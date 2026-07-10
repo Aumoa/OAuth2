@@ -1,5 +1,77 @@
+:root {
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --page-background:
+    linear-gradient(135deg, rgba(129, 216, 195, 0.34), transparent 52%),
+    linear-gradient(315deg, rgba(170, 59, 255, 0.14), transparent 56%), var(--bg);
+
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
+
+  color-scheme: light;
+  color: var(--text);
+  background: var(--page-background);
+  background-attachment: fixed;
+  transition: color 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s ease-in-out;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --oauth-bg: #101312;
+  --oauth-surface: #171b1a;
+  --oauth-surface-muted: #1f2523;
+  --oauth-border: #313a37;
+  --oauth-border-soft: #26302d;
+  --oauth-text: #ecf1ef;
+  --oauth-text-muted: #a7b0ac;
+  --oauth-accent: #8ab4f8;
+  --oauth-accent-hover: #a8c7fa;
+  --oauth-accent-soft: rgba(138, 180, 248, 0.14);
+  --oauth-on-accent: #0b1b33;
+  --oauth-focus: rgba(138, 180, 248, 0.28);
+  --oauth-danger: #f28b82;
+  --oauth-danger-bg: rgba(242, 139, 130, 0.14);
+  --oauth-success: #6ee7b7;
+  --oauth-success-bg: rgba(52, 211, 153, 0.14);
+  --oauth-warning: #facc15;
+  --oauth-warning-bg: rgba(250, 204, 21, 0.12);
+  --oauth-warning-border: rgba(250, 204, 21, 0.32);
+  --oauth-disabled: #59645f;
+  --oauth-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
+  --oauth-shadow-md: 0 12px 30px rgba(0, 0, 0, 0.42);
+
+  --text: var(--oauth-text-muted);
+  --text-h: var(--oauth-text);
+  --bg: var(--oauth-bg);
+  --border: var(--oauth-border);
+  --code-bg: var(--oauth-surface-muted);
+  --accent: var(--oauth-accent);
+  --accent-bg: var(--oauth-accent-soft);
+  --accent-border: var(--oauth-focus);
+  --social-bg: var(--oauth-surface-muted);
+  --shadow: var(--oauth-shadow-md);
+  --page-background:
+    linear-gradient(135deg, rgba(129, 216, 195, 0.12), transparent 36%), var(--bg);
+}
+
+:root[data-theme='dark'] #social .button-icon {
+  filter: invert(1) brightness(2);
+}
+
 .icon-button {
   background: none;
   border: none;
+  color: var(--text-h);
   cursor: pointer;
 }

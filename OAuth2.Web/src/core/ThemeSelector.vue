@@ -2,11 +2,26 @@
 import { ref } from 'vue';
 import Switcher from './components/Switcher.vue';
 
-const theme = ref('light');
+type Theme = 'light' | 'dark';
 
-function changeTheme(changeTheme: string) {
-  theme.value = changeTheme;
+function getInitialTheme(): Theme {
+  const currentTheme = document.documentElement.dataset.theme;
+
+  if (currentTheme === 'light' || currentTheme === 'dark') {
+    return currentTheme;
+  }
+
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
+
+const theme = ref<Theme>(getInitialTheme());
+
+function changeTheme(nextTheme: Theme) {
+  theme.value = nextTheme;
+  document.documentElement.dataset.theme = nextTheme;
+}
+
+changeTheme(theme.value);
 </script>
 
 <style scoped>
@@ -15,10 +30,10 @@ function changeTheme(changeTheme: string) {
 <template>
   <span>
     <Switcher :index="theme === 'light' ? 0 : 1">
-      <button class="icon-button" @click="() => changeTheme('dark')">
+      <button type="button" class="icon-button" aria-label="Use dark theme" @click="changeTheme('dark')">
         <span class="material-symbols-outlined">dark_mode</span>
       </button>
-      <button class="icon-button" @click="() => changeTheme('light')">
+      <button type="button" class="icon-button" aria-label="Use light theme" @click="changeTheme('light')">
         <span class="material-symbols-outlined">light_mode</span>
       </button>
     </Switcher>
