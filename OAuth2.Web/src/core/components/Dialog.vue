@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, ref, useId, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 type DialogSize = 'small' | 'medium' | 'large';
 type DialogCloseReason = 'backdrop' | 'button' | 'escape';
@@ -15,8 +16,8 @@ const props = withDefaults(defineProps<{
   showCloseButton?: boolean;
 }>(), {
   title: undefined,
-  ariaLabel: 'Dialog',
-  closeLabel: 'Close dialog',
+  ariaLabel: undefined,
+  closeLabel: undefined,
   size: 'medium',
   closeOnBackdrop: true,
   closeOnEscape: true,
@@ -27,6 +28,8 @@ const emit = defineEmits<{
   'update:isOpen': [value: boolean];
   close: [reason: DialogCloseReason];
 }>();
+
+const { t } = useI18n({ useScope: 'global' });
 
 const dialogElement = ref<HTMLDialogElement | null>(null);
 const titleId = `dialog-title-${useId()}`;
@@ -97,7 +100,7 @@ onBeforeUnmount(() => {
     ref="dialogElement"
     class="dialog"
     :aria-labelledby="title ? titleId : undefined"
-    :aria-label="title ? undefined : ariaLabel"
+    :aria-label="title ? undefined : (ariaLabel ?? t('core.dialog.ariaLabel'))"
     @cancel="handleCancel"
     @click="handleBackdropClick"
   >
@@ -113,8 +116,8 @@ onBeforeUnmount(() => {
           v-if="showCloseButton"
           type="button"
           class="dialog-close-button"
-          :aria-label="closeLabel"
-          :title="closeLabel"
+          :aria-label="closeLabel ?? t('core.dialog.closeLabel')"
+          :title="closeLabel ?? t('core.dialog.closeLabel')"
           @click="requestClose('button')"
         >
           <span class="material-symbols-outlined" aria-hidden="true">close</span>

@@ -10,7 +10,8 @@
   },
   "dependencies": {
     "material-symbols": "^0.45.7",
-    "vue": "^3.5.39"
+    "vue": "^3.5.39",
+    "vue-i18n": "^11.4.6"
   },
   "devDependencies": {
     "@types/node": "^24.13.2",

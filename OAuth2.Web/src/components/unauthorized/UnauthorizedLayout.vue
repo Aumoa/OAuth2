@@ -1,7 +1,9 @@
 <script setup lang="ts">
 import LanguageSelector from '../../core/components/LanguageSelector.vue';
 import ThemeSelector from '../../core/components/ThemeSelector.vue';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n({ useScope: 'global' });
 </script>
 
 <style scoped>
@@ -12,5 +14,5 @@ import ThemeSelector from '../../core/components/ThemeSelector.vue';
     <LanguageSelector />
     <ThemeSelector />
   </div>
-  <span>Unauthorized</span>
+  <span>{{ t('app.state.unauthorized') }}</span>
 </template>

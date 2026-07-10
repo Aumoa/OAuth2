@@ -1,24 +1,31 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { useI18n } from 'vue-i18n';
+import {
+  defaultLocale,
+  persistLocale,
+  toSupportedLocale,
+  type SupportedLocale,
+} from '../i18n/locale';
 import Dialog from './Dialog.vue';
 
-type LanguageCode = 'ko' | 'en' | 'es';
-
 interface LanguageOption {
-  code: LanguageCode;
+  code: SupportedLocale;
   badge: string;
   nativeName: string;
   englishName: string;
 }
 
 const props = defineProps<{
-  modelValue?: LanguageCode;
+  modelValue?: SupportedLocale;
 }>();
 
 const emit = defineEmits<{
-  'update:modelValue': [value: LanguageCode];
-  change: [value: LanguageCode];
+  'update:modelValue': [value: SupportedLocale];
+  change: [value: SupportedLocale];
 }>();
+
+const { locale, t } = useI18n({ useScope: 'global' });
 
 const languages: readonly LanguageOption[] = [
   { code: 'ko', badge: 'KO', nativeName: '한국어', englishName: 'Korean' },
@@ -26,30 +33,20 @@ const languages: readonly LanguageOption[] = [
   { code: 'es', badge: 'ES', nativeName: 'Español', englishName: 'Spanish' },
 ];
 
-function isLanguageCode(value: string): value is LanguageCode {
-  return languages.some((language) => language.code === value);
-}
-
-function getInitialLanguage(): LanguageCode {
-  if (props.modelValue) {
-    return props.modelValue;
-  }
-
-  const documentLanguage = document.documentElement.lang.toLowerCase().split('-')[0];
-
-  return isLanguageCode(documentLanguage) ? documentLanguage : 'ko';
-}
-
 const isDialogOpen = ref(false);
-const selectedLanguage = ref<LanguageCode>(getInitialLanguage());
+const selectedLanguage = computed(() => toSupportedLocale(locale.value) ?? defaultLocale);
 
 function openDialog() {
   isDialogOpen.value = true;
 }
 
-function selectLanguage(language: LanguageCode) {
-  selectedLanguage.value = language;
-  document.documentElement.lang = language;
+function applyLanguage(language: SupportedLocale) {
+  locale.value = language;
+  persistLocale(language);
+}
+
+function selectLanguage(language: SupportedLocale) {
+  applyLanguage(language);
   emit('update:modelValue', language);
   emit('change', language);
   isDialogOpen.value = false;
@@ -57,18 +54,17 @@ function selectLanguage(language: LanguageCode) {
 
 watch(() => props.modelValue, (language) => {
   if (language) {
-    selectedLanguage.value = language;
-    document.documentElement.lang = language;
+    applyLanguage(language);
   }
-});
+}, { immediate: true });
 </script>
 
 <template>
   <button
     type="button"
     class="icon-button"
-    aria-label="언어 변경"
-    title="언어 변경"
+    :aria-label="t('core.languageSelector.changeLabel')"
+    :title="t('core.languageSelector.changeLabel')"
     aria-haspopup="dialog"
     :aria-expanded="isDialogOpen"
     @click="openDialog"
@@ -78,14 +74,14 @@ watch(() => props.modelValue, (language) => {
 
   <Dialog
     v-model:isOpen="isDialogOpen"
-    title="언어 선택"
-    close-label="언어 선택 닫기"
+    :title="t('core.languageSelector.dialogTitle')"
+    :close-label="t('core.languageSelector.closeLabel')"
     size="small"
   >
     <div class="language-picker">
-      <p class="language-description">화면에 표시할 언어를 선택하세요.</p>
+      <p class="language-description">{{ t('core.languageSelector.description') }}</p>
 
-      <div class="language-list" aria-label="사용 가능한 언어">
+      <div class="language-list" :aria-label="t('core.languageSelector.availableLanguages')">
         <button
           v-for="language in languages"
           :key="language.code"
