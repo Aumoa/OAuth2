@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import Switcher from './components/Switcher.vue';
+import Switcher from '../components/Switcher.vue';
 
 type Theme = 'light' | 'dark';
 
