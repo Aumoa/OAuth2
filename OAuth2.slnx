@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="OAuth2.Backend/OAuth2.Backend.csproj" />
+  <Project Path="OAuth2.Frontend/OAuth2.Frontend.csproj" />
+</Solution>
