@@ -20,5 +20,4 @@ function changeTheme() {
       <option value="dark">dark</option>
     </select>
   </span>
-  <span>Text</span>
 </template>
