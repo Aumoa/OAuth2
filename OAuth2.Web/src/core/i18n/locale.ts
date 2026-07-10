@@ -11,6 +11,10 @@ export function toSupportedLocale(value: string | null | undefined): SupportedLo
   return supportedLocales.find((locale) => locale === languageCode) ?? null;
 }
 
+export function resolveSystemLocale(): SupportedLocale | null {
+  return toSupportedLocale(globalThis.navigator?.language);
+}
+
 export function resolvePreferredLocale(): SupportedLocale {
   try {
     const storedLocale = toSupportedLocale(globalThis.localStorage.getItem(localeStorageKey));
