@@ -1,10 +1,11 @@
 <script setup lang="ts">
 import { ref } from 'vue';
+import Switcher from './components/Switcher.vue';
 
 const theme = ref('light');
 
-function changeTheme() {
-  document.documentElement.setAttribute('data-theme', theme.value);
+function changeTheme(changeTheme: string) {
+  theme.value = changeTheme;
 }
 </script>
 
@@ -13,11 +14,13 @@ function changeTheme() {
 
 <template>
   <span>
-    <button>
-    </button>
-    <select v-model="theme" @change="changeTheme">
-      <option value="light">light</option>
-      <option value="dark">dark</option>
-    </select>
+    <Switcher :index="theme === 'light' ? 0 : 1">
+      <button class="icon-button" @click="() => changeTheme('dark')">
+        <span class="material-symbols-outlined">dark_mode</span>
+      </button>
+      <button class="icon-button" @click="() => changeTheme('light')">
+        <span class="material-symbols-outlined">light_mode</span>
+      </button>
+    </Switcher>
   </span>
 </template>
