@@ -1,27 +1,10 @@
 <script setup lang="ts">
-import { ref } from 'vue';
 import Switcher from '../components/Switcher.vue';
+import { theme, setTheme } from '../scripts/theme.ts';
 
-type Theme = 'light' | 'dark';
-
-function getInitialTheme(): Theme {
-  const currentTheme = document.documentElement.dataset.theme;
-
-  if (currentTheme === 'light' || currentTheme === 'dark') {
-    return currentTheme;
-  }
-
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+function changeTheme(nextTheme: 'light' | 'dark') {
+  setTheme(nextTheme);
 }
-
-const theme = ref<Theme>(getInitialTheme());
-
-function changeTheme(nextTheme: Theme) {
-  theme.value = nextTheme;
-  document.documentElement.dataset.theme = nextTheme;
-}
-
-changeTheme(theme.value);
 </script>
 
 <style scoped>
