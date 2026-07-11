@@ -40,6 +40,12 @@
   initial-value: #64748b;
 }
 
+@property --text-muted {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #64748b;
+}
+
 @property --accent {
   syntax: '<color>';
   inherits: true;
@@ -212,6 +218,7 @@
   --border-strong: #46524e;
   --text-h: #eef4f1;
   --text: #a8b3af;
+  --text-muted: #a8b3af;
   --accent: #5eead4;
   --accent-hover: #99f6e4;
   --on-accent: #042f2e;
