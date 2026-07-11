@@ -172,7 +172,7 @@ onBeforeUnmount(() => {
   color: var(--text);
   background:
     linear-gradient(145deg, var(--accent-bg), transparent 34%),
-    var(--oauth-surface, var(--bg));
+    var(--bg);
   border: 1px solid var(--border);
   border-radius: 16px;
   box-shadow: var(--shadow), 0 24px 64px rgba(8, 12, 11, 0.24);
@@ -257,7 +257,7 @@ onBeforeUnmount(() => {
   justify-content: flex-end;
   gap: 8px;
   padding: 16px 24px;
-  background: var(--oauth-surface-muted, var(--code-bg));
+  background: var(--code-bg);
   border-top: 1px solid var(--border);
 }
 

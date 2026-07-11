@@ -9,6 +9,5 @@ const setTheme = (newTheme: Theme) => {
 }
 
 const theme = ref<Theme>(localStorage.getItem('preference-theme') as Theme | null ?? 'system');
-document.documentElement.dataset.theme = theme.value;
 
 export { setTheme, theme };

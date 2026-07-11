@@ -1,18 +1,98 @@
+@property --text {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #6b6375;
+}
+
+@property --text-h {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #08060d;
+}
+
+@property --bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fff;
+}
+
+@property --border {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #e5e4e7;
+}
+
+@property --code-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f4f3ec;
+}
+
+@property --accent {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #aa3bff;
+}
+
+@property --accent-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(170, 59, 255, 0.1);
+}
+
+@property --accent-border {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(170, 59, 255, 0.5);
+}
+
+@property --social-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(244, 243, 236, 0.5);
+}
+
+@property --page-gradient-primary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(129, 216, 195, 0.34);
+}
+
+@property --page-gradient-secondary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(170, 59, 255, 0.14);
+}
+
+@property --page-gradient-primary-stop {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 52%;
+}
+
+@property --shadow-primary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(0, 0, 0, 0.1);
+}
+
+@property --shadow-secondary {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(0, 0, 0, 0.05);
+}
+
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
   --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+    var(--shadow-primary) 0 10px 15px -3px,
+    var(--shadow-secondary) 0 4px 6px -2px;
   --page-background:
-    linear-gradient(135deg, rgba(129, 216, 195, 0.34), transparent 52%),
-    linear-gradient(315deg, rgba(170, 59, 255, 0.14), transparent 56%), var(--bg);
+    linear-gradient(
+      135deg,
+      var(--page-gradient-primary),
+      transparent var(--page-gradient-primary-stop)
+    ),
+    linear-gradient(315deg, var(--page-gradient-secondary), transparent 56%), var(--bg);
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
   --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -22,47 +102,41 @@
   color: var(--text);
   background: var(--page-background);
   background-attachment: fixed;
-  transition: color 0.3s, background 0.3s, border-color 0.3s, box-shadow 0.3s ease-in-out;
+
+  transition:
+    --text 0.5s ease-in-out,
+    --text-h 0.5s ease-in-out,
+    --bg 0.5s ease-in-out,
+    --border 0.5s ease-in-out,
+    --code-bg 0.5s ease-in-out,
+    --accent 0.5s ease-in-out,
+    --accent-bg 0.5s ease-in-out,
+    --accent-border 0.5s ease-in-out,
+    --social-bg 0.5s ease-in-out,
+    --page-gradient-primary 0.5s ease-in-out,
+    --page-gradient-secondary 0.5s ease-in-out,
+    --page-gradient-primary-stop 0.5s ease-in-out,
+    --shadow-primary 0.5s ease-in-out,
+    --shadow-secondary 0.5s ease-in-out;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --oauth-bg: #101312;
-  --oauth-surface: #171b1a;
-  --oauth-surface-muted: #1f2523;
-  --oauth-border: #313a37;
-  --oauth-border-soft: #26302d;
-  --oauth-text: #ecf1ef;
-  --oauth-text-muted: #a7b0ac;
-  --oauth-accent: #8ab4f8;
-  --oauth-accent-hover: #a8c7fa;
-  --oauth-accent-soft: rgba(138, 180, 248, 0.14);
-  --oauth-on-accent: #0b1b33;
-  --oauth-focus: rgba(138, 180, 248, 0.28);
-  --oauth-danger: #f28b82;
-  --oauth-danger-bg: rgba(242, 139, 130, 0.14);
-  --oauth-success: #6ee7b7;
-  --oauth-success-bg: rgba(52, 211, 153, 0.14);
-  --oauth-warning: #facc15;
-  --oauth-warning-bg: rgba(250, 204, 21, 0.12);
-  --oauth-warning-border: rgba(250, 204, 21, 0.32);
-  --oauth-disabled: #59645f;
-  --oauth-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.35);
-  --oauth-shadow-md: 0 12px 30px rgba(0, 0, 0, 0.42);
-
-  --text: var(--oauth-text-muted);
-  --text-h: var(--oauth-text);
-  --bg: var(--oauth-bg);
-  --border: var(--oauth-border);
-  --code-bg: var(--oauth-surface-muted);
-  --accent: var(--oauth-accent);
-  --accent-bg: var(--oauth-accent-soft);
-  --accent-border: var(--oauth-focus);
-  --social-bg: var(--oauth-surface-muted);
-  --shadow: var(--oauth-shadow-md);
-  --page-background:
-    linear-gradient(135deg, rgba(129, 216, 195, 0.12), transparent 36%), var(--bg);
+  --text: #a7b0ac;
+  --text-h: #ecf1ef;
+  --bg: #101312;
+  --border: #313a37;
+  --code-bg: #1f2523;
+  --accent: #8ab4f8;
+  --accent-bg: rgba(138, 180, 248, 0.14);
+  --accent-border: rgba(138, 180, 248, 0.28);
+  --social-bg: #1f2523;
+  --page-gradient-primary: rgba(129, 216, 195, 0.12);
+  --page-gradient-secondary: rgba(170, 59, 255, 0);
+  --page-gradient-primary-stop: 36%;
+  --shadow-primary: rgba(0, 0, 0, 0.42);
+  --shadow-secondary: rgba(0, 0, 0, 0.2);
 }
 
 :root[data-theme='dark'] #social .button-icon {

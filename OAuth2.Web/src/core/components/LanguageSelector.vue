@@ -286,7 +286,7 @@ watch(isDialogOpen, (isOpen) => {
   gap: 8px;
   padding: 0 8px 0 13px;
   color: var(--text);
-  background: var(--oauth-surface-muted, var(--code-bg));
+  background: var(--code-bg);
   border: 1px solid var(--border);
   border-radius: 10px;
   transition: border-color 150ms ease, box-shadow 150ms ease;
@@ -400,7 +400,7 @@ watch(isDialogOpen, (isOpen) => {
 
 .language-option:hover {
   color: var(--text-h);
-  background: var(--oauth-surface-muted, var(--code-bg));
+  background: var(--code-bg);
 }
 
 .language-option:focus-visible {
