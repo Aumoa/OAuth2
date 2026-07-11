@@ -52,6 +52,7 @@ export const useAuthStore = defineStore('auth', () => {
       console.error(`Error occurred while fetching session: ${error}`);
       user.value = null;
       status.value = 'error';
+      throw error;
     }
   }
 

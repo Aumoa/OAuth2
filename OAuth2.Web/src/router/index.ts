@@ -22,6 +22,11 @@ export const router = createRouter({
       path: '/register',
       name: 'register',
       component: () => import('../views/Authorize.vue')
+    },
+    {
+      path: '/error',
+      name: 'error',
+      component: () => import('../views/Error.vue')
     }
   ],
 })
