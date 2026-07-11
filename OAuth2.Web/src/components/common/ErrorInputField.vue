@@ -63,8 +63,13 @@ function hideError() {
   }
 }
 
+function focus(options?: FocusOptions): void {
+  input.value?.focus(options);
+}
+
 defineExpose({
-  notifyError
+  notifyError,
+  focus
 });
 </script>
 

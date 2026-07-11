@@ -31,6 +31,7 @@ const props = withDefaults(defineProps<{
   required: false,
 });
 
+const inputElement = ref<HTMLInputElement | null>(null);
 const model = defineModel<string>({ default: '' });
 const attrs = useAttrs();
 const generatedId = `floating-input-${useId()}`;
@@ -63,6 +64,10 @@ function notifyError(durationMs = 1000): void {
   }, Math.max(0, durationMs));
 }
 
+function focus(options?: FocusOptions): void {
+  inputElement.value?.focus(options);
+}
+
 onBeforeUnmount(() => {
   if (errorNotificationTimer !== undefined) {
     clearTimeout(errorNotificationTimer);
@@ -71,6 +76,7 @@ onBeforeUnmount(() => {
 
 defineExpose({
   notifyError,
+  focus
 });
 </script>
 
@@ -152,6 +158,10 @@ defineExpose({
   background: var(--surface-muted);
 }
 
+.floating-input:read-only + .floating-label::before {
+  background: var(--surface-muted);
+}
+
 .floating-input::placeholder {
   color: var(--text);
   opacity: 0;
@@ -170,6 +180,8 @@ defineExpose({
   padding: 0 4px;
   overflow: hidden;
   color: var(--text);
+  isolation: isolate;
+  z-index: 1;
   background: transparent;
   font-size: 16px;
   line-height: 1;
@@ -182,7 +194,7 @@ defineExpose({
     top 0.2s ease,
     left 0.2s ease,
     color 0.2s ease,
-    background-color 0.2s ease,
+    background 0.2s ease,
     font-size 0.2s ease;
 }
 
@@ -199,8 +211,30 @@ defineExpose({
   top: 0;
   left: 8px;
   max-width: calc(100% - 16px);
-  background: var(--surface);
+  background: transparent;
   font-size: 13px;
+}
+
+.floating-input:is(
+  :focus,
+  :not(:placeholder-shown),
+  :autofill,
+  :-webkit-autofill
+) + .floating-label::before {
+  position: absolute;
+  z-index: -1;
+  top: 60%;
+  right: 0;
+  left: 0;
+  height: 2px;
+  background: var(--surface);
+  content: '';
+  transform: translateY(-50%);
+}
+
+.floating-input:focus + .floating-label::before {
+  top: 55%;
+  height: 7px;
 }
 
 .floating-label--error,
@@ -274,6 +308,7 @@ defineExpose({
     :class="{ 'floating-group--error': hasError }"
   >
     <input
+      ref="inputElement"
       v-bind="attrs"
       :id="inputId"
       v-model="model"
