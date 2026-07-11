@@ -1,5 +1,5 @@
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { cloneVNode, defineComponent } from 'vue'
 
 export default defineComponent({
   name: 'Switcher',
@@ -17,8 +17,16 @@ export default defineComponent({
       }
 
       const children = slots.default?.() ?? []
+      const selectedChild = children[props.index]
 
-      return children[props.index] ?? null
+      if (!selectedChild) {
+        return null
+      }
+
+      // A slot may contain unkeyed children of the same element type. Give the
+      // selected child an index-based identity so Vue replaces its DOM node and
+      // event handlers when the active item changes.
+      return cloneVNode(selectedChild, { key: props.index })
     }
   },
 });
