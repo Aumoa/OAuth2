@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, useAttrs, useId } from 'vue';
+import { computed, onBeforeUnmount, ref, useAttrs, useId } from 'vue';
 
 defineOptions({
   inheritAttrs: false,
@@ -34,8 +34,10 @@ const props = withDefaults(defineProps<{
 const model = defineModel<string>({ default: '' });
 const attrs = useAttrs();
 const generatedId = `floating-input-${useId()}`;
+const errorNotified = ref(false);
+let errorNotificationTimer: ReturnType<typeof setTimeout> | undefined;
 const inputId = computed(() => props.id ?? generatedId);
-const hasError = computed(() => Boolean(props.error));
+const hasError = computed(() => Boolean(props.error) || errorNotified.value);
 const errorMessage = computed(() => typeof props.error === 'string' ? props.error : undefined);
 const hintId = computed(() => `${inputId.value}-hint`);
 const errorId = computed(() => `${inputId.value}-error`);
@@ -47,6 +49,28 @@ const describedBy = computed(() => {
   ];
 
   return ids.filter(Boolean).join(' ') || undefined;
+});
+
+function notifyError(durationMs = 1000): void {
+  if (errorNotificationTimer !== undefined) {
+    clearTimeout(errorNotificationTimer);
+  }
+
+  errorNotified.value = true;
+  errorNotificationTimer = setTimeout(() => {
+    errorNotified.value = false;
+    errorNotificationTimer = undefined;
+  }, Math.max(0, durationMs));
+}
+
+onBeforeUnmount(() => {
+  if (errorNotificationTimer !== undefined) {
+    clearTimeout(errorNotificationTimer);
+  }
+});
+
+defineExpose({
+  notifyError,
 });
 </script>
 

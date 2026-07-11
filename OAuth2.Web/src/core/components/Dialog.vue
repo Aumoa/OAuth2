@@ -31,13 +31,49 @@ const emit = defineEmits<{
 
 const { t } = useI18n({ useScope: 'global' });
 
+const DIALOG_CLOSE_FALLBACK_MS = 240;
 const dialogElement = ref<HTMLDialogElement | null>(null);
+const isClosing = ref(false);
 const titleId = `dialog-title-${useId()}`;
 let previouslyFocusedElement: HTMLElement | null = null;
+let closeFallbackTimer: ReturnType<typeof setTimeout> | undefined;
 
 function restoreFocus() {
   previouslyFocusedElement?.focus();
   previouslyFocusedElement = null;
+}
+
+function clearCloseFallbackTimer(): void {
+  if (closeFallbackTimer !== undefined) {
+    clearTimeout(closeFallbackTimer);
+    closeFallbackTimer = undefined;
+  }
+}
+
+function finalizeClose(): void {
+  clearCloseFallbackTimer();
+
+  if (props.isOpen) {
+    isClosing.value = false;
+    return;
+  }
+
+  if (dialogElement.value?.open) {
+    dialogElement.value.close();
+  }
+
+  isClosing.value = false;
+  restoreFocus();
+}
+
+function beginClose(): void {
+  if (!dialogElement.value?.open || isClosing.value) {
+    return;
+  }
+
+  isClosing.value = true;
+  clearCloseFallbackTimer();
+  closeFallbackTimer = setTimeout(finalizeClose, DIALOG_CLOSE_FALLBACK_MS);
 }
 
 async function syncDialogState(isOpen: boolean) {
@@ -49,17 +85,22 @@ async function syncDialogState(isOpen: boolean) {
     return;
   }
 
-  if (isOpen && !dialog.open) {
-    previouslyFocusedElement = document.activeElement instanceof HTMLElement
-      ? document.activeElement
-      : null;
-    dialog.showModal();
+  if (isOpen) {
+    clearCloseFallbackTimer();
+    isClosing.value = false;
+
+    if (!dialog.open) {
+      previouslyFocusedElement = document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+      dialog.showModal();
+    }
+
     return;
   }
 
   if (!isOpen && dialog.open) {
-    dialog.close();
-    restoreFocus();
+    beginClose();
   }
 }
 
@@ -82,11 +123,19 @@ function handleBackdropClick(event: MouseEvent) {
   }
 }
 
+function handlePanelAnimationEnd(event: AnimationEvent): void {
+  if (isClosing.value && event.target === event.currentTarget) {
+    finalizeClose();
+  }
+}
+
 watch(() => props.isOpen, syncDialogState);
 
 onMounted(() => syncDialogState(props.isOpen));
 
 onBeforeUnmount(() => {
+  clearCloseFallbackTimer();
+
   if (dialogElement.value?.open) {
     dialogElement.value.close();
   }
@@ -99,12 +148,13 @@ onBeforeUnmount(() => {
   <dialog
     ref="dialogElement"
     class="dialog"
+    :class="{ 'dialog--closing': isClosing }"
     :aria-labelledby="title ? titleId : undefined"
     :aria-label="title ? undefined : (ariaLabel ?? t('core.dialog.ariaLabel'))"
     @cancel="handleCancel"
     @click="handleBackdropClick"
   >
-    <section class="dialog-panel" :class="`dialog-panel--${size}`">
+    <section class="dialog-panel" :class="`dialog-panel--${size}`" @animationend="handlePanelAnimationEnd">
       <header v-if="title || $slots.header || showCloseButton" class="dialog-header">
         <div class="dialog-header-content">
           <slot name="header">
@@ -163,6 +213,14 @@ onBeforeUnmount(() => {
   animation: dialog-backdrop-enter 160ms ease-out;
 }
 
+.dialog--closing {
+  pointer-events: none;
+}
+
+.dialog--closing::backdrop {
+  animation: dialog-backdrop-exit 140ms ease-in forwards;
+}
+
 .dialog-panel {
   display: flex;
   max-height: min(85svh, 760px);
@@ -177,6 +235,10 @@ onBeforeUnmount(() => {
   border-radius: 16px;
   box-shadow: var(--shadow), 0 24px 64px rgba(8, 12, 11, 0.24);
   animation: dialog-panel-enter 180ms cubic-bezier(0, 0, 0.2, 1);
+}
+
+.dialog--closing .dialog-panel {
+  animation: dialog-panel-exit 140ms cubic-bezier(0.4, 0, 1, 1) forwards;
 }
 
 .dialog-panel--small {
@@ -280,6 +342,28 @@ onBeforeUnmount(() => {
 
   to {
     opacity: 1;
+  }
+}
+
+@keyframes dialog-panel-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(6px) scale(0.99);
+  }
+}
+
+@keyframes dialog-backdrop-exit {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0;
   }
 }
 

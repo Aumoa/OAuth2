@@ -13,11 +13,11 @@ export default defineComponent({
   setup(props, { slots }) {
     return () => {
       if (!Number.isInteger(props.index) || props.index < 0) {
-        return null
+        return null;
       }
 
-      const children = slots.default?.() ?? []
-      const selectedChild = children[props.index]
+      const children = slots.default?.() ?? [];
+      const selectedChild = children[props.index];
 
       if (!selectedChild) {
         return null
@@ -26,7 +26,7 @@ export default defineComponent({
       // A slot may contain unkeyed children of the same element type. Give the
       // selected child an index-based identity so Vue replaces its DOM node and
       // event handlers when the active item changes.
-      return cloneVNode(selectedChild, { key: props.index })
+      return cloneVNode(selectedChild, { key: props.index });
     }
   },
 });
