@@ -2,6 +2,7 @@
 import { Accounts, RegisterForm } from '../api/accounts.ts';
 import Expander from '../components/common/Expander.vue';
 import UnauthenticatedFormLayout from '../components/layout/UnauthenticatedFormLayout.vue';
+import { HttpStatusCodeError } from '../core/api/HttpStatusCodeError.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { computed, ref } from 'vue';
 
@@ -13,6 +14,7 @@ const password = ref<string>('');
 const passwordRepeat = ref<string>('');
 const fullname = ref<string>('');
 const email = ref<string>('');
+const requesting = ref(false);
 
 const idInput = ref<InstanceType<typeof FloatingInput> | null>(null);
 const passwordInput = ref<InstanceType<typeof FloatingInput> | null>(null);
@@ -36,33 +38,47 @@ const description = computed(() => {
       return '사용할 ID를 입력하세요.';
     case 'password':
       return '사용할 비밀번호를 입력하세요.';
+    case 'properties':
+      return '이름과 이메일을 입력하세요.';
   }
 });
 
 async function continueAsync() {
+  if (requesting.value) {
+    return;
+  }
+
   switch (state.value) {
     case 'id':
-      if (id.value == '') {
+      if (id.value.trim() === '') {
         idInput.value?.notifyError('ID는 비어있을 수 없습니다.');
         return;
       }
 
-      const exists = await Accounts.verifyAsync(id.value);
-      if (exists) {
-        idInput.value?.notifyError('ID가 이미 존재합니다.');
+      requesting.value = true;
+      try {
+        const exists = await Accounts.verifyAsync(id.value);
+        if (exists) {
+          idInput.value?.notifyError('ID가 이미 존재합니다.');
+          return;
+        }
+      } catch {
+        idInput.value?.notifyError('ID 중복 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.');
         return;
+      } finally {
+        requesting.value = false;
       }
 
       state.value = 'password';
       setTimeout(() => passwordInput.value?.focus(), 100);
       break;
     case 'password':
-      if (password.value == '') {
+      if (password.value.trim() === '') {
         passwordInput.value?.notifyError('암호는 비어있을 수 없습니다.');
         return;
       }
 
-      if (password.value != passwordRepeat.value) {
+      if (password.value !== passwordRepeat.value) {
         passwordRepeatInput.value?.notifyError('암호가 일치하지 않습니다.');
         return;
       }
@@ -71,12 +87,12 @@ async function continueAsync() {
       setTimeout(() => fullnameInput.value?.focus(), 100);
       break;
     case 'properties':
-      if (fullname.value == '') {
+      if (fullname.value.trim() === '') {
         fullnameInput.value?.notifyError('전체 이름을 입력하세요.');
         return;
       }
 
-      if (email.value == '') {
+      if (email.value.trim() === '') {
         emailInput.value?.notifyError('이메일을 입력하세요.');
         return;
       }
@@ -87,7 +103,18 @@ async function continueAsync() {
         return;
       }
       
-      await Accounts.registerAsync(new RegisterForm(id.value, password.value, fullname.value, email.value));
+      requesting.value = true;
+      try {
+        await Accounts.registerAsync(new RegisterForm(id.value, password.value, fullname.value, email.value));
+      } catch (error) {
+        if (error instanceof HttpStatusCodeError && error.status === 409) {
+          emailInput.value?.notifyError('이미 사용 중인 ID 또는 이메일입니다.');
+        } else {
+          emailInput.value?.notifyError('계정 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        }
+      } finally {
+        requesting.value = false;
+      }
       break;
   }
 }
@@ -98,6 +125,10 @@ function previous() {
       password.value = '';
       passwordRepeat.value = '';
       state.value = 'id';
+      break;
+    case 'properties':
+      state.value = 'password';
+      setTimeout(() => passwordInput.value?.focus(), 100);
       break;
   }
 }
@@ -160,10 +191,10 @@ function previous() {
         </div>
       </Expander>
       <div class="button-container">
-        <button type="submit" class="app-button accent-button">
+        <button type="submit" class="app-button accent-button" :disabled="requesting">
           계속
         </button>
-        <button v-if="visibility.previous.value" type="button" class="app-button" @click="previous">
+        <button v-if="visibility.previous.value" type="button" class="app-button" :disabled="requesting" @click="previous">
           뒤로
         </button>
       </div>

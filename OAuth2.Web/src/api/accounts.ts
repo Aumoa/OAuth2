@@ -1,21 +1,23 @@
 import { HttpStatusCodeError } from "../core/api/HttpStatusCodeError";
 import { router } from "../router";
 
+export type RegisterState = 'unexpected' | 'unauthorized' | 'authrozied';
+
 export class RegisterForm {
   id: string;
   password: string;
-  fullname: string;
+  fullName: string;
   email: string;
 
-  constructor(id: string, password: string, fullname: string, email: string) {
+  constructor(id: string, password: string, fullName: string, email: string) {
     this.id = id;
     this.password = password;
-    this.fullname = fullname;
+    this.fullName = fullName;
     this.email = email;
   }
 
-  verify() {
-    if (this.id == '' || this.password == '' || this.fullname == '' || this.email == '') {
+  verify(): void {
+    if (this.id.trim() === '' || this.password.trim() === '' || this.fullName.trim() === '' || this.email.trim() === '') {
       throw new Error('Invalid arguments.');
     }
     
@@ -28,7 +30,7 @@ export class RegisterForm {
 
 export class Accounts {
   static async verifyAsync(id: string): Promise<boolean> {
-    const response = await fetch(`/api/v1/accounts/verify?id=${encodeURI(id)}`);
+    const response = await fetch(`/api/v1/accounts/verify?id=${encodeURIComponent(id)}`);
     if (!response.ok) {
       throw new HttpStatusCodeError(response.status, response.statusText);
     }
@@ -37,7 +39,7 @@ export class Accounts {
     return result as boolean;
   }
 
-  static async registerAsync(form: RegisterForm) {
+  static async registerAsync(form: RegisterForm): Promise<void> {
     form.verify();
 
     const response = await fetch(`/api/v1/accounts`, {
@@ -51,6 +53,6 @@ export class Accounts {
       throw new HttpStatusCodeError(response.status, response.statusText);
     }
 
-    router.replace('/verifyEmail');
+    await router.replace('/verifyEmail');
   }
-};
+}

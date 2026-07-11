@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
 
 namespace OAuth2.DataTransfer;
@@ -15,25 +15,25 @@ public partial record RegisterForm
 
     public bool Verify([NotNullWhen(false)] out string? error)
     {
-        if (string.IsNullOrEmpty(Id) || string.IsNullOrEmpty(Password) || string.IsNullOrEmpty(FullName) || string.IsNullOrEmpty(Email))
+        if (string.IsNullOrWhiteSpace(Id))
         {
             error = "body.id is missing";
             return false;
         }
 
-        if (string.IsNullOrEmpty(Password))
+        if (string.IsNullOrWhiteSpace(Password))
         {
             error = "body.password is missing";
             return false;
         }
 
-        if (string.IsNullOrEmpty(FullName))
+        if (string.IsNullOrWhiteSpace(FullName))
         {
             error = "body.fullName is missing";
             return false;
         }
 
-        if (string.IsNullOrEmpty(Email))
+        if (string.IsNullOrWhiteSpace(Email))
         {
             error = "body.email is missing";
             return false;
@@ -49,6 +49,6 @@ public partial record RegisterForm
         return true;
     }
 
-    [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase, "ko-KR")]
+    [GeneratedRegex(@"^[^@\s]+@[^@\s]+\.[^@\s]+$", RegexOptions.IgnoreCase)]
     private static partial Regex ValidEmailRegex();
 }

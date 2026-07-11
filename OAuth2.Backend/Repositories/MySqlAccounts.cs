@@ -1,4 +1,4 @@
-﻿using System.Security.Cryptography;
+using System.Security.Cryptography;
 using Dapper;
 using Microsoft.Extensions.Options;
 using MySql.Data.MySqlClient;
@@ -24,7 +24,12 @@ internal class MySqlAccounts(IOptions<MySqlOptions> options, PasswordHasher hash
         return account;
     }
 
-    public async Task<string?> AddAccountAsync(string id, string password, string fullName, string email, CancellationToken cancellationToken = default)
+    public async Task<AccountRegistration?> AddAccountAsync(
+        string id,
+        string password,
+        string fullName,
+        string email,
+        CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(password);
@@ -39,10 +44,32 @@ internal class MySqlAccounts(IOptions<MySqlOptions> options, PasswordHasher hash
         using var connection = new MySqlConnection(options.Value.ConnectionString);
 
         const string QUERY = "INSERT INTO `account` (`id`, `password`, `sub`, `name`, `email`, `verify_code`) VALUES(@id, @password, @sub, @name, @email, @verifyCode)";
+        var command = new CommandDefinition(
+            QUERY,
+            new
+            {
+                id,
+                password = passwordHash,
+                sub,
+                name = fullName,
+                email,
+                verifyCode = encryptedVerifyCode
+            },
+            cancellationToken: cancellationToken);
 
-        var command = new CommandDefinition(QUERY, new { id, pasword = passwordHash, sub, fullName, email, encryptedVerifyCode }, cancellationToken: cancellationToken);
-        await connection.ExecuteAsync(command);
+        try
+        {
+            var affectedRows = await connection.ExecuteAsync(command);
+            if (affectedRows != 1)
+            {
+                return null;
+            }
+        }
+        catch (MySqlException exception) when (exception.Number == 1062)
+        {
+            return null;
+        }
 
-        return verifyCode;
+        return new AccountRegistration(sub, verifyCode);
     }
 }
