@@ -2,23 +2,24 @@
 import { RouterView } from 'vue-router';
 import { theme } from './core/scripts/theme.ts';
 import { useAuthStore } from './auth.ts';
-import { router } from './router/index.ts';
+import { requiredAuthenticated, router } from './router/index.ts';
 import { RouteError } from './router/route-error.ts';
+import { onMounted } from 'vue';
 
 async function initializeAsync() {
-  if (authStore.$state.status === 'checking') {
-    router.push('/checking');
-  }
-  try {
-    await authStore.initializeAsync();
-  }
-  catch (error) {
-    if (error instanceof RouteError) {
-      const routeError = error as RouteError;
-      router.replace(routeError.url);
+  console.log(router.currentRoute.value.path);
+  if (requiredAuthenticated()) {
+    try {
+      await authStore.initializeAsync();
     }
-    else {
-      router.replace('/error');
+    catch (error) {
+      if (error instanceof RouteError) {
+        const routeError = error as RouteError;
+        router.replace(routeError.url);
+      }
+      else {
+        router.replace('/error');
+      }
     }
   }
 }
@@ -26,7 +27,10 @@ async function initializeAsync() {
 const authStore = useAuthStore();
 
 document.documentElement.dataset.theme = theme.value;
-initializeAsync();
+
+onMounted(() => {
+  initializeAsync();
+});
 </script>
 
 <template>

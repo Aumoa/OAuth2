@@ -16,17 +16,32 @@ export const router = createRouter({
     {
       path: '/login',
       name: 'login',
-      component: () => import('../views/Authorize.vue')
+      component: () => import('../views/Login.vue')
     },
     {
       path: '/register',
       name: 'register',
-      component: () => import('../views/Authorize.vue')
+      component: () => import('../views/Register.vue')
     },
     {
       path: '/error',
       name: 'error',
       component: () => import('../views/Error.vue')
+    },
+    {
+      path: '/verifyEmail',
+      name: 'verifyEmail',
+      component: () => import('../views/VerifyEmail.vue')
     }
   ],
-})
+});
+
+const publicRoutePaths = [
+  '/login',
+  '/register',
+  '/error'
+];
+
+export function requiredAuthenticated() {
+  return publicRoutePaths.find(s => router.currentRoute.value.path.startsWith(s));
+};
