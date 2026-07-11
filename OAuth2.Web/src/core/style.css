@@ -242,7 +242,7 @@
   filter: invert(1) brightness(2);
 }
 
-.icon-button {
+.app-button {
   background: none;
   border: none;
   color: var(--text-h);
@@ -257,17 +257,17 @@
   transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
 }
 
-.icon-button:hover {
+.app-button:hover {
   color: var(--accent-hover);
   background: var(--accent-bg);
   border-color: var(--accent-border);
 }
 
-.icon-button:focus-visible {
+.app-button:focus-visible {
   outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
-.icon-button .material-symbols-outlined {
+.app-button .material-symbols-outlined {
   font-size: 22px;
 }

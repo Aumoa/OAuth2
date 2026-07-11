@@ -143,7 +143,7 @@ watch(isDialogOpen, (isOpen) => {
 <template>
   <button
     type="button"
-    class="icon-button language-trigger"
+    class="app-button language-trigger"
     :aria-label="`${t('core.languageSelector.changeLabel')}: ${selectedLanguageOption.nativeName}`"
     :title="t('core.languageSelector.changeLabel')"
     aria-haspopup="dialog"
