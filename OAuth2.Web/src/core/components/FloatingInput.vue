@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onBeforeUnmount, ref, useAttrs, useId } from 'vue';
+import { computed, ref, useAttrs, useId } from 'vue';
 
 defineOptions({
   inheritAttrs: false,
@@ -35,11 +35,11 @@ const inputElement = ref<HTMLInputElement | null>(null);
 const model = defineModel<string>({ default: '' });
 const attrs = useAttrs();
 const generatedId = `floating-input-${useId()}`;
-const errorNotified = ref(false);
-let errorNotificationTimer: ReturnType<typeof setTimeout> | undefined;
+const notifiedErrorMessage = ref<string | undefined>(undefined);
 const inputId = computed(() => props.id ?? generatedId);
-const hasError = computed(() => Boolean(props.error) || errorNotified.value);
-const errorMessage = computed(() => typeof props.error === 'string' ? props.error : undefined);
+const hasError = computed(() => Boolean(props.error) || !isNullOrEmpty(notifiedErrorMessage.value));
+const errorMessage = computed(() => notifiedErrorMessage.value
+  ?? (typeof props.error === 'string' ? props.error : undefined));
 const hintId = computed(() => `${inputId.value}-hint`);
 const errorId = computed(() => `${inputId.value}-error`);
 const describedBy = computed(() => {
@@ -52,31 +52,26 @@ const describedBy = computed(() => {
   return ids.filter(Boolean).join(' ') || undefined;
 });
 
-function notifyError(durationMs = 1000): void {
-  if (errorNotificationTimer !== undefined) {
-    clearTimeout(errorNotificationTimer);
-  }
+function isNullOrEmpty(message?: string | null) {
+  return message == '' || message === null || message === undefined;
+}
 
-  errorNotified.value = true;
-  errorNotificationTimer = setTimeout(() => {
-    errorNotified.value = false;
-    errorNotificationTimer = undefined;
-  }, Math.max(0, durationMs));
+function notifyError(message: string): void {
+  notifiedErrorMessage.value = message;
+}
+
+function clearError(): void {
+  notifiedErrorMessage.value = undefined;
 }
 
 function focus(options?: FocusOptions): void {
   inputElement.value?.focus(options);
 }
 
-onBeforeUnmount(() => {
-  if (errorNotificationTimer !== undefined) {
-    clearTimeout(errorNotificationTimer);
-  }
-});
-
 defineExpose({
   notifyError,
-  focus
+  clearError,
+  focus,
 });
 </script>
 
@@ -85,7 +80,6 @@ defineExpose({
   position: relative;
   display: grid;
   width: 100%;
-  gap: 6px;
 }
 
 .floating-input {
@@ -226,15 +220,17 @@ defineExpose({
   top: 60%;
   right: 0;
   left: 0;
-  height: 2px;
+  height: 3px;
   background: var(--surface);
   content: '';
   transform: translateY(-50%);
+  transition: top 0.2s ease 1s, height 0.2s ease 1s;
 }
 
 .floating-input:focus + .floating-label::before {
-  top: 55%;
+  top: 50%;
   height: 7px;
+  transition: top 0.2s ease, height 0.2s;
 }
 
 .floating-label--error,
@@ -272,6 +268,35 @@ defineExpose({
 :global(:root.theme-transitioning .floating-label),
 :global(:root.theme-transitioning .floating-input::placeholder) {
   transition: none;
+}
+
+.expand {
+  display: grid;
+  grid-template-rows: 1.0fr;
+}
+
+.expand-inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.expand-enter-active,
+.expand-leave-active {
+  transition:
+    grid-template-rows 0.2s ease,
+    opacity 0.2s ease;
+}
+
+.expand-enter-from,
+.expand-leave-to {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.expand-enter-to,
+.expand-leave-from {
+  grid-template-rows: 1.0fr;
+  opacity: 1;
 }
 
 @keyframes shake {
@@ -323,6 +348,7 @@ defineExpose({
       :required="props.required"
       :aria-invalid="hasError ? 'true' : undefined"
       :aria-describedby="describedBy"
+      @input="clearError"
     />
     <label
       v-if="props.label"
@@ -333,20 +359,26 @@ defineExpose({
       {{ props.label }}
       <span v-if="props.required" class="floating-required" aria-hidden="true">*</span>
     </label>
-    <p
-      v-if="errorMessage"
-      :id="errorId"
-      class="floating-message floating-message--error"
-      role="alert"
-    >
-      {{ errorMessage }}
-    </p>
-    <p
-      v-else-if="props.hint"
-      :id="hintId"
-      class="floating-message"
-    >
-      {{ props.hint }}
-    </p>
+    <Transition name="expand">
+      <div v-if="errorMessage || props.hint" class="expand">
+        <div class="expand-inner">
+          <p
+            v-if="errorMessage"
+            :id="errorId"
+            class="floating-message floating-message--error"
+            role="alert"
+          >
+            {{ errorMessage }}
+          </p>
+          <p
+            v-else-if="props.hint"
+            :id="hintId"
+            class="floating-message"
+          >
+            {{ props.hint }}
+          </p>
+        </div>
+      </div>
+    </Transition>
   </div>
 </template>
