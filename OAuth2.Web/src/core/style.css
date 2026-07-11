@@ -1,55 +1,115 @@
-@property --text {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #6b6375;
-}
-
-@property --text-h {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #08060d;
-}
-
 @property --bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #f6f8fb;
+}
+
+@property --surface {
   syntax: '<color>';
   inherits: true;
   initial-value: #fff;
 }
 
+@property --surface-muted {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #eef2f7;
+}
+
 @property --border {
   syntax: '<color>';
   inherits: true;
-  initial-value: #e5e4e7;
+  initial-value: #d8dee7;
 }
 
-@property --code-bg {
+@property --border-strong {
   syntax: '<color>';
   inherits: true;
-  initial-value: #f4f3ec;
+  initial-value: #b7c0ce;
+}
+
+@property --text-h {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1f2937;
+}
+
+@property --text {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #64748b;
 }
 
 @property --accent {
   syntax: '<color>';
   inherits: true;
-  initial-value: #aa3bff;
+  initial-value: #0f766e;
 }
 
-@property --accent-bg {
+@property --accent-hover {
   syntax: '<color>';
   inherits: true;
-  initial-value: rgba(170, 59, 255, 0.1);
+  initial-value: #115e59;
 }
 
-@property --accent-border {
+@property --on-accent {
   syntax: '<color>';
   inherits: true;
-  initial-value: rgba(170, 59, 255, 0.5);
+  initial-value: #fff;
 }
 
-@property --social-bg {
+@property --danger {
   syntax: '<color>';
   inherits: true;
-  initial-value: rgba(244, 243, 236, 0.5);
+  initial-value: #dc2626;
+}
+
+@property --danger-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #fef2f2;
+}
+
+@property --success {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #16a34a;
+}
+
+@property --focus-ring {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(15, 118, 110, 0.28);
+}
+
+@property --topbar-bg {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: rgba(255, 255, 255, 0.92);
+}
+
+@property --sidebar-gradient-start {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #1e3a8a;
+}
+
+@property --sidebar-gradient-end {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #065f46;
+}
+
+@property --login-gradient-start {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #667eea;
+}
+
+@property --login-gradient-end {
+  syntax: '<color>';
+  inherits: true;
+  initial-value: #764ba2;
 }
 
 @property --page-gradient-primary {
@@ -70,22 +130,34 @@
   initial-value: 52%;
 }
 
-@property --shadow-primary {
+@property --shadow-sm-color {
   syntax: '<color>';
   inherits: true;
-  initial-value: rgba(0, 0, 0, 0.1);
+  initial-value: rgba(15, 23, 42, 0.08);
 }
 
-@property --shadow-secondary {
+@property --shadow-md-color {
   syntax: '<color>';
   inherits: true;
-  initial-value: rgba(0, 0, 0, 0.05);
+  initial-value: rgba(15, 23, 42, 0.12);
 }
 
 :root {
-  --shadow:
-    var(--shadow-primary) 0 10px 15px -3px,
-    var(--shadow-secondary) 0 4px 6px -2px;
+  --code-bg: var(--surface-muted);
+  --accent-bg: color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent-border: var(--focus-ring);
+  --social-bg: color-mix(in srgb, var(--surface-muted) 50%, transparent);
+  --sidebar-gradient:
+    linear-gradient(
+      180deg,
+      var(--sidebar-gradient-start) 0%,
+      var(--sidebar-gradient-end) 70%
+    );
+  --login-bg:
+    linear-gradient(135deg, var(--login-gradient-start) 0%, var(--login-gradient-end) 100%);
+  --shadow-sm: 0 1px 2px var(--shadow-sm-color);
+  --shadow-md: 0 12px 30px var(--shadow-md-color);
+  --shadow: var(--shadow-md);
   --page-background:
     linear-gradient(
       135deg,
@@ -104,39 +176,59 @@
   background-attachment: fixed;
 
   transition:
-    --text 0.5s ease-in-out,
-    --text-h 0.5s ease-in-out,
     --bg 0.5s ease-in-out,
+    --surface 0.5s ease-in-out,
+    --surface-muted 0.5s ease-in-out,
     --border 0.5s ease-in-out,
-    --code-bg 0.5s ease-in-out,
+    --border-strong 0.5s ease-in-out,
+    --text-h 0.5s ease-in-out,
+    --text 0.5s ease-in-out,
     --accent 0.5s ease-in-out,
-    --accent-bg 0.5s ease-in-out,
-    --accent-border 0.5s ease-in-out,
-    --social-bg 0.5s ease-in-out,
+    --accent-hover 0.5s ease-in-out,
+    --on-accent 0.5s ease-in-out,
+    --danger 0.5s ease-in-out,
+    --danger-bg 0.5s ease-in-out,
+    --success 0.5s ease-in-out,
+    --focus-ring 0.5s ease-in-out,
+    --topbar-bg 0.5s ease-in-out,
+    --sidebar-gradient-start 0.5s ease-in-out,
+    --sidebar-gradient-end 0.5s ease-in-out,
+    --login-gradient-start 0.5s ease-in-out,
+    --login-gradient-end 0.5s ease-in-out,
     --page-gradient-primary 0.5s ease-in-out,
     --page-gradient-secondary 0.5s ease-in-out,
     --page-gradient-primary-stop 0.5s ease-in-out,
-    --shadow-primary 0.5s ease-in-out,
-    --shadow-secondary 0.5s ease-in-out;
+    --shadow-sm-color 0.5s ease-in-out,
+    --shadow-md-color 0.5s ease-in-out;
 }
 
 :root[data-theme='dark'] {
   color-scheme: dark;
 
-  --text: #a7b0ac;
-  --text-h: #ecf1ef;
   --bg: #101312;
-  --border: #313a37;
-  --code-bg: #1f2523;
-  --accent: #8ab4f8;
-  --accent-bg: rgba(138, 180, 248, 0.14);
-  --accent-border: rgba(138, 180, 248, 0.28);
-  --social-bg: #1f2523;
+  --surface: #171b1a;
+  --surface-muted: #202826;
+  --border: #303a37;
+  --border-strong: #46524e;
+  --text-h: #eef4f1;
+  --text: #a8b3af;
+  --accent: #5eead4;
+  --accent-hover: #99f6e4;
+  --on-accent: #042f2e;
+  --danger: #f87171;
+  --danger-bg: #3f1d22;
+  --success: #86efac;
+  --focus-ring: rgba(94, 234, 212, 0.32);
+  --topbar-bg: rgba(23, 27, 26, 0.92);
+  --sidebar-gradient-start: #172554;
+  --sidebar-gradient-end: #064e3b;
+  --login-gradient-start: #172554;
+  --login-gradient-end: #064e3b;
   --page-gradient-primary: rgba(129, 216, 195, 0.12);
   --page-gradient-secondary: rgba(170, 59, 255, 0);
   --page-gradient-primary-stop: 36%;
-  --shadow-primary: rgba(0, 0, 0, 0.42);
-  --shadow-secondary: rgba(0, 0, 0, 0.2);
+  --shadow-sm-color: rgba(0, 0, 0, 0.35);
+  --shadow-md-color: rgba(0, 0, 0, 0.42);
 }
 
 :root[data-theme='dark'] #social .button-icon {
@@ -159,13 +251,13 @@
 }
 
 .icon-button:hover {
-  color: var(--accent);
+  color: var(--accent-hover);
   background: var(--accent-bg);
   border-color: var(--accent-border);
 }
 
 .icon-button:focus-visible {
-  outline: 3px solid var(--accent-border);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
