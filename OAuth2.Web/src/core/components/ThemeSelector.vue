@@ -17,10 +17,10 @@ function changeTheme(nextTheme: 'light' | 'dark') {
   <span>
     <Switcher :index="theme === 'light' ? 0 : 1">
       <button type="button" class="icon-button" :aria-label="t('core.themeSelector.useDark')" @click="changeTheme('dark')">
-        <span class="material-symbols-outlined">dark_mode</span>
+        <span class="material-symbols-outlined">light_mode</span>
       </button>
       <button type="button" class="icon-button" :aria-label="t('core.themeSelector.useLight')" @click="changeTheme('light')">
-        <span class="material-symbols-outlined">light_mode</span>
+        <span class="material-symbols-outlined">dark_mode</span>
       </button>
     </Switcher>
   </span>
