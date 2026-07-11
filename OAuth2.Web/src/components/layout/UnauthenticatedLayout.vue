@@ -44,7 +44,7 @@ const props = defineProps<{
   text-align: justify;
 }
 
-content-container {
+.content-container {
   min-width: 0;
 }
 
