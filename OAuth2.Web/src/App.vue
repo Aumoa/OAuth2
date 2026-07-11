@@ -15,7 +15,9 @@ async function initializeAsync() {
     catch (error) {
       if (error instanceof RouteError) {
         const routeError = error as RouteError;
-        router.replace(routeError.url);
+        if (!requiredAuthenticated(routeError.url)) {
+          router.replace(routeError.url);
+        }
       }
       else {
         router.replace('/error');

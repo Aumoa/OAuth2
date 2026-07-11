@@ -42,6 +42,7 @@ const publicRoutePaths = [
   '/error'
 ];
 
-export function requiredAuthenticated() {
-  return publicRoutePaths.find(s => router.currentRoute.value.path.startsWith(s));
+export function requiredAuthenticated(route: string) {
+  route = route ?? router.currentRoute.value.path;
+  return publicRoutePaths.find(s => route.startsWith(s));
 };
