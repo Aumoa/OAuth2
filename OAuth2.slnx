@@ -1,4 +1,6 @@
 <Solution>
+  <Project Path="OAuth2.Abstractions/OAuth2.Abstractions.csproj" Id="1039b9eb-1198-4966-9f16-c6b854e57c9b" />
   <Project Path="OAuth2.Backend/OAuth2.Backend.csproj" />
   <Project Path="OAuth2.Frontend/OAuth2.Frontend.csproj" />
+  <Project Path="SQLMigration/SQLMigration.csproj" />
 </Solution>
