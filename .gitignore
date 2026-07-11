@@ -60,3 +60,44 @@ lerna-debug.log*
 .DS_Store
 Thumbs.db
 Desktop.ini
+
+# AI coding assistant instructions
+
+# OpenAI Codex / shared agent instructions
+AGENTS.md
+SKILL.md
+.agents/
+.codex/
+
+# Anthropic Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# Google Gemini CLI
+GEMINI.md
+.gemini/
+
+# Cursor
+.cursor/
+.cursorrules
+
+# Windsurf
+.windsurf/
+.windsurfrules
+
+# GitHub Copilot
+.github/copilot-instructions.md
+.github/instructions/
+.github/prompts/
+.github/agents/
+
+# Cline / Roo Code
+.clinerules
+.roo/
+.roomodes
+
+# Amazon Q / Kiro / JetBrains Junie
+.amazonq/
+.kiro/
+.junie/
