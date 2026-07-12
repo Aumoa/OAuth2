@@ -46,6 +46,7 @@ project.fragment.lock.json
 .env.*
 !.env.example
 *.local
+appsettings.Development.json
 
 # Logs
 logs/
