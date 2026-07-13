@@ -2,8 +2,6 @@ using OAuth2.DataTransfer;
 
 namespace OAuth2.Services;
 
-public readonly record struct CreatedSession(string Id, DateTimeOffset ExpiresAt);
-
 public interface ISessionsRepository
 {
     ValueTask<CreatedSession> CreateAsync(
