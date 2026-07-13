@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
 using OAuth2.DataTransfer;
+using OAuth2.Options;
 using OAuth2.Services;
+using BffSessionOptions = OAuth2.Options.SessionOptions;
 
 namespace OAuth2.Controllers;
 
@@ -9,11 +12,45 @@ namespace OAuth2.Controllers;
 public class ApiV1Controller : ControllerBase
 {
     [HttpGet("session")]
-    public async Task<IActionResult> GetSessionAsync(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetSessionAsync(
+        [FromServices] ISessionsRepository sessions,
+        [FromServices] IOptions<BffSessionOptions> sessionOptions,
+        CancellationToken cancellationToken)
     {
-        await Task.Yield();
-        cancellationToken.ThrowIfCancellationRequested();
-        return Unauthorized();
+        if (!Request.Cookies.TryGetValue(sessionOptions.Value.CookieName, out var sessionId)
+            || string.IsNullOrWhiteSpace(sessionId))
+        {
+            return Unauthorized();
+        }
+
+        var user = await sessions.GetAsync(sessionId, cancellationToken);
+        if (user is null)
+        {
+            Response.Cookies.Delete(
+                sessionOptions.Value.CookieName,
+                CreateSessionDeleteCookieOptions());
+            return Unauthorized();
+        }
+
+        return Ok(user);
+    }
+
+    [HttpPost("logout")]
+    public async Task<IActionResult> LogoutAsync(
+        [FromServices] ISessionsRepository sessions,
+        [FromServices] IOptions<BffSessionOptions> sessionOptions,
+        CancellationToken cancellationToken)
+    {
+        if (Request.Cookies.TryGetValue(sessionOptions.Value.CookieName, out var sessionId)
+            && !string.IsNullOrWhiteSpace(sessionId))
+        {
+            await sessions.DeleteAsync(sessionId, cancellationToken);
+        }
+
+        Response.Cookies.Delete(
+            sessionOptions.Value.CookieName,
+            CreateSessionDeleteCookieOptions());
+        return NoContent();
     }
 
     [HttpGet("accounts/verify")]
@@ -102,6 +139,17 @@ public class ApiV1Controller : ControllerBase
             Content = response.Content,
             ContentType = response.ContentType ?? "application/json; charset=utf-8",
             StatusCode = (int)response.StatusCode
+        };
+    }
+
+    private static CookieOptions CreateSessionDeleteCookieOptions()
+    {
+        return new CookieOptions
+        {
+            HttpOnly = true,
+            Secure = true,
+            SameSite = SameSiteMode.Lax,
+            Path = "/"
         };
     }
 }

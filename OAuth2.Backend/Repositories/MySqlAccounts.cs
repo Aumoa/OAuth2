@@ -111,7 +111,7 @@ internal class MySqlAccounts(
             return null;
         }
 
-        return new AccountLogin(account.Sub, string.IsNullOrEmpty(account.VerifyCode));
+        return new AccountLogin(id, account.Sub, string.IsNullOrEmpty(account.VerifyCode));
     }
 
     public async Task<bool> VerifyEmailAsync(

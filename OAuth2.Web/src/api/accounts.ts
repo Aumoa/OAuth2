@@ -6,9 +6,21 @@ const pendingEmailVerificationSubKey = 'oauth2.pendingEmailVerificationSub';
 
 export type LoginState = 'authenticated' | 'emailVerificationRequired';
 
+export interface AuthorizationRequest {
+  clientId: string;
+  redirectUri: string;
+  responseType: string;
+  scope: string;
+  state: string;
+  nonce?: string | null;
+  codeChallenge: string;
+  codeChallengeMethod: string;
+}
+
 export interface LoginResponse {
   state: LoginState;
   sub?: string | null;
+  redirectUri?: string | null;
 }
 
 interface EmailVerificationChallenge {
@@ -79,11 +91,16 @@ export class Accounts {
     await router.replace('/verifyEmail');
   }
 
-  static async loginAsync(id: string, password: string): Promise<LoginResponse> {
+  static async loginAsync(
+    id: string,
+    password: string,
+    authorization: AuthorizationRequest,
+  ): Promise<LoginResponse> {
     const response = await fetch('/api/v1/accounts/login', {
       method: 'POST',
       headers: jsonRequestHeaders(),
-      body: JSON.stringify({ id, password }),
+      credentials: 'include',
+      body: JSON.stringify({ id, password, authorization }),
     });
     if (!response.ok) {
       throw new HttpStatusCodeError(response.status, response.statusText);
@@ -98,8 +115,20 @@ export class Accounts {
       Accounts.setPendingEmailVerificationSub(login.sub);
       await router.replace('/verifyEmail');
     } else if (login.state === 'authenticated') {
+      if (!login.redirectUri) {
+        throw new Error('Authorization redirect URI is missing.');
+      }
+
+      const redirectUri = new URL(login.redirectUri, window.location.origin);
+      if (
+        redirectUri.origin !== window.location.origin
+        || redirectUri.pathname !== '/api/v1/auth/redirect'
+      ) {
+        throw new Error('Authorization redirect URI is invalid.');
+      }
+
       Accounts.clearPendingEmailVerificationSub();
-      await router.replace('/');
+      window.location.assign(redirectUri.href);
     } else {
       throw new Error('Unknown login state.');
     }

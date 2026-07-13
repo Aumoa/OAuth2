@@ -1,6 +1,10 @@
 using System.Net.Mail;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Options;
 using OAuth2.DataTransfer;
+using OAuth2.OpenId;
+using OAuth2.Options;
 using OAuth2.Repositories;
 using OAuth2.Services;
 
@@ -8,7 +12,11 @@ namespace OAuth2.Controllers;
 
 [ApiController]
 [Route("api/v1/accounts")]
-public class AccountsController(IAccounts accounts, IEmailVerify emailVerify) : ControllerBase
+public class AccountsController(
+    IAccounts accounts,
+    IAuthorizationCodes authorizationCodes,
+    IEmailVerify emailVerify,
+    IOptions<OAuthOptions> oauthOptions) : ControllerBase
 {
     [HttpGet]
     public async Task<IActionResult> GetAsync(
@@ -62,18 +70,54 @@ public class AccountsController(IAccounts accounts, IEmailVerify emailVerify) : 
             return BadRequest(error);
         }
 
+        if (!InternalOidcAuthorization.TryValidate(
+            form.Authorization,
+            oauthOptions.Value.ClientId,
+            out var normalizedScope,
+            out error))
+        {
+            return BadRequest(error);
+        }
+
         var login = await accounts.LoginAsync(form.Id, form.Password, cancellationToken);
         if (login is null)
         {
             return Unauthorized();
         }
 
+        if (!login.EmailVerified)
+        {
+            return Ok(new LoginResponse
+            {
+                State = LoginStates.EmailVerificationRequired,
+                Sub = login.Sub
+            });
+        }
+
+        var authorization = form.Authorization!;
+        var code = await authorizationCodes.PushAsync(
+            new AuthorizationCodeBody(
+                login.Id,
+                authorization.ClientId!,
+                normalizedScope,
+                authorization.RedirectUri!,
+                authorization.Nonce,
+                authorization.CodeChallenge,
+                authorization.CodeChallengeMethod,
+                DateTimeOffset.UtcNow.ToUnixTimeSeconds()),
+            cancellationToken);
+        var redirectUri = QueryHelpers.AddQueryString(
+            authorization.RedirectUri!,
+            new Dictionary<string, string?>
+            {
+                ["code"] = code,
+                ["state"] = authorization.State
+            });
+
         return Ok(new LoginResponse
         {
-            State = login.EmailVerified
-                ? LoginStates.Authenticated
-                : LoginStates.EmailVerificationRequired,
-            Sub = login.EmailVerified ? null : login.Sub
+            State = LoginStates.Authenticated,
+            RedirectUri = redirectUri
         });
     }
 

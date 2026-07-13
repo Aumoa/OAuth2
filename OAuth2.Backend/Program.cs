@@ -38,6 +38,11 @@ return;
 static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
 {
     s.Configure<MySqlOptions>(config.GetRequiredSection(nameof(MySqlOptions)));
+    s.Configure<RedisOptions>(config.GetRequiredSection(nameof(RedisOptions)));
+    s.AddOptions<OAuthOptions>()
+        .Bind(config.GetRequiredSection("OAuth2"))
+        .Validate(static options => !string.IsNullOrWhiteSpace(options.ClientId), "OAuth2:ClientId is required.")
+        .ValidateOnStart();
     s.AddOptions<SESOptions>()
         .Bind(config.GetRequiredSection(nameof(SESOptions)))
         .ValidateDataAnnotations()
@@ -65,7 +70,10 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
 
     s.AddScoped<PasswordHasher>();
     s.AddScoped<IAccounts, MySqlAccounts>();
+    s.AddScoped<IAuthorizationCodes, RedisAuthorizationCodes>();
     s.AddScoped<IEmailVerify, SESEmailVerify>();
+    s.AddSingleton<RedisConnection>();
+    s.AddHostedService(services => services.GetRequiredService<RedisConnection>());
     return s;
 }
 

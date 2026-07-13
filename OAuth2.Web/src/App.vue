@@ -3,35 +3,32 @@ import { RouterView } from 'vue-router';
 import { theme } from './core/scripts/theme.ts';
 import { useAuthStore } from './auth.ts';
 import { requiredAuthenticated, router } from './router/index.ts';
-import { RouteError } from './router/route-error.ts';
-import { onMounted } from 'vue';
-
-async function initializeAsync() {
-  console.log(router.currentRoute.value.path);
-  if (requiredAuthenticated()) {
-    try {
-      await authStore.initializeAsync();
-    }
-    catch (error) {
-      if (error instanceof RouteError) {
-        const routeError = error as RouteError;
-        if (!requiredAuthenticated(routeError.url)) {
-          router.replace(routeError.url);
-        }
-      }
-      else {
-        router.replace('/error');
-      }
-    }
-  }
-}
-
-const authStore = useAuthStore();
 
 document.documentElement.dataset.theme = theme.value;
 
-onMounted(() => {
-  initializeAsync();
+router.beforeEach(async to => {
+  if (!requiredAuthenticated(to.path)) {
+    return true;
+  }
+
+  const auth = useAuthStore();
+
+  try {
+    await auth.initializeAsync();
+  } catch {
+    return { name: 'error' };
+  }
+
+  if (!auth.isAuthenticated) {
+    return {
+      name: 'login',
+      query: {
+        returnUrl: to.fullPath,
+      },
+    };
+  }
+
+  return true;
 });
 </script>
 

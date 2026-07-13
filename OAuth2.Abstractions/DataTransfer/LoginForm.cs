@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using OAuth2.OpenId;
 
 namespace OAuth2.DataTransfer;
 
@@ -7,6 +8,8 @@ public sealed record LoginForm
     public required string Id { get; init; }
 
     public required string Password { get; init; }
+
+    public OidcAuthorizationRequest? Authorization { get; init; }
 
     public bool Verify([NotNullWhen(false)] out string? error)
     {

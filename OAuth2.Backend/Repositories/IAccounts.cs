@@ -4,7 +4,7 @@ namespace OAuth2.Repositories;
 
 public sealed record AccountRegistration(string Sub, string VerifyCode);
 
-public sealed record AccountLogin(string Sub, bool EmailVerified);
+public sealed record AccountLogin(string Id, string Sub, bool EmailVerified);
 
 public sealed record EmailVerificationDelivery(string Sub, string VerifyCode, string Email);
 

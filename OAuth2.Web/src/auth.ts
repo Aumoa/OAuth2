@@ -1,69 +1,97 @@
 import { defineStore } from 'pinia';
-import { ref, computed } from 'vue';
-import { RouteError } from './router/route-error';
+import { computed, ref } from 'vue';
+import { HttpStatusCodeError } from './core/api/HttpStatusCodeError';
 
-export type AuthStatus = 'checking' | 'authenticated' | 'unauthenticated' | 'error';
+export type AuthStatus =
+  | 'checking'
+  | 'authenticated'
+  | 'unauthenticated'
+  | 'error';
 
 export interface User {
   id: string;
   sub: string;
   email: string;
   profile: string;
-};
+}
 
 export const useAuthStore = defineStore('auth', () => {
-  const status = ref<
-    'checking' | 'authenticated' | 'unauthenticated' | 'error'
-  >('checking');
-
+  const status = ref<AuthStatus>('checking');
   const user = ref<User | null>(null);
+
+  let initializationPromise: Promise<void> | null = null;
 
   const isAuthenticated = computed(
     () => status.value === 'authenticated',
   );
 
-  async function initializeAsync() {
-    status.value = 'checking'
+  function setUnauthenticated(): void {
+    user.value = null;
+    status.value = 'unauthenticated';
+  }
 
+  async function loadSessionAsync(): Promise<void> {
     try {
-      console.log('Fetching session...');      
       const response = await fetch('/api/v1/session', {
         credentials: 'include',
+        headers: {
+          Accept: 'application/json',
+        },
       });
 
       if (response.status === 401) {
-        user.value = null;
-        status.value = 'unauthenticated';
-        console.log('Session request returned 401 Unauthorized. User is unauthenticated.');
-        throw new RouteError('/login');
+        setUnauthenticated();
+        return;
       }
 
       if (!response.ok) {
-        throw new Error(`Session request failed: ${response.status}`);
+        throw new HttpStatusCodeError(
+          response.status,
+          response.statusText,
+        );
       }
 
-      user.value = await response.json();
+      user.value = await response.json() as User;
       status.value = 'authenticated';
     } catch (error) {
-      if (error instanceof RouteError) {
-        throw error;
-      }
-
-      console.error(`Error occurred while fetching session: ${error}`);
       user.value = null;
       status.value = 'error';
       throw error;
     }
   }
 
-  async function logoutAsync() {
-    await fetch('/api/v1/logout', {
+  function initializeAsync(force = false): Promise<void> {
+    if (!force && status.value !== 'checking') {
+      return Promise.resolve();
+    }
+
+    if (initializationPromise) {
+      return initializationPromise;
+    }
+
+    status.value = 'checking';
+
+    initializationPromise = loadSessionAsync().finally(() => {
+      initializationPromise = null;
+    });
+
+    return initializationPromise;
+  }
+
+  async function logoutAsync(): Promise<void> {
+    const response = await fetch('/api/v1/logout', {
       method: 'POST',
       credentials: 'include',
     });
 
-    user.value = null;
-    status.value = 'unauthenticated';
+    if (!response.ok) {
+      throw new HttpStatusCodeError(
+        response.status,
+        response.statusText,
+      );
+    }
+
+    setUnauthenticated();
   }
 
   return {

@@ -1,22 +1,57 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute } from 'vue-router';
 import { router } from '../router/index.ts';
 import UnauthenticatedFormLayout from '../components/layout/UnauthenticatedFormLayout.vue';
 import { HttpStatusCodeError } from '../core/api/HttpStatusCodeError.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
-import { Accounts } from '../api/accounts.ts';
+import { Accounts, type AuthorizationRequest } from '../api/accounts.ts';
 import Expander from '../core/components/Expander.vue';
 
 type State = 'id' | 'password';
 
 const { t } = useI18n({ useScope: 'global' });
+const route = useRoute();
 const state = ref<State>('id');
 const id = ref<string>('');
 const password = ref<string>('');
 const requesting = ref(false);
 const idInput = ref<InstanceType<typeof FloatingInput> | null>(null);
 const passwordInput = ref<InstanceType<typeof FloatingInput> | null>(null);
+
+const authorization = computed<AuthorizationRequest | null>(() => {
+  const clientId = queryValue('client_id');
+  const redirectUri = queryValue('redirect_uri');
+  const responseType = queryValue('response_type');
+  const scope = queryValue('scope');
+  const authorizationState = queryValue('state');
+  const codeChallenge = queryValue('code_challenge');
+  const codeChallengeMethod = queryValue('code_challenge_method');
+
+  if (
+    !clientId
+    || !redirectUri
+    || !responseType
+    || !scope
+    || !authorizationState
+    || !codeChallenge
+    || !codeChallengeMethod
+  ) {
+    return null;
+  }
+
+  return {
+    clientId,
+    redirectUri,
+    responseType,
+    scope,
+    state: authorizationState,
+    nonce: queryValue('nonce'),
+    codeChallenge,
+    codeChallengeMethod,
+  };
+});
 
 const visibility = {
   password: computed(() => state.value === 'password'),
@@ -45,8 +80,13 @@ function register() {
   }
 }
 
+function queryValue(name: string): string | null {
+  const value = route.query[name];
+  return typeof value === 'string' ? value : null;
+}
+
 async function continueAsync() {
-  if (requesting.value) {
+  if (requesting.value || authorization.value === null) {
     return;
   }
 
@@ -82,7 +122,7 @@ async function continueAsync() {
 
       requesting.value = true;
       try {
-        await Accounts.loginAsync(id.value, password.value);
+        await Accounts.loginAsync(id.value, password.value, authorization.value);
       } catch (error) {
         if (error instanceof HttpStatusCodeError && error.status === 401) {
           passwordInput.value?.notifyError(t('app.login.errors.invalidPassword'));
@@ -95,6 +135,12 @@ async function continueAsync() {
       break;
   }
 }
+
+onMounted(() => {
+  if (authorization.value === null) {
+    window.location.replace('/api/v1/auth/login');
+  }
+});
 </script>
 
 <style lang="css">

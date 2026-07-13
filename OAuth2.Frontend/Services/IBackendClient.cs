@@ -8,6 +8,12 @@ public sealed record BackendResponse(
     string? Content,
     string? ContentType);
 
+public sealed record BackendResponse<T>(
+    HttpStatusCode StatusCode,
+    T? Value,
+    string? Content,
+    string? ContentType);
+
 public interface IBackendClient
 {
     Task<bool> VerifyAccountIdAsync(string id, CancellationToken cancellationToken = default);
@@ -30,8 +36,7 @@ public interface IBackendClient
         string? acceptLanguage,
         CancellationToken cancellationToken = default);
 
-    Task<BackendResponse> VerifyChallengeAsync(
-        string code,
-        string? state,
+    Task<BackendResponse<SessionUser>> ExchangeAuthorizationCodeAsync(
+        AuthorizationCodeExchange exchange,
         CancellationToken cancellationToken = default);
 }

@@ -1,10 +1,13 @@
 using System.Net;
+using System.Text.Json;
 using OAuth2.DataTransfer;
 
 namespace OAuth2.Services;
 
 internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 {
+    private static readonly JsonSerializerOptions s_JsonOptions = new(JsonSerializerDefaults.Web);
+
     public async Task<bool> VerifyAccountIdAsync(string id, CancellationToken cancellationToken = default)
     {
         using var response = await http.GetAsync(
@@ -73,30 +76,26 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
-    public Task<BackendResponse> VerifyChallengeAsync(
-        string code,
-        string? state,
+    public async Task<BackendResponse<SessionUser>> ExchangeAuthorizationCodeAsync(
+        AuthorizationCodeExchange exchange,
         CancellationToken cancellationToken = default)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(code);
+        ArgumentNullException.ThrowIfNull(exchange);
 
-        code = $"code={Uri.EscapeDataString(code)}";
-        state = state == null ? "" : $"&state={Uri.EscapeDataString(state)}";
-        return GetAsync($"/api/v1/challenges?{code}{state}", null, cancellationToken);
-    }
-
-    private async Task<BackendResponse> GetAsync(
-        string requestUri,
-        string? acceptLanguage,
-        CancellationToken cancellationToken)
-    {
-        using var response = await http.GetAsync(requestUri, cancellationToken);
+        using var response = await http.PostAsJsonAsync(
+            "/api/v1/challenges/exchange",
+            exchange,
+            cancellationToken);
         var content = response.Content.Headers.ContentLength == 0
             ? null
             : await response.Content.ReadAsStringAsync(cancellationToken);
+        var value = response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(content)
+            ? JsonSerializer.Deserialize<SessionUser>(content, s_JsonOptions)
+            : null;
 
-        return new BackendResponse(
+        return new BackendResponse<SessionUser>(
             response.StatusCode,
+            value,
             content,
             response.Content.Headers.ContentType?.ToString());
     }
