@@ -94,18 +94,6 @@
   initial-value: rgba(255, 255, 255, 0.92);
 }
 
-@property --sidebar-gradient-start {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #1e3a8a;
-}
-
-@property --sidebar-gradient-end {
-  syntax: '<color>';
-  inherits: true;
-  initial-value: #065f46;
-}
-
 @property --login-gradient-start {
   syntax: '<color>';
   inherits: true;
@@ -153,12 +141,6 @@
   --accent-bg: color-mix(in srgb, var(--accent) 10%, transparent);
   --accent-border: var(--focus-ring);
   --social-bg: color-mix(in srgb, var(--surface-muted) 50%, transparent);
-  --sidebar-gradient:
-    linear-gradient(
-      180deg,
-      var(--sidebar-gradient-start) 0%,
-      var(--sidebar-gradient-end) 70%
-    );
   --login-bg:
     linear-gradient(135deg, var(--login-gradient-start) 0%, var(--login-gradient-end) 100%);
   --shadow-sm: 0 1px 2px var(--shadow-sm-color);
@@ -197,8 +179,6 @@
     --success 0.5s ease-in-out,
     --focus-ring 0.5s ease-in-out,
     --topbar-bg 0.5s ease-in-out,
-    --sidebar-gradient-start 0.5s ease-in-out,
-    --sidebar-gradient-end 0.5s ease-in-out,
     --login-gradient-start 0.5s ease-in-out,
     --login-gradient-end 0.5s ease-in-out,
     --page-gradient-primary 0.5s ease-in-out,
@@ -227,8 +207,6 @@
   --success: #86efac;
   --focus-ring: rgba(94, 234, 212, 0.32);
   --topbar-bg: rgba(23, 27, 26, 0.92);
-  --sidebar-gradient-start: #172554;
-  --sidebar-gradient-end: #064e3b;
   --login-gradient-start: #172554;
   --login-gradient-end: #064e3b;
   --page-gradient-primary: rgba(129, 216, 195, 0.12);
