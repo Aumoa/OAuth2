@@ -5,6 +5,7 @@ using Amazon.SimpleEmail.Model;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Localization;
 using Microsoft.Extensions.Options;
+using OAuth2.Localizational;
 using OAuth2.Options;
 
 namespace OAuth2.Services;
@@ -35,15 +36,15 @@ internal sealed class SESEmailVerify(
                 ["code"] = verifyCode
             });
 
-        var subject = localizer["SEND_EMAILVERIFY_SUBJECT", settings.SenderName].Value;
-        var heading = localizer["SEND_EMAILVERIFY_BODY_HTML_HEAD"].Value;
-        var message = localizer["SEND_EMAILVERIFY_BODY_HTML_MESSAGE"].Value;
-        var hint = localizer[
+        var subject = Localize("SEND_EMAILVERIFY_SUBJECT", settings.SenderName);
+        var heading = Localize("SEND_EMAILVERIFY_BODY_HTML_HEAD");
+        var message = Localize("SEND_EMAILVERIFY_BODY_HTML_MESSAGE");
+        var hint = Localize(
             "SEND_EMAILVERIFY_BODY_HTML_HINT_MESSAGE",
-            settings.VerificationCodeValidMinutes].Value;
-        var buttonText = localizer["SEND_EMAILVERIFY_BODY_HTML_BUTTON"].Value;
-        var copyInstruction = localizer["SEND_EMAILVERIFY_BODY_HTML_COPY_INSTRUCTION"].Value;
-        var ignoreMessage = localizer["SEND_EMAILVERIFY_BODY_HTML_IGNORE_MESSAGE"].Value;
+            settings.VerificationCodeValidMinutes);
+        var buttonText = Localize("SEND_EMAILVERIFY_BODY_HTML_BUTTON");
+        var copyInstruction = Localize("SEND_EMAILVERIFY_BODY_HTML_COPY_INSTRUCTION");
+        var ignoreMessage = Localize("SEND_EMAILVERIFY_BODY_HTML_IGNORE_MESSAGE");
 
         var request = new SendEmailRequest
         {
@@ -77,6 +78,21 @@ internal sealed class SESEmailVerify(
         };
 
         await client.SendEmailAsync(request, cancellationToken);
+    }
+
+    private string Localize(string name, params object[] arguments)
+    {
+        var localized = arguments.Length == 0
+            ? localizer[name]
+            : localizer[name, arguments];
+        if (localized.ResourceNotFound)
+        {
+            throw new InvalidOperationException(
+                $"Email localization resource '{name}' was not found for culture " +
+                $"'{System.Globalization.CultureInfo.CurrentUICulture.Name}'.");
+        }
+
+        return localized.Value;
     }
 
     private static string CreateSource(SESOptions settings)

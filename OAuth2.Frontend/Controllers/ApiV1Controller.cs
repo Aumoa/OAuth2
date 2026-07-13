@@ -37,11 +37,71 @@ public class ApiV1Controller : ControllerBase
             return BadRequest(error);
         }
 
-        var statusCode = await backend.RegisterAccountAsync(
+        var response = await backend.RegisterAccountAsync(
             form,
             Request.Headers.AcceptLanguage.ToString(),
             cancellationToken);
+        return FromBackend(response);
+    }
 
-        return StatusCode((int)statusCode);
+    [HttpPost("accounts/login")]
+    public async Task<IActionResult> LoginAsync(
+        [FromServices] IBackendClient backend,
+        [FromBody] LoginForm form,
+        CancellationToken cancellationToken)
+    {
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        return FromBackend(await backend.LoginAsync(form, cancellationToken));
+    }
+
+    [HttpPost("accounts/email/verify")]
+    public async Task<IActionResult> VerifyEmailAsync(
+        [FromServices] IBackendClient backend,
+        [FromBody] EmailVerificationForm form,
+        CancellationToken cancellationToken)
+    {
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        return FromBackend(await backend.VerifyEmailAsync(form, cancellationToken));
+    }
+
+    [HttpPost("accounts/email/resend")]
+    public async Task<IActionResult> ResendEmailVerificationAsync(
+        [FromServices] IBackendClient backend,
+        [FromBody] EmailVerificationResendForm form,
+        CancellationToken cancellationToken)
+    {
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        var response = await backend.ResendEmailVerificationAsync(
+            form,
+            Request.Headers.AcceptLanguage.ToString(),
+            cancellationToken);
+        return FromBackend(response);
+    }
+
+    private IActionResult FromBackend(BackendResponse response)
+    {
+        if (string.IsNullOrEmpty(response.Content))
+        {
+            return StatusCode((int)response.StatusCode);
+        }
+
+        return new ContentResult
+        {
+            Content = response.Content,
+            ContentType = response.ContentType ?? "application/json; charset=utf-8",
+            StatusCode = (int)response.StatusCode
+        };
     }
 }

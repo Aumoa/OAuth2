@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import { Accounts, RegisterForm } from '../api/accounts.ts';
-import Expander from '../components/common/Expander.vue';
+import Expander from '../core/components/Expander.vue';
 import UnauthenticatedFormLayout from '../components/layout/UnauthenticatedFormLayout.vue';
 import { HttpStatusCodeError } from '../core/api/HttpStatusCodeError.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { computed, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 
 type State = 'id' | 'password' | 'properties';
 
+const { t } = useI18n({ useScope: 'global' });
 const state = ref<State>('id');
 const id = ref<string>('');
 const password = ref<string>('');
@@ -35,11 +37,11 @@ const readonly = {
 const description = computed(() => {
   switch (state.value) {
     case 'id':
-      return '사용할 ID를 입력하세요.';
+      return t('app.register.descriptions.id');
     case 'password':
-      return '사용할 비밀번호를 입력하세요.';
+      return t('app.register.descriptions.password');
     case 'properties':
-      return '이름과 이메일을 입력하세요.';
+      return t('app.register.descriptions.properties');
   }
 });
 
@@ -51,7 +53,7 @@ async function continueAsync() {
   switch (state.value) {
     case 'id':
       if (id.value.trim() === '') {
-        idInput.value?.notifyError('ID는 비어있을 수 없습니다.');
+        idInput.value?.notifyError(t('app.register.errors.idRequired'));
         return;
       }
 
@@ -59,11 +61,11 @@ async function continueAsync() {
       try {
         const exists = await Accounts.verifyAsync(id.value);
         if (exists) {
-          idInput.value?.notifyError('ID가 이미 존재합니다.');
+          idInput.value?.notifyError(t('app.register.errors.idExists'));
           return;
         }
       } catch {
-        idInput.value?.notifyError('ID 중복 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+        idInput.value?.notifyError(t('app.register.errors.idCheckFailed'));
         return;
       } finally {
         requesting.value = false;
@@ -74,12 +76,12 @@ async function continueAsync() {
       break;
     case 'password':
       if (password.value.trim() === '') {
-        passwordInput.value?.notifyError('암호는 비어있을 수 없습니다.');
+        passwordInput.value?.notifyError(t('app.register.errors.passwordRequired'));
         return;
       }
 
       if (password.value !== passwordRepeat.value) {
-        passwordRepeatInput.value?.notifyError('암호가 일치하지 않습니다.');
+        passwordRepeatInput.value?.notifyError(t('app.register.errors.passwordMismatch'));
         return;
       }
       
@@ -88,18 +90,18 @@ async function continueAsync() {
       break;
     case 'properties':
       if (fullname.value.trim() === '') {
-        fullnameInput.value?.notifyError('전체 이름을 입력하세요.');
+        fullnameInput.value?.notifyError(t('app.register.errors.fullNameRequired'));
         return;
       }
 
       if (email.value.trim() === '') {
-        emailInput.value?.notifyError('이메일을 입력하세요.');
+        emailInput.value?.notifyError(t('app.register.errors.emailRequired'));
         return;
       }
 
       const emailPattern = /^[^@\s]+@[^@\s]+\.[^@\s]+$/i;
       if (!emailPattern.test(email.value)) {
-        emailInput.value?.notifyError('올바르지 않은 이메일입니다.');
+        emailInput.value?.notifyError(t('app.register.errors.invalidEmail'));
         return;
       }
       
@@ -108,9 +110,9 @@ async function continueAsync() {
         await Accounts.registerAsync(new RegisterForm(id.value, password.value, fullname.value, email.value));
       } catch (error) {
         if (error instanceof HttpStatusCodeError && error.status === 409) {
-          emailInput.value?.notifyError('이미 사용 중인 ID 또는 이메일입니다.');
+          emailInput.value?.notifyError(t('app.register.errors.conflict'));
         } else {
-          emailInput.value?.notifyError('계정 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.');
+          emailInput.value?.notifyError(t('app.register.errors.failed'));
         }
       } finally {
         requesting.value = false;
@@ -175,27 +177,27 @@ function previous() {
 </style>
 
 <template>
-  <UnauthenticatedFormLayout title="계정 등록" :description="description">
+  <UnauthenticatedFormLayout :title="t('app.register.title')" :description="description">
     <form class="content" @submit.prevent="continueAsync">
-      <FloatingInput ref="idInput" :readonly="readonly.id.value" id="id" label="ID" autocomplete="username" v-model="id" />
+      <FloatingInput ref="idInput" :readonly="readonly.id.value" id="id" :label="t('app.common.fields.id')" autocomplete="username" v-model="id" />
       <Expander :expand="visibility.password.value">
         <div class="content">
-          <FloatingInput ref="passwordInput" type="password" id="password" label="암호" v-model="password" />
-          <FloatingInput ref="passwordRepeatInput" type="password" id="passwordRepeat" label="암호 확인" v-model="passwordRepeat" />
+          <FloatingInput ref="passwordInput" type="password" id="password" :label="t('app.common.fields.password')" v-model="password" />
+          <FloatingInput ref="passwordRepeatInput" type="password" id="passwordRepeat" :label="t('app.common.fields.passwordConfirmation')" v-model="passwordRepeat" />
         </div>
       </Expander>
       <Expander :expand="visibility.properties.value">
         <div class="content">
-          <FloatingInput ref="fullnameInput" type="text" id="fullname" label="전체 이름" v-model="fullname" />
-          <FloatingInput ref="emailInput" type="text" id="email" label="이메일" v-model="email" />
+          <FloatingInput ref="fullnameInput" type="text" id="fullname" :label="t('app.common.fields.fullName')" v-model="fullname" />
+          <FloatingInput ref="emailInput" type="text" id="email" :label="t('app.common.fields.email')" v-model="email" />
         </div>
       </Expander>
       <div class="button-container">
         <button type="submit" class="app-button accent-button" :disabled="requesting">
-          계속
+          {{ t('app.common.actions.continue') }}
         </button>
         <button v-if="visibility.previous.value" type="button" class="app-button" :disabled="requesting" @click="previous">
-          뒤로
+          {{ t('app.common.actions.back') }}
         </button>
       </div>
     </form>

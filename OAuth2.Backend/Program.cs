@@ -1,8 +1,8 @@
 using Amazon;
 using Amazon.SimpleEmail;
-using Microsoft.AspNetCore.Localization;
 using Microsoft.Extensions.Options;
 using OAuth2;
+using OAuth2.Localizational;
 using OAuth2.Options;
 using OAuth2.Repositories;
 using OAuth2.Services;
@@ -16,6 +16,8 @@ Configure(builder.Services, builder.Configuration);
 builder.Services.AddControllers();
 
 var app = builder.Build();
+
+ValidateEmailLocalization(app.Services);
 
 app.UseRequestLocalization();
 app.UseHttpsRedirection();
@@ -41,10 +43,12 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
         .ValidateDataAnnotations()
         .ValidateOnStart();
 
-    s.AddLocalization(options => options.ResourcesPath = "Localizational");
+    // The marker type namespace matches the embedded resource base name:
+    // OAuth2.Localizational.Strings.
+    s.AddLocalization();
     s.Configure<RequestLocalizationOptions>(options =>
     {
-        string[] supportedCultures = ["en", "ko"];
+        string[] supportedCultures = ["en", "ko", "es"];
         options.SetDefaultCulture("en")
             .AddSupportedCultures(supportedCultures)
             .AddSupportedUICultures(supportedCultures);
@@ -54,6 +58,8 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     {
         var sesOptions = services.GetRequiredService<IOptions<SESOptions>>().Value;
         return new AmazonSimpleEmailServiceClient(
+            sesOptions.AccessKey,
+            sesOptions.SecretKey,
             RegionEndpoint.GetBySystemName(sesOptions.Region));
     });
 
@@ -69,4 +75,29 @@ async ValueTask StartMigrationAsync(CancellationToken cancellationToken)
     var scripts = new Scripts();
     var logger = new LoggerTextWriter(app.Logger);
     await Executor.RunAsync(options.Value.ConnectionString, options.Value.Database, [.. scripts.GetScripts()], logger, cancellationToken);
+}
+
+static void ValidateEmailLocalization(IServiceProvider services)
+{
+    var localizer = services.GetRequiredService<Microsoft.Extensions.Localization.IStringLocalizer<Strings>>();
+    var originalCulture = System.Globalization.CultureInfo.CurrentUICulture;
+
+    try
+    {
+        foreach (var cultureName in new[] { "en", "ko", "es" })
+        {
+            System.Globalization.CultureInfo.CurrentUICulture =
+                System.Globalization.CultureInfo.GetCultureInfo(cultureName);
+            var heading = localizer["SEND_EMAILVERIFY_BODY_HTML_HEAD"];
+            if (heading.ResourceNotFound)
+            {
+                throw new InvalidOperationException(
+                    $"Email localization resource was not found for culture '{cultureName}'.");
+            }
+        }
+    }
+    finally
+    {
+        System.Globalization.CultureInfo.CurrentUICulture = originalCulture;
+    }
 }

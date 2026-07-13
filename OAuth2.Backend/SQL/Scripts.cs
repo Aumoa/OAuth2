@@ -19,6 +19,7 @@ public class Scripts : IScripts
         yield return new AddClientDefaultScopes();
         yield return new AddOAuthGrant();
         yield return new AddAccountUpdatedAt();
+        yield return new AddEmailVerificationExpiration();
     }
 
     private class Init : IScript
@@ -345,6 +346,27 @@ ALTER TABLE `account`
 ALTER TABLE `account`
     DROP INDEX `IDX__account__updated_at`,
     DROP COLUMN `updated_at`;
+";
+    }
+
+    private class AddEmailVerificationExpiration : IScript
+    {
+        public string Name => "Add_email_verification_expiration";
+
+        public int InstalledRank => 13;
+
+        public string UpSql => @"
+ALTER TABLE `account`
+    ADD COLUMN `verify_code_expires_at` DATETIME NULL AFTER `verify_code`;
+
+UPDATE `account`
+SET `verify_code_expires_at` = DATE_ADD(UTC_TIMESTAMP(), INTERVAL 30 MINUTE)
+WHERE `verify_code` IS NOT NULL;
+";
+
+        public string DownSql => @"
+ALTER TABLE `account`
+    DROP COLUMN `verify_code_expires_at`;
 ";
     }
 }

@@ -9,6 +9,10 @@ public record SESOptions
 
     public string SenderName { get; init; } = "OAuth2";
 
+    public required string AccessKey { get; init; }
+
+    public required string SecretKey { get; init; }
+
     [Required]
     public string Region { get; init; } = "ap-northeast-2";
 

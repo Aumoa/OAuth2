@@ -1,4 +1,4 @@
-namespace OAuth2;
+namespace OAuth2.Localizational;
 
 /// <summary>
 /// Marker type used to locate shared localization resources.

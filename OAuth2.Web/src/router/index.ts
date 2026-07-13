@@ -1,4 +1,4 @@
-import { createRouter, createWebHistory } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router';
 
 export const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -39,10 +39,11 @@ export const router = createRouter({
 const publicRoutePaths = [
   '/login',
   '/register',
-  '/error'
+  '/verifyEmail',
+  '/error',
 ];
 
-export function requiredAuthenticated(route: string) {
+export function requiredAuthenticated(route?: string): boolean {
   route = route ?? router.currentRoute.value.path;
-  return publicRoutePaths.find(s => route.startsWith(s));
-};
+  return !publicRoutePaths.some(s => route.startsWith(s));
+}

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="SEND_EMAILVERIFY_BODY_HTML_HEAD" xml:space="preserve">
+    <value>Verifica tu dirección de correo electrónico</value>
+  </data>
+  <data name="SEND_EMAILVERIFY_BODY_HTML_HINT_MESSAGE" xml:space="preserve">
+    <value>Este enlace de verificación es válido durante {0} minutos.</value>
+  </data>
+  <data name="SEND_EMAILVERIFY_BODY_HTML_MESSAGE" xml:space="preserve">
+    <value>Para terminar de crear tu cuenta, selecciona el botón de abajo y verifica tu dirección de correo electrónico.</value>
+  </data>
+  <data name="SEND_EMAILVERIFY_BODY_HTML_BUTTON" xml:space="preserve">
+    <value>Verificar correo electrónico</value>
+  </data>
+  <data name="SEND_EMAILVERIFY_BODY_HTML_COPY_INSTRUCTION" xml:space="preserve">
+    <value>Si el botón no funciona, copia y pega la siguiente dirección en tu navegador.</value>
+  </data>
+  <data name="SEND_EMAILVERIFY_BODY_HTML_IGNORE_MESSAGE" xml:space="preserve">
+    <value>Si no solicitaste este correo, puedes ignorarlo de forma segura.</value>
+  </data>
+  <data name="SEND_EMAILVERIFY_SUBJECT" xml:space="preserve">
+    <value>Verificación de correo electrónico de {0}</value>
+  </data>
+</root>
