@@ -4,14 +4,14 @@ namespace OAuth2.Services;
 
 public interface IBackendClient
 {
-    Task<bool> VerifyAccountIdAsync(string id, CancellationToken cancellationToken = default);
+    Task<bool> AccountExistsAsync(string id, CancellationToken cancellationToken = default);
 
     Task<BackendResponse> RegisterAccountAsync(
         RegisterForm form,
         string? acceptLanguage,
         CancellationToken cancellationToken = default);
 
-    Task<BackendResponse> LoginAsync(
+    Task<BackendResponse> CreateAuthorizationCodeAsync(
         LoginForm form,
         CancellationToken cancellationToken = default);
 
@@ -19,7 +19,7 @@ public interface IBackendClient
         EmailVerificationForm form,
         CancellationToken cancellationToken = default);
 
-    Task<BackendResponse> ResendEmailVerificationAsync(
+    Task<BackendResponse> CreateEmailVerificationDeliveryAsync(
         EmailVerificationResendForm form,
         string? acceptLanguage,
         CancellationToken cancellationToken = default);

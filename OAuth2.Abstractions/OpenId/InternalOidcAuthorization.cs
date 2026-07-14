@@ -6,7 +6,7 @@ public static class InternalOidcAuthorization
 {
     public const string DefaultClientId = "oauth2";
     public const string RedirectUri = "/";
-    public const string CallbackPath = "/api/v1/auth/redirect";
+    public const string CallbackPath = "/api/v1/auth/callback";
     public const string Scope = OidcScopePolicy.AllScope;
 
     public static bool TryValidate(

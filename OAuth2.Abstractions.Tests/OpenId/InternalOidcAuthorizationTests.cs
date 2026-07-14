@@ -23,7 +23,7 @@ public sealed class InternalOidcAuthorizationTests
     [Theory]
     [InlineData("https://localhost:7140/")]
     [InlineData("//")]
-    [InlineData("/api/v1/auth/redirect")]
+    [InlineData("/api/v1/auth/callback")]
     public void TryValidate_RejectsRedirectOtherThanExactRelativePath(string redirectUri)
     {
         var request = CreateRequest() with

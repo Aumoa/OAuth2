@@ -8,11 +8,14 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 {
     private static readonly JsonSerializerOptions s_JsonOptions = new(JsonSerializerDefaults.Web);
 
-    public async Task<bool> VerifyAccountIdAsync(string id, CancellationToken cancellationToken = default)
+    public async Task<bool> AccountExistsAsync(string id, CancellationToken cancellationToken = default)
     {
-        using var response = await http.GetAsync(
-            $"/api/v1/accounts?id={Uri.EscapeDataString(id)}",
-            cancellationToken);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Head,
+            $"/api/v1/accounts/{Uri.EscapeDataString(id)}");
+        using var response = await http.SendAsync(request, cancellationToken);
         if (response.StatusCode == HttpStatusCode.NotFound)
         {
             return false;
@@ -32,10 +35,15 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             throw new ArgumentException("Form verification failed.", nameof(form));
         }
 
-        return PostAsync("/api/v1/accounts", form, acceptLanguage, cancellationToken);
+        return SendAsync(
+            HttpMethod.Post,
+            "/api/v1/accounts",
+            form,
+            acceptLanguage,
+            cancellationToken);
     }
 
-    public Task<BackendResponse> LoginAsync(
+    public Task<BackendResponse> CreateAuthorizationCodeAsync(
         LoginForm form,
         CancellationToken cancellationToken = default)
     {
@@ -44,7 +52,12 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             throw new ArgumentException("Form verification failed.", nameof(form));
         }
 
-        return PostAsync("/api/v1/accounts/login", form, null, cancellationToken);
+        return SendAsync(
+            HttpMethod.Post,
+            "/api/v1/authorization-codes",
+            form,
+            null,
+            cancellationToken);
     }
 
     public Task<BackendResponse> VerifyEmailAsync(
@@ -56,10 +69,15 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             throw new ArgumentException("Form verification failed.", nameof(form));
         }
 
-        return PostAsync("/api/v1/accounts/email/verify", form, null, cancellationToken);
+        return SendAsync(
+            HttpMethod.Put,
+            "/api/v1/email-verifications",
+            form,
+            null,
+            cancellationToken);
     }
 
-    public Task<BackendResponse> ResendEmailVerificationAsync(
+    public Task<BackendResponse> CreateEmailVerificationDeliveryAsync(
         EmailVerificationResendForm form,
         string? acceptLanguage,
         CancellationToken cancellationToken = default)
@@ -69,8 +87,9 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             throw new ArgumentException("Form verification failed.", nameof(form));
         }
 
-        return PostAsync(
-            "/api/v1/accounts/email/resend",
+        return SendAsync(
+            HttpMethod.Post,
+            "/api/v1/email-verification-deliveries",
             form,
             acceptLanguage,
             cancellationToken);
@@ -83,7 +102,7 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         ArgumentNullException.ThrowIfNull(exchange);
 
         using var response = await http.PostAsJsonAsync(
-            "/api/v1/challenges/exchange",
+            "/api/v1/authorization-grants",
             exchange,
             cancellationToken);
         var content = response.Content.Headers.ContentLength == 0
@@ -100,13 +119,14 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             response.Content.Headers.ContentType?.ToString());
     }
 
-    private async Task<BackendResponse> PostAsync<T>(
+    private async Task<BackendResponse> SendAsync<T>(
+        HttpMethod method,
         string requestUri,
         T body,
         string? acceptLanguage,
         CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(HttpMethod.Post, requestUri)
+        using var request = new HttpRequestMessage(method, requestUri)
         {
             Content = JsonContent.Create(body)
         };

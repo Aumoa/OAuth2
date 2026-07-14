@@ -15,7 +15,7 @@ function redirectAuthorizationResponse(): boolean {
     return false;
   }
 
-  const callbackUri = new URL('/api/v1/auth/redirect', window.location.origin);
+  const callbackUri = new URL('/api/v1/auth/callback', window.location.origin);
   callbackUri.searchParams.set('code', code);
   callbackUri.searchParams.set('state', state);
   window.location.replace(callbackUri.href);

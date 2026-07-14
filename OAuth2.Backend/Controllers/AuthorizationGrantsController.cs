@@ -9,15 +9,15 @@ using OAuth2.Services;
 namespace OAuth2.Controllers;
 
 [ApiController]
-[Route("api/v1/challenges")]
-public class ChallengesController(
+[Route("api/v1/authorization-grants")]
+public sealed class AuthorizationGrantsController(
     IAuthorizationCodes authorizationCodes,
     IAccounts accounts,
     IAccountClaims accountClaims,
     IOptions<OAuthOptions> oauthOptions) : ControllerBase
 {
-    [HttpPost("exchange")]
-    public async Task<IActionResult> ExchangeAsync(
+    [HttpPost]
+    public async Task<IActionResult> CreateAsync(
         [FromBody] AuthorizationCodeExchange exchange,
         CancellationToken cancellationToken = default)
     {

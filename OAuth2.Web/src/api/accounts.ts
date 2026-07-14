@@ -61,13 +61,18 @@ export class RegisterForm {
 
 export class Accounts {
   static async verifyAsync(id: string): Promise<boolean> {
-    const response = await fetch(`/api/v1/accounts/verify?id=${encodeURIComponent(id)}`);
+    const response = await fetch(`/api/v1/accounts/${encodeURIComponent(id)}`, {
+      method: 'HEAD',
+    });
+    if (response.status === 404) {
+      return false;
+    }
+
     if (!response.ok) {
       throw new HttpStatusCodeError(response.status, response.statusText);
     }
 
-    const result = await response.json();
-    return result as boolean;
+    return true;
   }
 
   static async registerAsync(form: RegisterForm): Promise<void> {
@@ -96,7 +101,7 @@ export class Accounts {
     password: string,
     authorization: AuthorizationRequest,
   ): Promise<LoginResponse> {
-    const response = await fetch('/api/v1/accounts/login', {
+    const response = await fetch('/api/v1/authorization-codes', {
       method: 'POST',
       headers: jsonRequestHeaders(),
       credentials: 'include',
@@ -139,8 +144,8 @@ export class Accounts {
   }
 
   static async verifyEmailAsync(sub: string, code: string): Promise<void> {
-    const response = await fetch('/api/v1/accounts/email/verify', {
-      method: 'POST',
+    const response = await fetch('/api/v1/email-verifications', {
+      method: 'PUT',
       headers: jsonRequestHeaders(),
       body: JSON.stringify({ sub, code }),
     });
@@ -152,7 +157,7 @@ export class Accounts {
   }
 
   static async resendEmailVerificationAsync(sub: string): Promise<void> {
-    const response = await fetch('/api/v1/accounts/email/resend', {
+    const response = await fetch('/api/v1/email-verification-deliveries', {
       method: 'POST',
       headers: jsonRequestHeaders(),
       body: JSON.stringify({ sub }),
