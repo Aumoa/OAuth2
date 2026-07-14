@@ -6,11 +6,8 @@ import ThemeSelector from '../core/components/ThemeSelector.vue';
 
 <style lang="css">
 .top-layout {
-  position: absolute;
-  left: 0;
-  top: 0;
   width: 100%;
-  height: 50px;
+  height: 100%;
   display: flex;
   flex-direction: row;
   background-color: var(--topbar-bg);
@@ -19,10 +16,11 @@ import ThemeSelector from '../core/components/ThemeSelector.vue';
 }
 
 .title-box {
-  width: 220px;
+  width: var(--sidebar-width);
   display: flex;
   align-content: center;
   border-right: 1px solid var(--border-strong);
+  box-sizing: border-box;
 }
 
 .title {

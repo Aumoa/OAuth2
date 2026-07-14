@@ -1,7 +1,7 @@
 <script setup lang="ts">
 </script>
 
-<style lang="css" scoped>
+<style scoped lang="cs">
 </style>
 
 <template>

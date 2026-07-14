@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { router } from '../router/index.ts';
-import UnauthenticatedFormLayout from '../components/layout/UnauthenticatedFormLayout.vue';
+import UnauthenticatedFormLayout from '../components/UnauthorizedForm.vue/index.js';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { Accounts, type AuthorizationRequest } from '../api/accounts.ts';

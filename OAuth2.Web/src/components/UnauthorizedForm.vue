@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import UnauthenticatedLayout from './UnauthenticatedLayout.vue';
+import UnauthenticatedLayout from './UnauthorizedLayout.vue/index.js';
 
 const props = defineProps<{
   title?: string;

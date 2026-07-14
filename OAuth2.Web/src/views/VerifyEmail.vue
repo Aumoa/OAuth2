@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { Accounts } from '../api/accounts.ts';
 import { router } from '../router/index.ts';
-import UnauthenticatedFormLayout from '../components/layout/UnauthenticatedFormLayout.vue';
+import UnauthenticatedFormLayout from '../components/UnauthorizedForm.vue/index.js';
 
 type VerificationState =
   | 'pending'

@@ -5,11 +5,9 @@ import SidebarMainButton from './SidebarMainButton.vue';
 
 <style lang="css">
 .sidebar {
-  position: absolute;
-  top: 50px;
   border-right: 1px solid var(--border-strong);
-  width: 220px;
-  height: 100vh;
+  width: 100%;
+  height: 100%;
   background: linear-gradient(180deg, var(--surface-muted), var(--surface));
   display: flex;
   flex-direction: column;

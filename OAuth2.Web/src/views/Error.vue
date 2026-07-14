@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import UnauthenticatedLayout from '../components/layout/UnauthenticatedLayout.vue';
+import UnauthorizedLayout from '../layouts/UnauthorizedLayout.vue';
 import Error from '../core/components/Error.vue';
 import { computed } from 'vue';
 import { useRoute } from 'vue-router';
@@ -16,7 +16,7 @@ const message = computed(() => {
 </style>
 
 <template>
-  <UnauthenticatedLayout>
+  <UnauthorizedLayout>
     <Error :message="message" />
-  </UnauthenticatedLayout>
+  </UnauthorizedLayout>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Accounts, RegisterForm } from '../api/accounts.ts';
 import Expander from '../core/components/Expander.vue';
-import UnauthenticatedFormLayout from '../components/layout/UnauthenticatedFormLayout.vue';
+import UnauthenticatedFormLayout from '../components/UnauthorizedForm.vue/index.js';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { computed, ref } from 'vue';
