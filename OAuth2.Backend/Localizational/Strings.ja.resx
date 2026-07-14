@@ -13,24 +13,24 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="SEND_EMAILVERIFY_BODY_HTML_HEAD" xml:space="preserve">
-    <value>Verifica tu dirección de correo electrónico</value>
+    <value>メールアドレスを確認してください</value>
   </data>
   <data name="SEND_EMAILVERIFY_BODY_HTML_HINT_MESSAGE" xml:space="preserve">
-    <value>Este enlace de verificación es válido durante {0} minutos.</value>
+    <value>この確認リンクは{0}分間有効です。</value>
   </data>
   <data name="SEND_EMAILVERIFY_BODY_HTML_MESSAGE" xml:space="preserve">
-    <value>Para terminar de crear tu cuenta, selecciona el botón de abajo y verifica tu dirección de correo electrónico.</value>
+    <value>アカウントの作成を完了するには、下のボタンを選択してメールアドレスを確認してください。</value>
   </data>
   <data name="SEND_EMAILVERIFY_BODY_HTML_BUTTON" xml:space="preserve">
-    <value>Verificar correo electrónico</value>
+    <value>メールアドレスを確認</value>
   </data>
   <data name="SEND_EMAILVERIFY_BODY_HTML_COPY_INSTRUCTION" xml:space="preserve">
-    <value>Si el botón no funciona, copia y pega la siguiente dirección en tu navegador.</value>
+    <value>ボタンが動作しない場合は、以下のアドレスをコピーしてブラウザーに貼り付けてください。</value>
   </data>
   <data name="SEND_EMAILVERIFY_BODY_HTML_IGNORE_MESSAGE" xml:space="preserve">
-    <value>Si no solicitaste este correo, puedes ignorarlo de forma segura.</value>
+    <value>このメールに心当たりがない場合は、無視していただいて問題ありません。</value>
   </data>
   <data name="SEND_EMAILVERIFY_SUBJECT" xml:space="preserve">
-    <value>Verificación de correo electrónico de {0}</value>
+    <value>{0} メールアドレスの確認</value>
   </data>
 </root>

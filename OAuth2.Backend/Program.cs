@@ -53,7 +53,7 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddLocalization();
     s.Configure<RequestLocalizationOptions>(options =>
     {
-        string[] supportedCultures = ["en", "ko", "es"];
+        string[] supportedCultures = ["en", "ko", "ja"];
         options.SetDefaultCulture("en")
             .AddSupportedCultures(supportedCultures)
             .AddSupportedUICultures(supportedCultures);
@@ -92,7 +92,7 @@ static void ValidateEmailLocalization(IServiceProvider services)
 
     try
     {
-        foreach (var cultureName in new[] { "en", "ko", "es" })
+        foreach (var cultureName in new[] { "en", "ko", "ja" })
         {
             System.Globalization.CultureInfo.CurrentUICulture =
                 System.Globalization.CultureInfo.GetCultureInfo(cultureName);

@@ -20,9 +20,9 @@ export const i18n = createI18n({
       ...appMessages.en,
       ...coreMessages.en,
     },
-    es: {
-      ...appMessages.es,
-      ...coreMessages.es,
+    ja: {
+      ...appMessages.ja,
+      ...coreMessages.ja,
     },
   },
 });

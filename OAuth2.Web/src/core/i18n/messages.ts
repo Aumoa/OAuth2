@@ -21,7 +21,7 @@ export const coreMessages = {
         languageNames: {
           ko: '한국어',
           en: '영어',
-          es: '스페인어',
+          ja: '일본어',
         },
       },
       themeSelector: {
@@ -52,7 +52,7 @@ export const coreMessages = {
         languageNames: {
           ko: 'Korean',
           en: 'English',
-          es: 'Spanish',
+          ja: 'Japanese',
         },
       },
       themeSelector: {
@@ -61,34 +61,34 @@ export const coreMessages = {
       },
     },
   },
-  es: {
+  ja: {
     core: {
       dialog: {
-        ariaLabel: 'Cuadro de diálogo',
-        closeLabel: 'Cerrar cuadro de diálogo',
+        ariaLabel: 'ダイアログ',
+        closeLabel: 'ダイアログを閉じる',
       },
       languageSelector: {
-        changeLabel: 'Cambiar idioma',
-        dialogTitle: 'Seleccionar idioma',
-        closeLabel: 'Cerrar selector de idioma',
-        description: 'Elige el idioma que se mostrará en la pantalla.',
-        availableLanguages: 'Idiomas disponibles',
-        searchPlaceholder: 'Buscar idiomas',
-        clearSearch: 'Borrar búsqueda',
-        noResults: 'No se encontraron idiomas.',
-        recommended: 'Recomendado',
-        allLanguages: 'Todos los idiomas',
-        searchResults: 'Resultados de búsqueda',
-        systemDefault: 'Idioma del sistema',
+        changeLabel: '言語を変更',
+        dialogTitle: '言語を選択',
+        closeLabel: '言語選択を閉じる',
+        description: '画面に表示する言語を選択してください。',
+        availableLanguages: '利用可能な言語',
+        searchPlaceholder: '言語を検索',
+        clearSearch: '検索をクリア',
+        noResults: '言語が見つかりません。',
+        recommended: 'おすすめ',
+        allLanguages: 'すべての言語',
+        searchResults: '検索結果',
+        systemDefault: 'システムの言語',
         languageNames: {
-          ko: 'Coreano',
-          en: 'Inglés',
-          es: 'Español',
+          ko: '韓国語',
+          en: '英語',
+          ja: '日本語',
         },
       },
       themeSelector: {
-        useDark: 'Usar tema oscuro',
-        useLight: 'Usar tema claro',
+        useDark: 'ダークテーマを使用',
+        useLight: 'ライトテーマを使用',
       },
     },
   },

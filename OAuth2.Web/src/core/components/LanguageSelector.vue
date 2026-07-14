@@ -37,7 +37,7 @@ const { locale, t } = useI18n({ useScope: 'global' });
 const languages: readonly LanguageOption[] = [
   { code: 'ko', badge: 'KO', nativeName: '한국어' },
   { code: 'en', badge: 'EN', nativeName: 'English' },
-  { code: 'es', badge: 'ES', nativeName: 'Español' },
+  { code: 'ja', badge: 'JA', nativeName: '日本語' },
 ];
 
 const languageResultsId = `language-results-${useId()}`;
