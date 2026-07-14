@@ -10,7 +10,7 @@ import ThemeSelector from '../core/components/ThemeSelector.vue';
   height: 100%;
   display: flex;
   flex-direction: row;
-  background-color: var(--topbar-bg);
+  background-color: color-mix(in srgb, var(--topbar-bg) 50%, transparent);
   box-sizing: border-box;
   border-bottom: 1px solid var(--border-strong);
 }
