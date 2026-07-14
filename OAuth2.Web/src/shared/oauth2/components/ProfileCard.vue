@@ -2,15 +2,8 @@
 import { computed, onBeforeUnmount, onMounted, ref, useId } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Avatar from './Avatar.vue';
+import { oauth2ActionPaths, type OAuth2ActionPath } from '../src/action-paths.ts';
 import { useAuthStore } from '../src/auth.ts';
-
-const props = withDefaults(defineProps<{
-  accountManagementUrl?: string;
-  loginUrl?: string;
-}>(), {
-  accountManagementUrl: '/',
-  loginUrl: '/api/v1/auth/login',
-});
 
 const auth = useAuthStore();
 const { t } = useI18n({ useScope: 'global' });
@@ -18,8 +11,7 @@ const container = ref<HTMLElement | null>(null);
 const trigger = ref<HTMLButtonElement | null>(null);
 const isPinnedOpen = ref(false);
 const isHoverOpen = ref(false);
-const isLoggingOut = ref(false);
-const logoutError = ref<string | null>(null);
+const requestedAction = ref<OAuth2ActionPath | null>(null);
 const copyState = ref<'idle' | 'copied' | 'error'>('idle');
 const panelId = `profile-card-${useId()}`;
 
@@ -49,7 +41,6 @@ const copyLabel = computed(() => {
 
 function toggle(): void {
   isPinnedOpen.value = !isPinnedOpen.value;
-  logoutError.value = null;
 }
 
 function close(): void {
@@ -107,22 +98,13 @@ async function copySubjectAsync(): Promise<void> {
   resetCopyStateLater();
 }
 
-async function logoutAsync(): Promise<void> {
-  if (isLoggingOut.value) {
+function requestAction(path: OAuth2ActionPath): void {
+  if (requestedAction.value !== null) {
     return;
   }
 
-  isLoggingOut.value = true;
-  logoutError.value = null;
-
-  try {
-    await auth.logoutAsync();
-    window.location.replace(props.loginUrl);
-  } catch {
-    logoutError.value = t('oauth2.profileCard.logoutFailed');
-  } finally {
-    isLoggingOut.value = false;
-  }
+  requestedAction.value = path;
+  window.location.replace(path);
 }
 
 onMounted(() => {
@@ -314,15 +296,6 @@ onBeforeUnmount(() => {
   font-size: 20px;
 }
 
-.profile-error {
-  margin: 0;
-  padding: 8px 16px 12px;
-  border-top: 1px solid var(--border);
-  color: var(--danger);
-  font-size: 12px;
-  line-height: 1.4;
-}
-
 .profile-card-panel-enter-active,
 .profile-card-panel-leave-active {
   transition: opacity 0.16s ease, transform 0.16s ease;
@@ -400,25 +373,30 @@ onBeforeUnmount(() => {
         </div>
 
         <nav class="profile-actions" :aria-label="t('oauth2.profileCard.actionsLabel')">
-          <a class="profile-action" :href="props.accountManagementUrl" @click="close">
+          <button
+            type="button"
+            class="profile-action"
+            :disabled="requestedAction !== null"
+            @click="requestAction(oauth2ActionPaths.manageAccount)"
+          >
             <span class="material-symbols-outlined" aria-hidden="true">manage_accounts</span>
             <span>{{ t('oauth2.profileCard.accountManagement') }}</span>
-          </a>
+          </button>
 
           <button
             type="button"
             class="profile-action logout"
-            :disabled="isLoggingOut"
-            @click="logoutAsync"
+            :disabled="requestedAction !== null"
+            @click="requestAction(oauth2ActionPaths.logout)"
           >
             <span class="material-symbols-outlined" aria-hidden="true">logout</span>
             <span>
-              {{ isLoggingOut ? t('oauth2.profileCard.loggingOut') : t('oauth2.profileCard.logout') }}
+              {{ requestedAction === oauth2ActionPaths.logout
+                ? t('oauth2.profileCard.loggingOut')
+                : t('oauth2.profileCard.logout') }}
             </span>
           </button>
         </nav>
-
-        <p v-if="logoutError" class="profile-error" role="alert">{{ logoutError }}</p>
       </section>
     </Transition>
   </div>

@@ -2,12 +2,12 @@
 import { RouterView } from 'vue-router';
 import { theme } from './core/scripts/theme.ts';
 import { useAuthStore } from './shared/oauth2/src/auth.ts';
-import { requiredAuthenticated, router } from './router/index.ts';
+import { requiresAuthentication, router } from './router/index.ts';
 
 document.documentElement.dataset.theme = theme.value;
 
 router.beforeEach(async to => {
-  if (!requiredAuthenticated(to.path)) {
+  if (!requiresAuthentication(to)) {
     return true;
   }
 

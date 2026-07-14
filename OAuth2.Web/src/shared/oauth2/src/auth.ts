@@ -1,6 +1,5 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { HttpStatusCodeError } from '../../../core/src/http-status-code-error';
 
 export type AuthStatus =
   | 'checking'
@@ -78,27 +77,10 @@ export const useAuthStore = defineStore('auth', () => {
     return initializationPromise;
   }
 
-  async function logoutAsync(): Promise<void> {
-    const response = await fetch('/api/v1/session', {
-      method: 'DELETE',
-      credentials: 'include',
-    });
-
-    if (!response.ok) {
-      throw new HttpStatusCodeError(
-        response.status,
-        response.statusText,
-      );
-    }
-
-    setUnauthenticated();
-  }
-
   return {
     status,
     user,
     isAuthenticated,
     initializeAsync,
-    logoutAsync,
   };
 });
