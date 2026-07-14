@@ -76,7 +76,7 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
-    public async Task<BackendResponse<SessionUser>> ExchangeAuthorizationCodeAsync(
+    public async Task<BackendResponse<GrantedUserInfo>> ExchangeAuthorizationCodeAsync(
         AuthorizationCodeExchange exchange,
         CancellationToken cancellationToken = default)
     {
@@ -90,10 +90,10 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             ? null
             : await response.Content.ReadAsStringAsync(cancellationToken);
         var value = response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(content)
-            ? JsonSerializer.Deserialize<SessionUser>(content, s_JsonOptions)
+            ? JsonSerializer.Deserialize<GrantedUserInfo>(content, s_JsonOptions)
             : null;
 
-        return new BackendResponse<SessionUser>(
+        return new BackendResponse<GrantedUserInfo>(
             response.StatusCode,
             value,
             content,

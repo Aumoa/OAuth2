@@ -35,7 +35,7 @@ internal class MySqlAccounts(
 
         using var connection = new MySqlConnection(mysqlOptions.Value.ConnectionString);
 
-        const string QUERY = "SELECT `id`, `password`, `sub`, `name`, `email`, `verify_code` AS `VerifyCode`, `verify_code_expires_at` AS `VerifyCodeExpiresAt`, `created_at` AS `CreatedAt` FROM `account` WHERE `id` = @id";
+        const string QUERY = "SELECT `id`, `password`, `sub`, `name`, `email`, `verify_code` AS `VerifyCode`, `verify_code_expires_at` AS `VerifyCodeExpiresAt`, `created_at` AS `CreatedAt`, `updated_at` AS `UpdatedAt` FROM `account` WHERE `id` = @id";
         var command = new CommandDefinition(QUERY, new { id }, cancellationToken: cancellationToken);
 
         await connection.OpenAsync(cancellationToken);

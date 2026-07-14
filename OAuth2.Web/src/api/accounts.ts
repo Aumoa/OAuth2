@@ -122,7 +122,9 @@ export class Accounts {
       const redirectUri = new URL(login.redirectUri, window.location.origin);
       if (
         redirectUri.origin !== window.location.origin
-        || redirectUri.pathname !== '/api/v1/auth/redirect'
+        || redirectUri.pathname !== '/'
+        || !redirectUri.searchParams.get('code')
+        || !redirectUri.searchParams.get('state')
       ) {
         throw new Error('Authorization redirect URI is invalid.');
       }

@@ -24,7 +24,7 @@ public interface IBackendClient
         string? acceptLanguage,
         CancellationToken cancellationToken = default);
 
-    Task<BackendResponse<SessionUser>> ExchangeAuthorizationCodeAsync(
+    Task<BackendResponse<GrantedUserInfo>> ExchangeAuthorizationCodeAsync(
         AuthorizationCodeExchange exchange,
         CancellationToken cancellationToken = default);
 }

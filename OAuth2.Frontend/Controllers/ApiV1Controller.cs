@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using OAuth2.DataTransfer;
+using OAuth2.OpenId;
 using OAuth2.Options;
 using OAuth2.Services;
 using BffSessionOptions = OAuth2.Options.SessionOptions;
@@ -23,8 +24,8 @@ public class ApiV1Controller : ControllerBase
             return Unauthorized();
         }
 
-        var user = await sessions.GetAsync(sessionId, cancellationToken);
-        if (user is null)
+        var session = await sessions.GetAsync(sessionId, cancellationToken);
+        if (session is null)
         {
             Response.Cookies.Delete(
                 sessionOptions.Value.CookieName,
@@ -32,7 +33,29 @@ public class ApiV1Controller : ControllerBase
             return Unauthorized();
         }
 
-        return Ok(user);
+        if (!OidcScopePolicy.TryCombine(
+                session.GrantedScope,
+                session.SessionScope,
+                out var effectiveScope))
+        {
+            await sessions.DeleteAsync(sessionId, cancellationToken);
+            Response.Cookies.Delete(
+                sessionOptions.Value.CookieName,
+                CreateSessionDeleteCookieOptions());
+            return Unauthorized();
+        }
+
+        var claims = OidcClaimPolicy.Filter(session.Claims, effectiveScope);
+        if (!claims.ContainsKey("sub"))
+        {
+            await sessions.DeleteAsync(sessionId, cancellationToken);
+            Response.Cookies.Delete(
+                sessionOptions.Value.CookieName,
+                CreateSessionDeleteCookieOptions());
+            return Unauthorized();
+        }
+
+        return Ok(claims);
     }
 
     [HttpPost("logout")]

@@ -7,10 +7,7 @@ public sealed class InternalOidcAuthorizationTests
     [Fact]
     public void TryValidate_AcceptsExactInternalRedirectAndNormalizesScope()
     {
-        var request = CreateRequest() with
-        {
-            Scope = "email openid profile email"
-        };
+        var request = CreateRequest();
 
         var result = InternalOidcAuthorization.TryValidate(
             request,
@@ -24,9 +21,9 @@ public sealed class InternalOidcAuthorizationTests
     }
 
     [Theory]
-    [InlineData("https://localhost:7140/api/v1/auth/redirect")]
-    [InlineData("//api/v1/auth/redirect")]
-    [InlineData("/api/v1/auth/redirect/")]
+    [InlineData("https://localhost:7140/")]
+    [InlineData("//")]
+    [InlineData("/api/v1/auth/redirect")]
     public void TryValidate_RejectsRedirectOtherThanExactRelativePath(string redirectUri)
     {
         var request = CreateRequest() with
@@ -45,11 +42,11 @@ public sealed class InternalOidcAuthorizationTests
     }
 
     [Fact]
-    public void TryValidate_RejectsMissingOpenIdScope()
+    public void TryValidate_RejectsScopeOtherThanAll()
     {
         var request = CreateRequest() with
         {
-            Scope = "profile email"
+            Scope = "openid profile email address phone groups"
         };
 
         var result = InternalOidcAuthorization.TryValidate(

@@ -4,6 +4,7 @@ using OAuth2.DataTransfer;
 using OAuth2.OpenId;
 using OAuth2.Options;
 using OAuth2.Repositories;
+using OAuth2.Services;
 
 namespace OAuth2.Controllers;
 
@@ -12,6 +13,7 @@ namespace OAuth2.Controllers;
 public class ChallengesController(
     IAuthorizationCodes authorizationCodes,
     IAccounts accounts,
+    IAccountClaims accountClaims,
     IOptions<OAuthOptions> oauthOptions) : ControllerBase
 {
     [HttpPost("exchange")]
@@ -38,6 +40,8 @@ public class ChallengesController(
             || !string.Equals(exchange.ClientId, code.ClientId, StringComparison.Ordinal)
             || !string.Equals(code.RedirectUri, InternalOidcAuthorization.RedirectUri, StringComparison.Ordinal)
             || !string.Equals(exchange.RedirectUri, code.RedirectUri, StringComparison.Ordinal)
+            || !OidcScopePolicy.TryNormalize(code.Scope, true, out var grantedScope)
+            || !string.Equals(grantedScope, InternalOidcAuthorization.Scope, StringComparison.Ordinal)
             || !Pkce.Validate(exchange.CodeVerifier, code.CodeChallenge, code.CodeChallengeMethod))
         {
             return InvalidGrant();
@@ -54,12 +58,11 @@ public class ChallengesController(
             return InvalidGrant();
         }
 
-        return Ok(new SessionUser
+        var claims = await accountClaims.GetClaimsAsync(code.AccountId, cancellationToken);
+        return Ok(new GrantedUserInfo
         {
-            Id = account.Id,
-            Sub = account.Sub,
-            Email = account.Email,
-            Name = account.Name
+            Scope = grantedScope,
+            Claims = OidcUserInfoFactory.Create(account, claims, grantedScope)
         });
     }
 

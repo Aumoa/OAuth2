@@ -5,10 +5,11 @@ namespace OAuth2.Services;
 public interface ISessionsRepository
 {
     ValueTask<CreatedSession> CreateAsync(
-        SessionUser user,
+        GrantedUserInfo userInfo,
+        string sessionScope,
         CancellationToken cancellationToken = default);
 
-    ValueTask<SessionUser?> GetAsync(
+    ValueTask<SessionRecord?> GetAsync(
         string sessionId,
         CancellationToken cancellationToken = default);
 

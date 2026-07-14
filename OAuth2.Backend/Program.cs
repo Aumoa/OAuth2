@@ -70,6 +70,7 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
 
     s.AddScoped<PasswordHasher>();
     s.AddScoped<IAccounts, MySqlAccounts>();
+    s.AddScoped<IAccountClaims, MySqlAccountClaims>();
     s.AddScoped<IAuthorizationCodes, RedisAuthorizationCodes>();
     s.AddScoped<IEmailVerify, SESEmailVerify>();
     s.AddSingleton<RedisConnection>();

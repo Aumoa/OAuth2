@@ -134,7 +134,19 @@ public class AuthController(
                 return BackendError(response);
             }
 
-            var session = await sessions.CreateAsync(response.Value, cancellationToken);
+            if (!OidcScopePolicy.TryCombine(
+                    response.Value.Scope,
+                    InternalOidcAuthorization.Scope,
+                    out _)
+                || !response.Value.Claims.ContainsKey("sub"))
+            {
+                return BadRequest(new { error = "invalid_grant" });
+            }
+
+            var session = await sessions.CreateAsync(
+                response.Value,
+                InternalOidcAuthorization.Scope,
+                cancellationToken);
             Response.Cookies.Append(
                 sessionOptions.Value.CookieName,
                 session.Id,
@@ -148,7 +160,7 @@ public class AuthController(
         }
     }
 
-    private IActionResult BackendError(BackendResponse<SessionUser> response)
+    private IActionResult BackendError(BackendResponse<GrantedUserInfo> response)
     {
         if (string.IsNullOrEmpty(response.Content))
         {
@@ -170,7 +182,7 @@ public class AuthController(
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Lax,
-            Path = InternalOidcAuthorization.RedirectUri,
+            Path = InternalOidcAuthorization.CallbackPath,
             Expires = DateTimeOffset.UtcNow.AddMinutes(10)
         };
     }
@@ -182,7 +194,7 @@ public class AuthController(
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Lax,
-            Path = InternalOidcAuthorization.RedirectUri
+            Path = InternalOidcAuthorization.CallbackPath
         };
     }
 

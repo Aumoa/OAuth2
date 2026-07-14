@@ -17,4 +17,6 @@ public record Account
     public DateTime? VerifyCodeExpiresAt { get; set; }
 
     public DateTime? CreatedAt { get; set; }
+
+    public DateTime? UpdatedAt { get; set; }
 }

@@ -18,13 +18,28 @@ internal sealed class RedisSessionsRepository(
     private static readonly JsonSerializerOptions s_JsonOptions = new(JsonSerializerDefaults.Web);
 
     public async ValueTask<CreatedSession> CreateAsync(
-        SessionUser user,
+        GrantedUserInfo userInfo,
+        string sessionScope,
         CancellationToken cancellationToken = default)
     {
-        ArgumentNullException.ThrowIfNull(user);
+        ArgumentNullException.ThrowIfNull(userInfo);
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionScope);
+
+        if (!OidcScopePolicy.TryCombine(userInfo.Scope, sessionScope, out _))
+        {
+            throw new InvalidOperationException(
+                "The session scope cannot exceed the scope granted by the backend.");
+        }
 
         var database = connection.GetDatabase();
-        var value = JsonSerializer.Serialize(user, s_JsonOptions);
+        var value = JsonSerializer.Serialize(
+            new SessionRecord
+            {
+                GrantedScope = userInfo.Scope,
+                SessionScope = sessionScope,
+                Claims = userInfo.Claims
+            },
+            s_JsonOptions);
         var lifetime = sessionOptions.Value.Lifetime;
 
         for (var attempt = 0; attempt < 3; attempt++)
@@ -45,7 +60,7 @@ internal sealed class RedisSessionsRepository(
         throw new InvalidOperationException("Unable to allocate a unique session identifier.");
     }
 
-    public async ValueTask<SessionUser?> GetAsync(
+    public async ValueTask<SessionRecord?> GetAsync(
         string sessionId,
         CancellationToken cancellationToken = default)
     {
@@ -56,7 +71,7 @@ internal sealed class RedisSessionsRepository(
             .WaitAsync(cancellationToken);
         return value.IsNullOrEmpty
             ? null
-            : JsonSerializer.Deserialize<SessionUser>(value.ToString(), s_JsonOptions);
+            : JsonSerializer.Deserialize<SessionRecord>(value.ToString(), s_JsonOptions);
     }
 
     public async ValueTask DeleteAsync(

@@ -5,10 +5,9 @@ namespace OAuth2.OpenId;
 public static class InternalOidcAuthorization
 {
     public const string DefaultClientId = "oauth2";
-    public const string RedirectUri = "/api/v1/auth/redirect";
-    public const string Scope = "openid profile email";
-
-    private static readonly string[] s_AllowedScopes = ["openid", "profile", "email"];
+    public const string RedirectUri = "/";
+    public const string CallbackPath = "/api/v1/auth/redirect";
+    public const string Scope = OidcScopePolicy.AllScope;
 
     public static bool TryValidate(
         OidcAuthorizationRequest? request,
@@ -42,7 +41,8 @@ public static class InternalOidcAuthorization
             return false;
         }
 
-        if (!TryNormalizeScope(request.Scope, out normalizedScope))
+        if (!OidcScopePolicy.TryNormalize(request.Scope, true, out normalizedScope)
+            || !string.Equals(normalizedScope, Scope, StringComparison.Ordinal))
         {
             error = "invalid_scope";
             return false;
@@ -64,27 +64,4 @@ public static class InternalOidcAuthorization
         return true;
     }
 
-    private static bool TryNormalizeScope(
-        string? scope,
-        [NotNullWhen(true)] out string? normalizedScope)
-    {
-        normalizedScope = null;
-        if (string.IsNullOrWhiteSpace(scope))
-        {
-            return false;
-        }
-
-        var requestedScopes = scope.Split(
-            ' ',
-            StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-        var requestedSet = new HashSet<string>(requestedScopes, StringComparer.Ordinal);
-        if (!requestedSet.Contains("openid")
-            || requestedSet.Any(value => !s_AllowedScopes.Contains(value, StringComparer.Ordinal)))
-        {
-            return false;
-        }
-
-        normalizedScope = string.Join(' ', s_AllowedScopes.Where(requestedSet.Contains));
-        return true;
-    }
 }
