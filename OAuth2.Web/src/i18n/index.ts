@@ -1,6 +1,7 @@
 import { createI18n } from 'vue-i18n';
 import { resolvePreferredLocale } from '../core/i18n/locale';
 import { coreMessages } from '../core/i18n/messages';
+import { oauth2Messages } from '../shared/oauth2/i18n/messages';
 import { appMessages } from './messages';
 
 const locale = resolvePreferredLocale();
@@ -15,14 +16,17 @@ export const i18n = createI18n({
     ko: {
       ...appMessages.ko,
       ...coreMessages.ko,
+      ...oauth2Messages.ko,
     },
     en: {
       ...appMessages.en,
       ...coreMessages.en,
+      ...oauth2Messages.en,
     },
     ja: {
       ...appMessages.ja,
       ...coreMessages.ja,
+      ...oauth2Messages.ja,
     },
   },
 });

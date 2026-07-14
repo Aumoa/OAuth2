@@ -9,10 +9,12 @@ export type AuthStatus =
   | 'error';
 
 export interface User {
-  id: string;
   sub: string;
-  email: string;
-  profile: string;
+
+  id?: string;
+  picture?: string;
+  email?: string;
+  name?: string;
 }
 
 export const useAuthStore = defineStore('auth', () => {

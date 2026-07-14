@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import LanguageSelector from '../core/components/LanguageSelector.vue';
 import ThemeSelector from '../core/components/ThemeSelector.vue';
+import ProfileCard from '../shared/oauth2/components/ProfileCard.vue';
 
 </script>
 
@@ -43,6 +44,7 @@ import ThemeSelector from '../core/components/ThemeSelector.vue';
   flex-direction: row-reverse;
   align-self: center;
   padding-right: 10px;
+  gap: 10px;
 }
 </style>
 
@@ -57,6 +59,7 @@ import ThemeSelector from '../core/components/ThemeSelector.vue';
       <div class="function-container">
         <LanguageSelector />
         <ThemeSelector />
+        <ProfileCard />
       </div>
     </div>
   </div>
