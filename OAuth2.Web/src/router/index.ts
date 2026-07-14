@@ -14,29 +14,30 @@ export const router = createRouter({
       ]
     },
     {
-      path: '/checking',
-      name: 'checking',
-      component: () => import('../views/CheckingView.vue')
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: () => import('../views/Login.vue')
-    },
-    {
-      path: '/register',
-      name: 'register',
-      component: () => import('../views/Register.vue')
-    },
-    {
-      path: '/error',
-      name: 'error',
-      component: () => import('../views/Error.vue')
-    },
-    {
-      path: '/verifyEmail',
-      name: 'verifyEmail',
-      component: () => import('../views/VerifyEmail.vue')
+      path: '/',
+      component: () => import('../layouts/UnauthorizedLayout.vue'),
+      children: [
+        {
+          path: 'checking',
+          component: () => import('../views/CheckingView.vue')
+        },
+        {
+          path: 'login',
+          component: () => import('../views/Login.vue')
+        },
+        {
+          path: 'register',
+          component: () => import('../views/Register.vue')
+        },
+        {
+          path: 'error',
+          component: () => import('../views/Error.vue')
+        },
+        {
+          path: 'verifyEmail',
+          component: () => import('../views/VerifyEmail.vue')
+        }
+      ]
     }
   ],
 });

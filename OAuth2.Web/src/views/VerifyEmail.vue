@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { Accounts } from '../api/accounts.ts';
 import { router } from '../router/index.ts';
-import UnauthenticatedFormLayout from '../components/UnauthorizedForm.vue/index.js';
+import UnauthorizedForm from '../components/UnauthorizedForm.vue';
 
 type VerificationState =
   | 'pending'
@@ -114,7 +114,7 @@ async function goToLoginAsync(): Promise<void> {
 </style>
 
 <template>
-  <UnauthenticatedFormLayout :title="title" :description="description">
+  <UnauthorizedForm :title="title" :description="description">
     <div class="verification-actions">
       <button
         v-if="sub && (state === 'pending' || state === 'resent' || state === 'failed')"
@@ -133,5 +133,5 @@ async function goToLoginAsync(): Promise<void> {
         {{ t('app.verifyEmail.actions.goToLogin') }}
       </button>
     </div>
-  </UnauthenticatedFormLayout>
+  </UnauthorizedForm>
 </template>

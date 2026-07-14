@@ -14,6 +14,9 @@ export const appMessages = {
           fullName: '전체 이름',
           email: '이메일',
         },
+        errorMessages: {
+          unexpected: '알 수 없는 오류가 발생하였습니다.',
+        },
       },
       login: {
         title: 'OAuth2에 로그인',
@@ -87,6 +90,9 @@ export const appMessages = {
           fullName: 'Full name',
           email: 'Email',
         },
+        errorMessages: {
+          unexpected: 'An unexpected error occurred.',
+        },
       },
       login: {
         title: 'Sign in to OAuth2',
@@ -159,6 +165,9 @@ export const appMessages = {
           passwordConfirmation: 'Confirmar contraseña',
           fullName: 'Nombre completo',
           email: 'Correo electrónico',
+        },
+        errorMessages: {
+          unexpected: 'Se produjo un error inesperado.',
         },
       },
       login: {

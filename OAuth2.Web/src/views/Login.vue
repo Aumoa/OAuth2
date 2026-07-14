@@ -3,7 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { router } from '../router/index.ts';
-import UnauthenticatedFormLayout from '../components/UnauthorizedForm.vue/index.js';
+import UnauthorizedForm from '../components/UnauthorizedForm.vue';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { Accounts, type AuthorizationRequest } from '../api/accounts.ts';
@@ -172,7 +172,7 @@ onMounted(() => {
 </style>
 
 <template>
-  <UnauthenticatedFormLayout :title="t('app.login.title')">
+  <UnauthorizedForm :title="t('app.login.title')">
     <form class="content" @submit.prevent="continueAsync">
       <FloatingInput
         ref="idInput"
@@ -204,5 +204,5 @@ onMounted(() => {
         </button>
       </div>
     </form>
-  </UnauthenticatedFormLayout>
+  </UnauthorizedForm>
 </template>

@@ -1,6 +1,4 @@
 <script setup lang="ts">
-import UnauthenticatedLayout from './UnauthorizedLayout.vue/index.js';
-
 const props = defineProps<{
   title?: string;
   description?: string;
@@ -52,7 +50,6 @@ const props = defineProps<{
 </style>
 
 <template>
-  <unauthenticated-layout>
   <div class="content-container">
     <div v-if="title != ''" class="header-container">
       <h2 class="title">{{ props.title }}</h2>
@@ -60,5 +57,4 @@ const props = defineProps<{
     </div>
     <slot />
   </div>
-  </unauthenticated-layout>
 </template>

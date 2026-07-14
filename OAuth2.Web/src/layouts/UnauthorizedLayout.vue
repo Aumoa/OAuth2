@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import LanguageSelector from '../../core/components/LanguageSelector.vue';
-import ThemeSelector from '../../core/components/ThemeSelector.vue';
+import LanguageSelector from '../core/components/LanguageSelector.vue';
+import ThemeSelector from '../core/components/ThemeSelector.vue';
 </script>
 
 <style lang="css">
@@ -26,6 +26,6 @@ import ThemeSelector from '../../core/components/ThemeSelector.vue';
     <ThemeSelector />
   </div>
   <div class="root-panel">
-    <slot />
+    <RouterView />
   </div>
 </template>

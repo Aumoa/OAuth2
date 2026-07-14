@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { Accounts, RegisterForm } from '../api/accounts.ts';
 import Expander from '../core/components/Expander.vue';
-import UnauthenticatedFormLayout from '../components/UnauthorizedForm.vue/index.js';
+import UnauthorizedForm from '../components/UnauthorizedForm.vue';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { computed, ref } from 'vue';
@@ -177,7 +177,7 @@ function previous() {
 </style>
 
 <template>
-  <UnauthenticatedFormLayout :title="t('app.register.title')" :description="description">
+  <UnauthorizedForm :title="t('app.register.title')" :description="description">
     <form class="content" @submit.prevent="continueAsync">
       <FloatingInput ref="idInput" :readonly="readonly.id.value" id="id" :label="t('app.common.fields.id')" autocomplete="username" v-model="id" />
       <Expander :expand="visibility.password.value">
@@ -201,5 +201,5 @@ function previous() {
         </button>
       </div>
     </form>
-  </UnauthenticatedFormLayout>
+  </UnauthorizedForm>
 </template>
