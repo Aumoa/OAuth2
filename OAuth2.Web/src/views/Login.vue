@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
 import { router } from '../router/index.ts';
 import UnauthenticatedFormLayout from '../components/layout/UnauthenticatedFormLayout.vue';
-import { HttpStatusCodeError } from '../core/api/HttpStatusCodeError.ts';
+import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { Accounts, type AuthorizationRequest } from '../api/accounts.ts';
 import Expander from '../core/components/Expander.vue';

@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
-import { HttpStatusCodeError } from './core/api/HttpStatusCodeError';
+import { HttpStatusCodeError } from '../../../core/src/http-status-code-error';
 
 export type AuthStatus =
   | 'checking'

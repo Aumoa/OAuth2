@@ -1,4 +1,4 @@
-import { HttpStatusCodeError } from '../core/api/HttpStatusCodeError';
+import { HttpStatusCodeError } from '../core/src/http-status-code-error';
 import { resolvePreferredLocale } from '../core/i18n/locale';
 import { router } from '../router';
 

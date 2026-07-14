@@ -2,7 +2,7 @@
 import { Accounts, RegisterForm } from '../api/accounts.ts';
 import Expander from '../core/components/Expander.vue';
 import UnauthenticatedFormLayout from '../components/layout/UnauthenticatedFormLayout.vue';
-import { HttpStatusCodeError } from '../core/api/HttpStatusCodeError.ts';
+import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';

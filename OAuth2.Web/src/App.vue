@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { RouterView } from 'vue-router';
 import { theme } from './core/scripts/theme.ts';
-import { useAuthStore } from './auth.ts';
+import { useAuthStore } from './shared/oauth2/src/auth.ts';
 import { requiredAuthenticated, router } from './router/index.ts';
 
 document.documentElement.dataset.theme = theme.value;
