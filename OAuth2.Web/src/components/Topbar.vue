@@ -57,8 +57,8 @@ import ProfileCard from '../shared/oauth2/components/ProfileCard.vue';
     </div>
     <div class="function-box">
       <div class="function-container">
-        <LanguageSelector />
         <ThemeSelector />
+        <LanguageSelector />
         <ProfileCard />
       </div>
     </div>
