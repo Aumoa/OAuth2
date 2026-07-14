@@ -289,51 +289,53 @@ onMounted(async () => {
 .remembered-container {
   display: flex;
   flex-direction: column;
+  gap: 12px;
   min-width: 0;
 }
 
 .remembered-list {
   display: flex;
   flex-direction: column;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 9px;
 }
 
 .remembered-row {
-  display: flex;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
   min-width: 0;
-  border-bottom: 1px solid var(--border);
+  background: transparent;
 }
 
-.remembered-account,
-.use-another-account,
-.remove-account {
+.remembered-row + .remembered-row {
+  border-top: 1px solid var(--border);
+}
+
+.remembered-account {
   border: 0;
   color: var(--text-h);
   background: transparent;
   cursor: pointer;
-}
-
-.remembered-account {
   display: flex;
   flex: 1;
   align-items: center;
   min-width: 0;
-  padding: 14px 8px;
+  padding: 10px 12px;
   gap: 12px;
+  font: inherit;
   text-align: left;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
-.remembered-account:hover,
-.use-another-account:hover,
-.remove-account:hover {
-  color: var(--accent-hover);
-  background: var(--accent-bg);
+.remembered-account:hover {
+  background: var(--surface-muted);
 }
 
-.remembered-account:focus-visible,
-.use-another-account:focus-visible,
-.remove-account:focus-visible {
-  outline: 3px solid var(--focus-ring);
-  outline-offset: -3px;
+.remembered-account:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .account-avatar {
@@ -369,26 +371,52 @@ onMounted(async () => {
 }
 
 .account-primary {
-  font-size: 0.88rem;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
 }
 
 .account-secondary {
   color: var(--text-muted);
-  font-size: 0.74rem;
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .remove-account {
   display: grid;
   width: 44px;
-  flex: 0 0 44px;
+  height: auto;
+  align-self: stretch;
+  padding: 0;
   place-items: center;
+  border: 0;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  color: var(--text-muted);
+  background: transparent;
+  cursor: pointer;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.remove-account:hover {
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
+.remove-account:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
+}
+
+.remove-account .material-symbols-outlined {
+  font-size: 20px;
 }
 
 .use-another-account {
-  padding: 16px 8px;
-  color: var(--text);
-  text-align: right;
+  width: auto;
+  padding: 0 12px;
+  align-self: flex-end;
+  font-size: 0.8rem;
 }
 
 button:disabled {
@@ -455,7 +483,7 @@ button:disabled {
       </div>
       <button
         type="button"
-        class="use-another-account"
+        class="app-button use-another-account"
         :disabled="requesting"
         @click="useAnotherAccount"
       >
