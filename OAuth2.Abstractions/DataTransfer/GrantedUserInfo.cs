@@ -7,4 +7,6 @@ public sealed record GrantedUserInfo
     public required string Scope { get; init; }
 
     public required Dictionary<string, JsonElement> Claims { get; init; }
+
+    public RememberedSessionGrant? RememberedSession { get; init; }
 }

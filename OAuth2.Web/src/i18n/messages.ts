@@ -20,6 +20,13 @@ export const appMessages = {
       },
       login: {
         title: 'OAuth2에 로그인',
+        loadingAccounts: '저장된 계정을 확인하는 중...',
+        continueWithAccount: '{account} 계정으로 계속',
+        passwordRequired: '암호 재입력 필요',
+        removeAccount: '저장된 계정 삭제',
+        removeAccountLabel: '{account} 계정 삭제',
+        confirmRemoveAccount: '{account} 계정을 이 브라우저에서 삭제할까요?',
+        useAnotherAccount: '다른 계정으로 계속',
         errors: {
           idRequired: 'ID를 입력하세요.',
           accountNotFound: '일치하는 계정이 존재하지 않습니다.',
@@ -27,6 +34,9 @@ export const appMessages = {
           passwordRequired: '암호를 입력하세요.',
           invalidPassword: '암호가 올바르지 않습니다.',
           failed: '로그인에 실패했습니다. 잠시 후 다시 시도해 주세요.',
+          accountListFailed: '저장된 계정을 불러오지 못했습니다. ID와 암호로 로그인해 주세요.',
+          rememberedSignInFailed: '저장된 계정으로 로그인하지 못했습니다. 잠시 후 다시 시도해 주세요.',
+          removeAccountFailed: '저장된 계정을 삭제하지 못했습니다. 잠시 후 다시 시도해 주세요.',
         },
       },
       register: {
@@ -96,6 +106,13 @@ export const appMessages = {
       },
       login: {
         title: 'Sign in to OAuth2',
+        loadingAccounts: 'Checking saved accounts...',
+        continueWithAccount: 'Continue as {account}',
+        passwordRequired: 'Password required',
+        removeAccount: 'Remove saved account',
+        removeAccountLabel: 'Remove {account}',
+        confirmRemoveAccount: 'Remove {account} from this browser?',
+        useAnotherAccount: 'Use another account',
         errors: {
           idRequired: 'Enter your ID.',
           accountNotFound: 'No matching account was found.',
@@ -103,6 +120,9 @@ export const appMessages = {
           passwordRequired: 'Enter your password.',
           invalidPassword: 'The password is incorrect.',
           failed: 'Sign-in failed. Please try again later.',
+          accountListFailed: 'Saved accounts could not be loaded. Sign in with your ID and password.',
+          rememberedSignInFailed: 'Could not sign in with the saved account. Please try again later.',
+          removeAccountFailed: 'Could not remove the saved account. Please try again later.',
         },
       },
       register: {
@@ -172,6 +192,13 @@ export const appMessages = {
       },
       login: {
         title: 'OAuth2にログイン',
+        loadingAccounts: '保存済みのアカウントを確認しています...',
+        continueWithAccount: '{account}として続行',
+        passwordRequired: 'パスワードの再入力が必要です',
+        removeAccount: '保存済みのアカウントを削除',
+        removeAccountLabel: '{account}を削除',
+        confirmRemoveAccount: 'このブラウザーから{account}を削除しますか？',
+        useAnotherAccount: '別のアカウントを使用',
         errors: {
           idRequired: 'IDを入力してください。',
           accountNotFound: '該当するアカウントが見つかりません。',
@@ -179,6 +206,9 @@ export const appMessages = {
           passwordRequired: 'パスワードを入力してください。',
           invalidPassword: 'パスワードが正しくありません。',
           failed: 'ログインに失敗しました。しばらくしてからもう一度お試しください。',
+          accountListFailed: '保存済みのアカウントを読み込めませんでした。IDとパスワードでログインしてください。',
+          rememberedSignInFailed: '保存済みのアカウントでログインできませんでした。しばらくしてからもう一度お試しください。',
+          removeAccountFailed: '保存済みのアカウントを削除できませんでした。しばらくしてからもう一度お試しください。',
         },
       },
       register: {

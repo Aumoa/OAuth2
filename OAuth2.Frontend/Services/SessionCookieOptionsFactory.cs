@@ -10,7 +10,8 @@ internal static class SessionCookieOptionsFactory
             Secure = true,
             SameSite = SameSiteMode.Lax,
             Path = "/",
-            Expires = expiresAt
+            Expires = expiresAt,
+            IsEssential = true
         };
     }
 
@@ -21,7 +22,8 @@ internal static class SessionCookieOptionsFactory
             HttpOnly = true,
             Secure = true,
             SameSite = SameSiteMode.Lax,
-            Path = "/"
+            Path = "/",
+            IsEssential = true
         };
     }
 }

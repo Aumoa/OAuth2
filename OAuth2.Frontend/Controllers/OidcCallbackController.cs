@@ -10,12 +10,14 @@ using BffSessionOptions = OAuth2.Options.SessionOptions;
 namespace OAuth2.Controllers;
 
 [ApiController]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/auth")]
 public sealed class OidcCallbackController(
     IBackendClient backend,
     ISessionsRepository sessions,
     IOptions<OAuthOptions> oauthOptions,
-    IOptions<BffSessionOptions> sessionOptions) : ControllerBase
+    IOptions<BffSessionOptions> sessionOptions,
+    ILogger<OidcCallbackController> logger) : ControllerBase
 {
     [HttpGet("callback")]
     public async Task<IActionResult> CallbackAsync(
@@ -64,10 +66,36 @@ public sealed class OidcCallbackController(
                 return BadRequest(new { error = "invalid_grant" });
             }
 
+            Request.Cookies.TryGetValue(
+                sessionOptions.Value.CookieName,
+                out var currentSessionId);
             var session = await sessions.CreateAsync(
                 response.Value,
                 InternalOidcAuthorization.Scope,
+                currentSessionId,
                 cancellationToken);
+            foreach (var token in session.SupersededRememberedSessionTokens)
+            {
+                try
+                {
+                    var revocation = await backend.RevokeRememberedSessionAsync(
+                        token,
+                        cancellationToken);
+                    if ((int)revocation.StatusCode >= 400)
+                    {
+                        logger.LogWarning(
+                            "Failed to revoke a superseded remembered session. Status: {StatusCode}",
+                            (int)revocation.StatusCode);
+                    }
+                }
+                catch (Exception exception) when (!cancellationToken.IsCancellationRequested)
+                {
+                    logger.LogWarning(
+                        exception,
+                        "Failed to revoke a superseded remembered session.");
+                }
+            }
+
             Response.Cookies.Append(
                 sessionOptions.Value.CookieName,
                 session.Id,

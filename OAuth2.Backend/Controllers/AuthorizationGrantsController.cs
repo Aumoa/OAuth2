@@ -9,9 +9,11 @@ using OAuth2.Services;
 namespace OAuth2.Controllers;
 
 [ApiController]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/authorization-grants")]
 public sealed class AuthorizationGrantsController(
     IAuthorizationCodes authorizationCodes,
+    IRememberedSessions rememberedSessions,
     IAccounts accounts,
     IAccountClaims accountClaims,
     IOptions<OAuthOptions> oauthOptions) : ControllerBase
@@ -59,10 +61,26 @@ public sealed class AuthorizationGrantsController(
         }
 
         var claims = await accountClaims.GetClaimsAsync(code.AccountId, cancellationToken);
+        RememberedSessionGrant? rememberedSession = null;
+        if (code.CreateRememberedSession)
+        {
+            var created = await rememberedSessions.CreateAsync(
+                code.AccountId,
+                code.AuthTime,
+                cancellationToken);
+            rememberedSession = new RememberedSessionGrant
+            {
+                Token = created.Token,
+                AuthenticatedAt = DateTimeOffset.FromUnixTimeSeconds(code.AuthTime),
+                ExpiresAt = created.ExpiresAt
+            };
+        }
+
         return Ok(new GrantedUserInfo
         {
             Scope = grantedScope,
-            Claims = OidcUserInfoFactory.Create(account, claims, grantedScope)
+            Claims = OidcUserInfoFactory.Create(account, claims, grantedScope),
+            RememberedSession = rememberedSession
         });
     }
 

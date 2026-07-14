@@ -15,6 +15,14 @@ public interface IBackendClient
         LoginForm form,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> CreateAuthorizationCodeFromRememberedSessionAsync(
+        RememberedLoginForm form,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> RevokeRememberedSessionAsync(
+        string token,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> VerifyEmailAsync(
         EmailVerificationForm form,
         CancellationToken cancellationToken = default);

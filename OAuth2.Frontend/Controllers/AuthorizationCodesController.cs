@@ -5,6 +5,7 @@ using OAuth2.Services;
 namespace OAuth2.Controllers;
 
 [ApiController]
+[ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/authorization-codes")]
 public sealed class AuthorizationCodesController(IBackendClient backend) : BackendProxyControllerBase
 {
@@ -13,6 +14,11 @@ public sealed class AuthorizationCodesController(IBackendClient backend) : Backe
         [FromBody] LoginForm form,
         CancellationToken cancellationToken)
     {
+        if (!BrowserActionRequest.IsValid(Request))
+        {
+            return Forbid();
+        }
+
         if (!form.Verify(out var error))
         {
             return BadRequest(error);

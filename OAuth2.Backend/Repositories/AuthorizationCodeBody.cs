@@ -8,4 +8,5 @@ public readonly record struct AuthorizationCodeBody(
     string? Nonce,
     string? CodeChallenge,
     string? CodeChallengeMethod,
-    long AuthTime);
+    long AuthTime,
+    bool CreateRememberedSession);

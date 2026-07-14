@@ -31,6 +31,7 @@ function jsonRequestHeaders(): HeadersInit {
   return {
     'Accept-Language': resolvePreferredLocale(),
     'Content-Type': 'application/json',
+    'X-OAuth2-Action': '1',
   };
 }
 

@@ -29,7 +29,11 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddOptions<BffSessionOptions>()
         .Bind(config.GetRequiredSection("SessionOptions"))
         .Validate(static options => !string.IsNullOrWhiteSpace(options.CookieName), "SessionOptions:CookieName is required.")
+        .Validate(static options => options.CookieName.StartsWith("__Host-", StringComparison.Ordinal), "SessionOptions:CookieName must use the __Host- prefix.")
         .Validate(static options => options.LifetimeMinutes > 0, "SessionOptions:LifetimeMinutes must be positive.")
+        .Validate(static options => options.BrowserLifetimeDays > 0, "SessionOptions:BrowserLifetimeDays must be positive.")
+        .Validate(static options => options.BrowserLifetime > options.Lifetime, "SessionOptions:BrowserLifetimeDays must exceed the active session lifetime.")
+        .Validate(static options => options.MaxRememberedAccounts > 0, "SessionOptions:MaxRememberedAccounts must be positive.")
         .ValidateOnStart();
 
     s.AddSingleton<RedisConnection>();

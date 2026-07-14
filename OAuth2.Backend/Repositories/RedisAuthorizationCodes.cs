@@ -24,7 +24,8 @@ internal sealed class RedisAuthorizationCodes(
             'nonce',
             'code_challenge',
             'code_challenge_method',
-            'auth_time')
+            'auth_time',
+            'create_remembered_session')
 
         redis.call('DEL', KEYS[1])
         return values
@@ -45,7 +46,8 @@ internal sealed class RedisAuthorizationCodes(
             new("nonce", body.Nonce ?? string.Empty),
             new("code_challenge", body.CodeChallenge ?? string.Empty),
             new("code_challenge_method", body.CodeChallengeMethod ?? string.Empty),
-            new("auth_time", body.AuthTime.ToString(CultureInfo.InvariantCulture))
+            new("auth_time", body.AuthTime.ToString(CultureInfo.InvariantCulture)),
+            new("create_remembered_session", body.CreateRememberedSession ? "1" : "0")
         ];
 
         var database = connection.GetDatabase();
@@ -69,7 +71,7 @@ internal sealed class RedisAuthorizationCodes(
         }
 
         var values = (RedisResult[]?)result;
-        if (values is not { Length: 8 })
+        if (values is not { Length: 9 })
         {
             logger.LogError("Invalid authorization code record was read from Redis.");
             return null;
@@ -83,6 +85,7 @@ internal sealed class RedisAuthorizationCodes(
         var codeChallenge = Read(values[5]);
         var codeChallengeMethod = Read(values[6]);
         var authTimeValue = Read(values[7]);
+        var createRememberedSessionValue = Read(values[8]);
 
         if (string.IsNullOrWhiteSpace(accountId)
             || string.IsNullOrWhiteSpace(clientId)
@@ -102,7 +105,8 @@ internal sealed class RedisAuthorizationCodes(
             EmptyToNull(nonce),
             EmptyToNull(codeChallenge),
             EmptyToNull(codeChallengeMethod),
-            authTime);
+            authTime,
+            string.Equals(createRememberedSessionValue, "1", StringComparison.Ordinal));
     }
 
     private static string? Read(RedisResult value)

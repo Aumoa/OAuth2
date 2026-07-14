@@ -60,6 +60,37 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
+    public Task<BackendResponse> CreateAuthorizationCodeFromRememberedSessionAsync(
+        RememberedLoginForm form,
+        CancellationToken cancellationToken = default)
+    {
+        if (!form.Verify(out _))
+        {
+            throw new ArgumentException("Form verification failed.", nameof(form));
+        }
+
+        return SendAsync(
+            HttpMethod.Post,
+            "/api/v1/authorization-codes/remembered",
+            form,
+            null,
+            cancellationToken);
+    }
+
+    public Task<BackendResponse> RevokeRememberedSessionAsync(
+        string token,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(token);
+
+        return SendAsync(
+            HttpMethod.Delete,
+            "/api/v1/remembered-sessions",
+            new RememberedSessionRevocation { Token = token },
+            null,
+            cancellationToken);
+    }
+
     public Task<BackendResponse> VerifyEmailAsync(
         EmailVerificationForm form,
         CancellationToken cancellationToken = default)

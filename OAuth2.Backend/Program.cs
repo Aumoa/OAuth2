@@ -47,6 +47,10 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
         .Bind(config.GetRequiredSection(nameof(SESOptions)))
         .ValidateDataAnnotations()
         .ValidateOnStart();
+    s.AddOptions<RememberedSessionOptions>()
+        .Bind(config.GetRequiredSection(nameof(RememberedSessionOptions)))
+        .Validate(static options => options.LifetimeDays > 0, "RememberedSessionOptions:LifetimeDays must be positive.")
+        .ValidateOnStart();
 
     // The marker type namespace matches the embedded resource base name:
     // OAuth2.Localizational.Strings.
@@ -72,6 +76,7 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddScoped<IAccounts, MySqlAccounts>();
     s.AddScoped<IAccountClaims, MySqlAccountClaims>();
     s.AddScoped<IAuthorizationCodes, RedisAuthorizationCodes>();
+    s.AddScoped<IRememberedSessions, RedisRememberedSessions>();
     s.AddScoped<IEmailVerify, SESEmailVerify>();
     s.AddSingleton<RedisConnection>();
     s.AddHostedService(services => services.GetRequiredService<RedisConnection>());
