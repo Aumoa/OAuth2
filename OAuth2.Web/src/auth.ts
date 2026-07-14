@@ -45,10 +45,8 @@ export const useAuthStore = defineStore('auth', () => {
       }
 
       if (!response.ok) {
-        throw new HttpStatusCodeError(
-          response.status,
-          response.statusText,
-        );
+        setUnauthenticated();
+        return;
       }
 
       user.value = await response.json() as User;
