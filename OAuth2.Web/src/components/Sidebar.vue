@@ -32,6 +32,10 @@ const { t } = useI18n();
         :label="t('app.sidebar.accountInformation')"
         to="/"
       />
+      <SidebarMainButton
+        icon="apps"
+        :label="t('app.sidebar.applicationManagement')"
+      />
     </nav>
   </div>
 </template>

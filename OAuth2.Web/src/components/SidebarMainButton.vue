@@ -2,7 +2,7 @@
 interface Props {
   icon: string;
   label: string;
-  to: string;
+  to?: string;
 }
 
 defineProps<Props>();
@@ -28,6 +28,7 @@ defineProps<Props>();
   line-height: 1.35;
   text-align: left;
   text-decoration: none;
+  cursor: pointer;
   transition:
     color 140ms ease,
     background-color 140ms ease,
@@ -35,9 +36,14 @@ defineProps<Props>();
     box-shadow 140ms ease;
 }
 
-.sidebar-main-button:hover {
+.sidebar-main-button:hover:not(:disabled) {
   color: var(--text-h);
   background: var(--surface-muted);
+}
+
+.sidebar-main-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .sidebar-main-button:focus-visible {
@@ -75,10 +81,17 @@ defineProps<Props>();
 </style>
 
 <template>
-  <RouterLink class="sidebar-main-button" :to="to">
+  <RouterLink v-if="to" class="sidebar-main-button" :to="to">
     <span class="material-symbols-outlined sidebar-main-button-icon" aria-hidden="true">
       {{ icon }}
     </span>
     <span class="sidebar-main-button-label">{{ label }}</span>
   </RouterLink>
+
+  <button v-else class="sidebar-main-button" type="button" disabled>
+    <span class="material-symbols-outlined sidebar-main-button-icon" aria-hidden="true">
+      {{ icon }}
+    </span>
+    <span class="sidebar-main-button-label">{{ label }}</span>
+  </button>
 </template>

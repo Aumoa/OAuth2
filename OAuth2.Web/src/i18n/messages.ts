@@ -5,6 +5,7 @@ export const appMessages = {
       sidebar: {
         navigationLabel: '주요 메뉴',
         accountInformation: '계정 정보',
+        applicationManagement: '애플리케이션 관리',
       },
       common: {
         actions: {
@@ -96,6 +97,7 @@ export const appMessages = {
       sidebar: {
         navigationLabel: 'Main navigation',
         accountInformation: 'Account information',
+        applicationManagement: 'Application management',
       },
       common: {
         actions: {
@@ -187,6 +189,7 @@ export const appMessages = {
       sidebar: {
         navigationLabel: 'メインメニュー',
         accountInformation: 'アカウント情報',
+        applicationManagement: 'アプリケーション管理',
       },
       common: {
         actions: {
