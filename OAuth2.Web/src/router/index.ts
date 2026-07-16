@@ -32,6 +32,10 @@ export const router = createRouter({
           path: '',
           component: () => import('../views/HomeView.vue'),
         },
+        {
+          path: 'applications',
+          component: () => import('../views/ManageApplicationsView.vue'),
+        },
       ],
     },
     {

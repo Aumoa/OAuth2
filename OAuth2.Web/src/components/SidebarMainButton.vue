@@ -2,10 +2,15 @@
 interface Props {
   icon: string;
   label: string;
-  to?: string;
+  to: string;
 }
 
 defineProps<Props>();
+
+const emit = defineEmits<{
+  focus: [event: FocusEvent];
+  blur: [event: FocusEvent];
+}>();
 </script>
 
 <style scoped lang="css">
@@ -14,8 +19,10 @@ defineProps<Props>();
   grid-template-columns: 24px minmax(0, 1fr);
   gap: 10px;
   align-items: center;
+  position: relative;
+  z-index: 1;
   width: 100%;
-  min-height: 44px;
+  height: var(--sidebar-main-button-height, 44px);
   padding: 0 12px;
   box-sizing: border-box;
   border: 1px solid transparent;
@@ -36,14 +43,9 @@ defineProps<Props>();
     box-shadow 140ms ease;
 }
 
-.sidebar-main-button:hover:not(:disabled) {
+.sidebar-main-button:hover {
   color: var(--text-h);
   background: var(--surface-muted);
-}
-
-.sidebar-main-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
 }
 
 .sidebar-main-button:focus-visible {
@@ -52,10 +54,8 @@ defineProps<Props>();
 }
 
 .sidebar-main-button.router-link-exact-active {
-  border-color: var(--accent-border);
   color: var(--accent-hover);
-  background: var(--accent-bg);
-  box-shadow: inset 3px 0 0 var(--accent);
+  background: transparent;
 }
 
 .sidebar-main-button-icon {
@@ -81,17 +81,15 @@ defineProps<Props>();
 </style>
 
 <template>
-  <RouterLink v-if="to" class="sidebar-main-button" :to="to">
+  <RouterLink
+    class="sidebar-main-button"
+    :to="to"
+    @focus="emit('focus', $event)"
+    @blur="emit('blur', $event)"
+  >
     <span class="material-symbols-outlined sidebar-main-button-icon" aria-hidden="true">
       {{ icon }}
     </span>
     <span class="sidebar-main-button-label">{{ label }}</span>
   </RouterLink>
-
-  <button v-else class="sidebar-main-button" type="button" disabled>
-    <span class="material-symbols-outlined sidebar-main-button-icon" aria-hidden="true">
-      {{ icon }}
-    </span>
-    <span class="sidebar-main-button-label">{{ label }}</span>
-  </button>
 </template>
