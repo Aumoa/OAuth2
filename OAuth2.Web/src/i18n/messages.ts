@@ -7,6 +7,20 @@ export const appMessages = {
         accountInformation: '계정 정보',
         applicationManagement: '애플리케이션 관리',
       },
+      accountInformation: {
+        title: '계정 정보',
+        description: '로그인한 계정의 기본 프로필 정보입니다.',
+        profileSection: '기본 프로필',
+        fields: {
+          id: 'ID',
+          email: '이메일',
+          subject: '계정 식별자',
+        },
+        emailVerified: '인증됨',
+        emailUnverified: '인증되지 않음',
+        notProvided: '등록되지 않음',
+        unknownUser: '알 수 없는 사용자',
+      },
       common: {
         actions: {
           continue: '계속',
@@ -99,6 +113,20 @@ export const appMessages = {
         accountInformation: 'Account information',
         applicationManagement: 'Application management',
       },
+      accountInformation: {
+        title: 'Account information',
+        description: 'Basic profile information for the signed-in account.',
+        profileSection: 'Basic profile',
+        fields: {
+          id: 'ID',
+          email: 'Email',
+          subject: 'Account identifier',
+        },
+        emailVerified: 'Verified',
+        emailUnverified: 'Not verified',
+        notProvided: 'Not provided',
+        unknownUser: 'Unknown user',
+      },
       common: {
         actions: {
           continue: 'Continue',
@@ -190,6 +218,20 @@ export const appMessages = {
         navigationLabel: 'メインメニュー',
         accountInformation: 'アカウント情報',
         applicationManagement: 'アプリケーション管理',
+      },
+      accountInformation: {
+        title: 'アカウント情報',
+        description: 'ログイン中のアカウントの基本プロフィール情報です。',
+        profileSection: '基本プロフィール',
+        fields: {
+          id: 'ID',
+          email: 'メールアドレス',
+          subject: 'アカウント識別子',
+        },
+        emailVerified: '確認済み',
+        emailUnverified: '未確認',
+        notProvided: '未登録',
+        unknownUser: '不明なユーザー',
       },
       common: {
         actions: {

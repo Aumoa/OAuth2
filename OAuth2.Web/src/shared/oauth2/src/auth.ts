@@ -13,6 +13,19 @@ export interface User {
   id?: string;
   picture?: string;
   email?: string;
+  emailVerified?: boolean;
+  name?: string;
+}
+
+interface SessionClaims {
+  sub: string;
+
+  id?: string;
+  preferred_username?: string;
+  picture?: string;
+  email?: string;
+  emailVerified?: boolean;
+  email_verified?: boolean;
   name?: string;
 }
 
@@ -50,7 +63,15 @@ export const useAuthStore = defineStore('auth', () => {
         return;
       }
 
-      user.value = await response.json() as User;
+      const claims = await response.json() as SessionClaims;
+      user.value = {
+        sub: claims.sub,
+        id: claims.id ?? claims.preferred_username,
+        picture: claims.picture,
+        email: claims.email,
+        emailVerified: claims.emailVerified ?? claims.email_verified,
+        name: claims.name,
+      };
       status.value = 'authenticated';
     } catch (error) {
       user.value = null;
