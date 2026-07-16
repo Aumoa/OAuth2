@@ -11,8 +11,24 @@ public interface IBackendClient
         CreateApplicationForm form,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> DeleteApplicationAsync(
+        string ownerId,
+        string id,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetOwnedApplicationAsync(
+        string ownerId,
+        string id,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> GetOwnedApplicationsAsync(
         string ownerId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> UpdateApplicationAsync(
+        string ownerId,
+        string id,
+        UpdateApplicationForm form,
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> RegisterAccountAsync(

@@ -10,9 +10,29 @@ const createApplicationPath = '/applications/new';
 const mainButtonHeight = 44;
 const navigationGap = 4;
 const focusedButtonIndex = ref<number | null>(null);
-const showNewApplicationButton = computed(() => route.name === 'applications-new');
-const navigationPaths = computed(() => showNewApplicationButton.value
-  ? ['/', '/applications', createApplicationPath]
+const transientApplicationButton = computed(() => {
+  if (route.name === 'applications-new') {
+    return {
+      path: createApplicationPath,
+      icon: 'add_circle',
+      label: t('app.sidebar.newApplication'),
+    };
+  }
+
+  if (route.name === 'applications-edit') {
+    const clientIdParam = route.params.clientId;
+    const clientId = Array.isArray(clientIdParam) ? clientIdParam.join('/') : clientIdParam;
+    return {
+      path: route.path,
+      icon: 'edit',
+      label: t('app.sidebar.editApplication', { clientId }),
+    };
+  }
+
+  return null;
+});
+const navigationPaths = computed(() => transientApplicationButton.value
+  ? ['/', '/applications', transientApplicationButton.value.path]
   : ['/', '/applications']);
 const activeButtonIndex = computed(() => {
   const exactIndex = navigationPaths.value.indexOf(route.path);
@@ -33,7 +53,7 @@ const highlightedButtonIndex = computed(() => {
     : activeButtonIndex.value;
 });
 const highlightedButtonIndentLevel = computed(() => (
-  showNewApplicationButton.value && highlightedButtonIndex.value === 2 ? 1 : 0
+  transientApplicationButton.value && highlightedButtonIndex.value === 2 ? 1 : 0
 ));
 const navigationStyle = computed(() => ({
   '--sidebar-main-button-height': `${mainButtonHeight}px`,
@@ -134,10 +154,10 @@ function blurButton(index: number): void {
         @blur="blurButton(1)"
       />
       <SidebarMainButton
-        v-if="showNewApplicationButton"
-        icon="add_circle"
-        :label="t('app.sidebar.newApplication')"
-        :to="createApplicationPath"
+        v-if="transientApplicationButton"
+        :icon="transientApplicationButton.icon"
+        :label="transientApplicationButton.label"
+        :to="transientApplicationButton.path"
         :indent-level="1"
         @focus="focusButton(2)"
         @blur="blurButton(2)"

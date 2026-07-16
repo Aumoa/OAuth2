@@ -46,6 +46,34 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
+    public async Task<BackendResponse> DeleteApplicationAsync(
+        string ownerId,
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        using var response = await http.DeleteAsync(
+            ApplicationUri(ownerId, id),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetOwnedApplicationAsync(
+        string ownerId,
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        using var response = await http.GetAsync(
+            ApplicationUri(ownerId, id),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
     public async Task<BackendResponse> GetOwnedApplicationsAsync(
         string ownerId,
         CancellationToken cancellationToken = default)
@@ -55,14 +83,30 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         using var response = await http.GetAsync(
             $"/api/v1/applications?ownerId={Uri.EscapeDataString(ownerId)}",
             cancellationToken);
-        var content = response.Content.Headers.ContentLength == 0
-            ? null
-            : await response.Content.ReadAsStringAsync(cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
 
-        return new BackendResponse(
-            response.StatusCode,
-            content,
-            response.Content.Headers.ContentType?.ToString());
+    public Task<BackendResponse> UpdateApplicationAsync(
+        string ownerId,
+        string id,
+        UpdateApplicationForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(form);
+
+        if (!form.Verify(out _))
+        {
+            throw new ArgumentException("Form verification failed.", nameof(form));
+        }
+
+        return SendAsync(
+            HttpMethod.Put,
+            ApplicationUri(ownerId, id),
+            form,
+            null,
+            cancellationToken);
     }
 
     public Task<BackendResponse> RegisterAccountAsync(
@@ -208,6 +252,16 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         }
 
         using var response = await http.SendAsync(request, cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    private static string ApplicationUri(string ownerId, string id) =>
+        $"/api/v1/applications/{Uri.EscapeDataString(id)}?ownerId={Uri.EscapeDataString(ownerId)}";
+
+    private static async Task<BackendResponse> ToBackendResponseAsync(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
         var content = response.Content.Headers.ContentLength == 0
             ? null
             : await response.Content.ReadAsStringAsync(cancellationToken);

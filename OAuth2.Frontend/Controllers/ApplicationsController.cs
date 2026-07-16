@@ -53,6 +53,86 @@ public sealed class ApplicationsController(
         return FromBackend(response);
     }
 
+    [HttpGet("{**id}")]
+    public async Task<IActionResult> GetAsync(
+        [FromRoute] string id,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        var ownerId = await GetOwnerIdAsync(cancellationToken);
+        if (ownerId is null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await backend.GetOwnedApplicationAsync(ownerId, id, cancellationToken);
+        return FromBackend(response);
+    }
+
+    [HttpPut("{**id}")]
+    public async Task<IActionResult> UpdateAsync(
+        [FromRoute] string id,
+        [FromBody] UpdateApplicationForm form,
+        CancellationToken cancellationToken)
+    {
+        if (!BrowserActionRequest.IsValid(Request))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        var ownerId = await GetOwnerIdAsync(cancellationToken);
+        if (ownerId is null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await backend.UpdateApplicationAsync(
+            ownerId,
+            id,
+            form,
+            cancellationToken);
+        return FromBackend(response);
+    }
+
+    [HttpDelete("{**id}")]
+    public async Task<IActionResult> DeleteAsync(
+        [FromRoute] string id,
+        CancellationToken cancellationToken)
+    {
+        if (!BrowserActionRequest.IsValid(Request))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        var ownerId = await GetOwnerIdAsync(cancellationToken);
+        if (ownerId is null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await backend.DeleteApplicationAsync(ownerId, id, cancellationToken);
+        return FromBackend(response);
+    }
+
     private async Task<string?> GetOwnerIdAsync(CancellationToken cancellationToken)
     {
         if (!TryGetSessionId(out var sessionId))

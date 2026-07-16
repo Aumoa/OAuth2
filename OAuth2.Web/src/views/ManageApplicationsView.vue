@@ -160,7 +160,7 @@ onMounted(loadApplicationsAsync);
 
 .application-card {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
+  grid-template-columns: 46px minmax(0, 1fr) auto auto;
   gap: 14px;
   align-items: center;
   min-height: 76px;
@@ -229,6 +229,19 @@ onMounted(loadApplicationsAsync);
   font-weight: 600;
 }
 
+.edit-application-button {
+  width: auto;
+  height: 38px;
+  padding: 0 12px;
+  grid-auto-flow: column;
+  gap: 6px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
 @keyframes loading-spin {
   to {
     transform: rotate(360deg);
@@ -255,7 +268,7 @@ onMounted(loadApplicationsAsync);
   }
 
   .application-card {
-    grid-template-columns: 42px minmax(0, 1fr);
+    grid-template-columns: 42px minmax(0, 1fr) 40px;
     padding: 13px 14px;
   }
 
@@ -265,8 +278,19 @@ onMounted(loadApplicationsAsync);
   }
 
   .application-date {
-    grid-column: 2;
+    grid-column: 2 / 4;
     align-items: flex-start;
+  }
+
+  .edit-application-button {
+    grid-row: 1;
+    grid-column: 3;
+    width: 40px;
+    padding: 0;
+  }
+
+  .edit-application-label {
+    display: none;
   }
 }
 
@@ -350,6 +374,15 @@ onMounted(loadApplicationsAsync);
               {{ formatCreatedAt(application.createdAt) }}
             </time>
           </div>
+
+          <RouterLink
+            class="app-button edit-application-button"
+            :to="{ name: 'applications-edit', params: { clientId: application.id } }"
+            :aria-label="t('app.applicationManagement.editApplicationLabel', { name: application.name })"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+            <span class="edit-application-label">{{ t('app.applicationManagement.editAction') }}</span>
+          </RouterLink>
         </article>
       </li>
     </ul>

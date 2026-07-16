@@ -45,6 +45,11 @@ export const router = createRouter({
               name: 'applications-new',
               component: () => import('../views/CreateApplicationView.vue'),
             },
+            {
+              path: 'edit/:clientId(.+)',
+              name: 'applications-edit',
+              component: () => import('../views/EditApplicationView.vue'),
+            },
           ],
         },
       ],
