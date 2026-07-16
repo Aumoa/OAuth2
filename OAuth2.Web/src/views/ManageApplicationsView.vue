@@ -159,6 +159,7 @@ onMounted(loadApplicationsAsync);
 }
 
 .application-card {
+  position: relative;
   display: grid;
   grid-template-columns: 46px minmax(0, 1fr) auto auto;
   gap: 14px;
@@ -170,6 +171,34 @@ onMounted(loadApplicationsAsync);
   border-radius: 11px;
   background: color-mix(in srgb, var(--surface) 94%, transparent);
   box-shadow: var(--shadow-sm);
+  transition:
+    border-color 140ms ease,
+    background-color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+.application-card-link {
+  position: absolute;
+  z-index: 1;
+  inset: 0;
+  border-radius: inherit;
+  outline: none;
+  cursor: pointer;
+}
+
+.application-card:has(.application-card-link:hover) {
+  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--accent-bg) 52%, var(--surface));
+  box-shadow: var(--shadow-sm), inset 3px 0 0 var(--accent);
+}
+
+.application-card:has(.application-card-link:focus-visible) {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.application-card:has(.application-card-link:hover, .application-card-link:focus-visible) .application-name {
+  color: var(--accent-hover);
 }
 
 .application-icon {
@@ -203,6 +232,7 @@ onMounted(loadApplicationsAsync);
   font-size: 15px;
   font-weight: 700;
   line-height: 1.4;
+  transition: color 140ms ease;
 }
 
 .application-id {
@@ -230,6 +260,8 @@ onMounted(loadApplicationsAsync);
 }
 
 .edit-application-button {
+  position: relative;
+  z-index: 2;
   width: auto;
   height: 38px;
   padding: 0 12px;
@@ -298,6 +330,11 @@ onMounted(loadApplicationsAsync);
   .state-icon.loading .material-symbols-outlined {
     animation: none;
   }
+
+  .application-card,
+  .application-name {
+    transition-duration: 0.01ms;
+  }
 }
 </style>
 
@@ -357,6 +394,12 @@ onMounted(loadApplicationsAsync);
     <ul v-else class="application-list">
       <li v-for="application in applications" :key="application.id">
         <article class="application-card">
+          <RouterLink
+            class="application-card-link"
+            :to="{ name: 'applications-edit', params: { clientId: application.id } }"
+            :aria-label="t('app.applicationManagement.openApplicationLabel', { name: application.name })"
+          ></RouterLink>
+
           <span class="application-icon" aria-hidden="true">
             <span class="material-symbols-outlined">web_asset</span>
           </span>
