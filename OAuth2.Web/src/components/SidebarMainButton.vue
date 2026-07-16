@@ -11,6 +11,12 @@ const emit = defineEmits<{
   focus: [event: FocusEvent];
   blur: [event: FocusEvent];
 }>();
+
+function onFocus(event: FocusEvent): void {
+  if ((event.currentTarget as HTMLElement | null)?.matches(':focus-visible')) {
+    emit('focus', event);
+  }
+}
 </script>
 
 <style scoped lang="css">
@@ -84,7 +90,7 @@ const emit = defineEmits<{
   <RouterLink
     class="sidebar-main-button"
     :to="to"
-    @focus="emit('focus', $event)"
+    @focus="onFocus"
     @blur="emit('blur', $event)"
   >
     <span class="material-symbols-outlined sidebar-main-button-icon" aria-hidden="true">
