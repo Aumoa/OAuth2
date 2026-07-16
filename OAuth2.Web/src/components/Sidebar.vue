@@ -6,19 +6,39 @@ import SidebarMainButton from './SidebarMainButton.vue';
 
 const { t } = useI18n();
 const route = useRoute();
-const navigationPaths = ['/', '/applications'] as const;
+const createApplicationPath = '/applications/new';
 const mainButtonHeight = 44;
 const navigationGap = 4;
 const focusedButtonIndex = ref<number | null>(null);
-const activeButtonIndex = computed(() => navigationPaths.findIndex(path => (
-  route.path === path || (path !== '/' && route.path.startsWith(`${path}/`))
-)));
-const highlightedButtonIndex = computed(() => (
-  focusedButtonIndex.value ?? activeButtonIndex.value
+const showNewApplicationButton = computed(() => route.name === 'applications-new');
+const navigationPaths = computed(() => showNewApplicationButton.value
+  ? ['/', '/applications', createApplicationPath]
+  : ['/', '/applications']);
+const activeButtonIndex = computed(() => {
+  const exactIndex = navigationPaths.value.indexOf(route.path);
+  if (exactIndex >= 0) {
+    return exactIndex;
+  }
+
+  return navigationPaths.value.findIndex(path => (
+    path !== '/' && route.path.startsWith(`${path}/`)
+  ));
+});
+const highlightedButtonIndex = computed(() => {
+  const focusedIndex = focusedButtonIndex.value;
+  return focusedIndex !== null
+    && focusedIndex >= 0
+    && focusedIndex < navigationPaths.value.length
+    ? focusedIndex
+    : activeButtonIndex.value;
+});
+const highlightedButtonIndentLevel = computed(() => (
+  showNewApplicationButton.value && highlightedButtonIndex.value === 2 ? 1 : 0
 ));
 const navigationStyle = computed(() => ({
   '--sidebar-main-button-height': `${mainButtonHeight}px`,
   '--sidebar-navigation-gap': `${navigationGap}px`,
+  '--sidebar-active-button-indent': `${highlightedButtonIndentLevel.value * 20}px`,
   '--sidebar-active-button-offset': `${Math.max(highlightedButtonIndex.value, 0)
     * (mainButtonHeight + navigationGap)}px`,
 }));
@@ -59,8 +79,8 @@ function blurButton(index: number): void {
 .sidebar-navigation-highlight {
   position: absolute;
   top: 0;
-  left: 0;
-  width: 100%;
+  left: var(--sidebar-active-button-indent, 0px);
+  width: calc(100% - var(--sidebar-active-button-indent, 0px));
   height: var(--sidebar-main-button-height);
   box-sizing: border-box;
   border: 1px solid var(--accent-border);
@@ -72,6 +92,8 @@ function blurButton(index: number): void {
   transform: translateY(var(--sidebar-active-button-offset, 0));
   transition:
     opacity 120ms ease,
+    left 220ms cubic-bezier(0.22, 1, 0.36, 1),
+    width 220ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
 }
@@ -110,6 +132,15 @@ function blurButton(index: number): void {
         to="/applications"
         @focus="focusButton(1)"
         @blur="blurButton(1)"
+      />
+      <SidebarMainButton
+        v-if="showNewApplicationButton"
+        icon="add_circle"
+        :label="t('app.sidebar.newApplication')"
+        :to="createApplicationPath"
+        :indent-level="1"
+        @focus="focusButton(2)"
+        @blur="blurButton(2)"
       />
     </nav>
   </div>

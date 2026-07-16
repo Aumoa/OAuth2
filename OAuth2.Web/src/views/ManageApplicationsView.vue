@@ -1,23 +1,13 @@
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Applications, type ApplicationSummary } from '../api/applications.ts';
-import Dialog from '../core/components/Dialog.vue';
-import FloatingInput from '../core/components/FloatingInput.vue';
-import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
 type ViewState = 'loading' | 'ready' | 'error';
 
 const { locale, t } = useI18n();
 const state = ref<ViewState>('loading');
 const applications = ref<ApplicationSummary[]>([]);
-const isCreateDialogOpen = ref(false);
-const isCreating = ref(false);
-const clientId = ref('');
-const applicationName = ref('');
-const createError = ref<string | null>(null);
-const clientIdInput = ref<InstanceType<typeof FloatingInput> | null>(null);
-const applicationNameInput = ref<InstanceType<typeof FloatingInput> | null>(null);
 const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value, {
   dateStyle: 'medium',
 }));
@@ -35,81 +25,6 @@ async function loadApplicationsAsync(): Promise<void> {
     state.value = 'ready';
   } catch {
     state.value = 'error';
-  }
-}
-
-async function openCreateDialogAsync(): Promise<void> {
-  isCreateDialogOpen.value = true;
-  await nextTick();
-  requestAnimationFrame(() => clientIdInput.value?.focus());
-}
-
-function resetCreateForm(): void {
-  clientId.value = '';
-  applicationName.value = '';
-  createError.value = null;
-  clientIdInput.value?.clearError();
-  applicationNameInput.value?.clearError();
-}
-
-function updateCreateDialogOpen(value: boolean): void {
-  if (isCreating.value) {
-    return;
-  }
-
-  isCreateDialogOpen.value = value;
-  if (!value) {
-    resetCreateForm();
-  }
-}
-
-async function createApplicationAsync(): Promise<void> {
-  if (isCreating.value) {
-    return;
-  }
-
-  const normalizedClientId = clientId.value.trim();
-  const normalizedName = applicationName.value.trim();
-  createError.value = null;
-
-  if (normalizedClientId.length === 0) {
-    clientIdInput.value?.notifyError(t('app.applicationManagement.errors.clientIdRequired'));
-    return;
-  }
-
-  if (normalizedClientId.length > 128) {
-    clientIdInput.value?.notifyError(t('app.applicationManagement.errors.clientIdTooLong'));
-    return;
-  }
-
-  if (normalizedName.length === 0) {
-    applicationNameInput.value?.notifyError(t('app.applicationManagement.errors.nameRequired'));
-    return;
-  }
-
-  if (normalizedName.length > 512) {
-    applicationNameInput.value?.notifyError(t('app.applicationManagement.errors.nameTooLong'));
-    return;
-  }
-
-  isCreating.value = true;
-  try {
-    const application = await Applications.createAsync(normalizedClientId, normalizedName);
-    applications.value = [
-      application,
-      ...applications.value.filter(existing => existing.id !== application.id),
-    ];
-    state.value = 'ready';
-    isCreateDialogOpen.value = false;
-    resetCreateForm();
-  } catch (error) {
-    if (error instanceof HttpStatusCodeError && error.status === 409) {
-      clientIdInput.value?.notifyError(t('app.applicationManagement.errors.conflict'));
-    } else {
-      createError.value = t('app.applicationManagement.errors.createFailed');
-    }
-  } finally {
-    isCreating.value = false;
   }
 }
 
@@ -163,59 +78,8 @@ onMounted(loadApplicationsAsync);
   font: inherit;
   font-size: 13px;
   font-weight: 700;
+  text-decoration: none;
   white-space: nowrap;
-}
-
-.creation-description {
-  margin: 0 0 20px;
-  color: var(--text-muted);
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.creation-form {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.creation-error {
-  margin: 0;
-  color: var(--danger);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.dialog-action {
-  width: auto;
-  min-width: 84px;
-  padding: 0 14px;
-  grid-auto-flow: column;
-  gap: 6px;
-  font: inherit;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.dialog-action.primary {
-  color: var(--on-accent);
-  background: var(--accent);
-  border-color: var(--accent);
-}
-
-.dialog-action.primary:hover {
-  color: var(--on-accent);
-  background: var(--accent-hover);
-  border-color: var(--accent-hover);
-}
-
-.dialog-action:disabled {
-  cursor: wait;
-  opacity: 0.64;
-}
-
-.button-spinner {
-  animation: loading-spin 1s linear infinite;
 }
 
 .applications-state {
@@ -407,8 +271,7 @@ onMounted(loadApplicationsAsync);
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .state-icon.loading .material-symbols-outlined,
-  .button-spinner {
+  .state-icon.loading .material-symbols-outlined {
     animation: none;
   }
 }
@@ -426,15 +289,13 @@ onMounted(loadApplicationsAsync);
         </p>
       </div>
 
-      <button
-        type="button"
+      <RouterLink
         class="app-button create-application-button"
-        aria-haspopup="dialog"
-        @click="openCreateDialogAsync"
+        to="/applications/new"
       >
         <span class="material-symbols-outlined" aria-hidden="true">add</span>
         <span>{{ t('app.applicationManagement.createAction') }}</span>
-      </button>
+      </RouterLink>
     </header>
 
     <div v-if="state === 'loading'" class="applications-state" role="status">
@@ -493,64 +354,5 @@ onMounted(loadApplicationsAsync);
       </li>
     </ul>
 
-    <Dialog
-      :is-open="isCreateDialogOpen"
-      :title="t('app.applicationManagement.createTitle')"
-      :close-on-backdrop="!isCreating"
-      :close-on-escape="!isCreating"
-      :show-close-button="!isCreating"
-      @update:is-open="updateCreateDialogOpen"
-    >
-      <p class="creation-description">
-        {{ t('app.applicationManagement.createDescription') }}
-      </p>
-
-      <form id="create-application-form" class="creation-form" @submit.prevent="createApplicationAsync">
-        <FloatingInput
-          id="application-client-id"
-          ref="clientIdInput"
-          v-model="clientId"
-          :label="t('app.applicationManagement.clientId')"
-          :maxlength="128"
-          :disabled="isCreating"
-          autocomplete="off"
-          required
-          spellcheck="false"
-        />
-        <FloatingInput
-          id="application-name"
-          ref="applicationNameInput"
-          v-model="applicationName"
-          :label="t('app.applicationManagement.name')"
-          :maxlength="512"
-          :disabled="isCreating"
-          autocomplete="off"
-          required
-        />
-        <p v-if="createError" class="creation-error" role="alert">{{ createError }}</p>
-      </form>
-
-      <template #footer>
-        <button
-          type="button"
-          class="app-button dialog-action"
-          :disabled="isCreating"
-          @click="updateCreateDialogOpen(false)"
-        >
-          {{ t('app.applicationManagement.createCancel') }}
-        </button>
-        <button
-          type="submit"
-          form="create-application-form"
-          class="app-button dialog-action primary"
-          :disabled="isCreating"
-        >
-          <span v-if="isCreating" class="material-symbols-outlined button-spinner" aria-hidden="true">
-            progress_activity
-          </span>
-          <span>{{ t('app.applicationManagement.createSubmit') }}</span>
-        </button>
-      </template>
-    </Dialog>
   </section>
 </template>

@@ -34,7 +34,18 @@ export const router = createRouter({
         },
         {
           path: 'applications',
-          component: () => import('../views/ManageApplicationsView.vue'),
+          children: [
+            {
+              path: '',
+              name: 'applications',
+              component: () => import('../views/ManageApplicationsView.vue'),
+            },
+            {
+              path: 'new',
+              name: 'applications-new',
+              component: () => import('../views/CreateApplicationView.vue'),
+            },
+          ],
         },
       ],
     },

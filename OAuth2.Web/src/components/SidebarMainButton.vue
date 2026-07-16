@@ -1,16 +1,24 @@
 <script setup lang="ts">
+import { computed, type CSSProperties } from 'vue';
+
 interface Props {
   icon: string;
   label: string;
   to: string;
+  indentLevel?: number;
 }
 
-defineProps<Props>();
+const props = withDefaults(defineProps<Props>(), {
+  indentLevel: 0,
+});
 
 const emit = defineEmits<{
   focus: [event: FocusEvent];
   blur: [event: FocusEvent];
 }>();
+const buttonStyle = computed<CSSProperties>(() => ({
+  '--sidebar-main-button-indent': `${Math.max(props.indentLevel, 0) * 20}px`,
+}));
 
 function onFocus(event: FocusEvent): void {
   if ((event.currentTarget as HTMLElement | null)?.matches(':focus-visible')) {
@@ -27,8 +35,9 @@ function onFocus(event: FocusEvent): void {
   align-items: center;
   position: relative;
   z-index: 1;
-  width: 100%;
+  width: calc(100% - var(--sidebar-main-button-indent, 0px));
   height: var(--sidebar-main-button-height, 44px);
+  margin-left: var(--sidebar-main-button-indent, 0px);
   padding: 0 12px;
   box-sizing: border-box;
   border: 1px solid transparent;
@@ -47,6 +56,14 @@ function onFocus(event: FocusEvent): void {
     background-color 140ms ease,
     border-color 140ms ease,
     box-shadow 140ms ease;
+}
+
+.sidebar-main-button.is-indented {
+  font-size: 13px;
+}
+
+.sidebar-main-button.is-indented .sidebar-main-button-icon {
+  font-size: 20px;
 }
 
 .sidebar-main-button:hover {
@@ -89,6 +106,8 @@ function onFocus(event: FocusEvent): void {
 <template>
   <RouterLink
     class="sidebar-main-button"
+    :class="{ 'is-indented': indentLevel > 0 }"
+    :style="buttonStyle"
     :to="to"
     @focus="onFocus"
     @blur="emit('blur', $event)"

@@ -6,6 +6,7 @@ export const appMessages = {
         navigationLabel: '주요 메뉴',
         accountInformation: '계정 정보',
         applicationManagement: '애플리케이션 관리',
+        newApplication: '새 애플리케이션',
       },
       accountInformation: {
         title: '계정 정보',
@@ -137,6 +138,7 @@ export const appMessages = {
         navigationLabel: 'Main navigation',
         accountInformation: 'Account information',
         applicationManagement: 'Application management',
+        newApplication: 'New application',
       },
       accountInformation: {
         title: 'Account information',
@@ -268,6 +270,7 @@ export const appMessages = {
         navigationLabel: 'メインメニュー',
         accountInformation: 'アカウント情報',
         applicationManagement: 'アプリケーション管理',
+        newApplication: '新しいアプリケーション',
       },
       accountInformation: {
         title: 'アカウント情報',
