@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using OAuth2.DataTransfer;
 using OAuth2.Services;
 using BffSessionOptions = OAuth2.Options.SessionOptions;
 
@@ -14,23 +15,54 @@ public sealed class ApplicationsController(
     IBackendClient backend,
     IOptions<BffSessionOptions> sessionOptions) : BackendProxyControllerBase
 {
-    [HttpGet]
-    public async Task<IActionResult> GetAsync(CancellationToken cancellationToken)
+    [HttpPost]
+    public async Task<IActionResult> CreateAsync(
+        [FromBody] CreateApplicationForm form,
+        CancellationToken cancellationToken)
     {
-        if (!TryGetSessionId(out var sessionId))
+        if (!BrowserActionRequest.IsValid(Request))
+        {
+            return Forbid();
+        }
+
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        var ownerId = await GetOwnerIdAsync(cancellationToken);
+        if (ownerId is null)
         {
             return Unauthorized();
         }
 
-        var session = await sessions.GetAsync(sessionId, cancellationToken);
-        var ownerId = GetStringClaim(session?.Claims, "preferred_username");
-        if (string.IsNullOrWhiteSpace(ownerId))
+        var response = await backend.CreateApplicationAsync(ownerId, form, cancellationToken);
+        return FromBackend(response);
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> GetAsync(CancellationToken cancellationToken)
+    {
+        var ownerId = await GetOwnerIdAsync(cancellationToken);
+        if (ownerId is null)
         {
             return Unauthorized();
         }
 
         var response = await backend.GetOwnedApplicationsAsync(ownerId, cancellationToken);
         return FromBackend(response);
+    }
+
+    private async Task<string?> GetOwnerIdAsync(CancellationToken cancellationToken)
+    {
+        if (!TryGetSessionId(out var sessionId))
+        {
+            return null;
+        }
+
+        var session = await sessions.GetAsync(sessionId, cancellationToken);
+        var ownerId = GetStringClaim(session?.Claims, "preferred_username");
+        return string.IsNullOrWhiteSpace(ownerId) ? null : ownerId;
     }
 
     private bool TryGetSessionId(out string sessionId)

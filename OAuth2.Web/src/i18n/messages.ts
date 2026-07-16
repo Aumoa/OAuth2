@@ -24,6 +24,12 @@ export const appMessages = {
       applicationManagement: {
         title: '애플리케이션 관리',
         description: '이 계정이 소유한 OAuth2 애플리케이션을 관리합니다.',
+        createAction: '새 애플리케이션',
+        createTitle: '새 애플리케이션 만들기',
+        createDescription: '클라이언트 ID와 표시할 이름을 지정하세요. 시크릿은 생성되지 않습니다.',
+        createSubmit: '생성',
+        createCancel: '취소',
+        name: '애플리케이션 이름',
         loading: '애플리케이션을 불러오는 중...',
         loadFailed: '애플리케이션 목록을 불러오지 못했습니다.',
         retry: '다시 시도',
@@ -31,6 +37,14 @@ export const appMessages = {
         emptyDescription: '애플리케이션을 등록하면 이곳에서 확인할 수 있습니다.',
         clientId: '클라이언트 ID',
         createdAt: '생성일',
+        errors: {
+          clientIdRequired: '클라이언트 ID를 입력하세요.',
+          clientIdTooLong: '클라이언트 ID는 128자 이하여야 합니다.',
+          nameRequired: '애플리케이션 이름을 입력하세요.',
+          nameTooLong: '애플리케이션 이름은 512자 이하여야 합니다.',
+          conflict: '이미 사용 중인 클라이언트 ID입니다.',
+          createFailed: '애플리케이션을 만들지 못했습니다. 잠시 후 다시 시도해 주세요.',
+        },
       },
       common: {
         actions: {
@@ -141,6 +155,12 @@ export const appMessages = {
       applicationManagement: {
         title: 'Application management',
         description: 'Manage OAuth2 applications owned by this account.',
+        createAction: 'New application',
+        createTitle: 'Create a new application',
+        createDescription: 'Choose a client ID and display name. No secret will be created.',
+        createSubmit: 'Create',
+        createCancel: 'Cancel',
+        name: 'Application name',
         loading: 'Loading applications...',
         loadFailed: 'Could not load the application list.',
         retry: 'Try again',
@@ -148,6 +168,14 @@ export const appMessages = {
         emptyDescription: 'Applications you register will appear here.',
         clientId: 'Client ID',
         createdAt: 'Created',
+        errors: {
+          clientIdRequired: 'Enter a client ID.',
+          clientIdTooLong: 'The client ID must be 128 characters or fewer.',
+          nameRequired: 'Enter an application name.',
+          nameTooLong: 'The application name must be 512 characters or fewer.',
+          conflict: 'This client ID is already in use.',
+          createFailed: 'Could not create the application. Please try again later.',
+        },
       },
       common: {
         actions: {
@@ -258,6 +286,12 @@ export const appMessages = {
       applicationManagement: {
         title: 'アプリケーション管理',
         description: 'このアカウントが所有するOAuth2アプリケーションを管理します。',
+        createAction: '新しいアプリケーション',
+        createTitle: '新しいアプリケーションを作成',
+        createDescription: 'クライアントIDと表示名を指定してください。シークレットは作成されません。',
+        createSubmit: '作成',
+        createCancel: 'キャンセル',
+        name: 'アプリケーション名',
         loading: 'アプリケーションを読み込んでいます...',
         loadFailed: 'アプリケーションの一覧を読み込めませんでした。',
         retry: '再試行',
@@ -265,6 +299,14 @@ export const appMessages = {
         emptyDescription: 'アプリケーションを登録すると、ここに表示されます。',
         clientId: 'クライアントID',
         createdAt: '作成日',
+        errors: {
+          clientIdRequired: 'クライアントIDを入力してください。',
+          clientIdTooLong: 'クライアントIDは128文字以内で入力してください。',
+          nameRequired: 'アプリケーション名を入力してください。',
+          nameTooLong: 'アプリケーション名は512文字以内で入力してください。',
+          conflict: 'このクライアントIDは既に使用されています。',
+          createFailed: 'アプリケーションを作成できませんでした。しばらくしてからもう一度お試しください。',
+        },
       },
       common: {
         actions: {

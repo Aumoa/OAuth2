@@ -25,6 +25,27 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return true;
     }
 
+    public Task<BackendResponse> CreateApplicationAsync(
+        string ownerId,
+        CreateApplicationForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        if (!form.Verify(out _))
+        {
+            throw new ArgumentException("Form verification failed.", nameof(form));
+        }
+
+        return SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/applications?ownerId={Uri.EscapeDataString(ownerId)}",
+            form,
+            null,
+            cancellationToken);
+    }
+
     public async Task<BackendResponse> GetOwnedApplicationsAsync(
         string ownerId,
         CancellationToken cancellationToken = default)
