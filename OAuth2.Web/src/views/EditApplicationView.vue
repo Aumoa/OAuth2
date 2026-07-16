@@ -31,7 +31,8 @@ const clientId = computed(() => {
   return Array.isArray(value) ? value.join('/') : (value ?? '');
 });
 const deleteConfirmationMatches = computed(() => (
-  deleteConfirmation.value === clientId.value
+  application.value !== null
+  && deleteConfirmation.value === application.value.name
 ));
 let isMounted = true;
 let loadRequestId = 0;
@@ -777,14 +778,14 @@ onBeforeUnmount(() => {
     >
       <p class="delete-dialog-description">
         <i18n-t keypath="app.applicationManagement.deleteDialogDescription" tag="span">
-          <template #clientId><code>{{ clientId }}</code></template>
+          <template #name><code>{{ application?.name }}</code></template>
         </i18n-t>
       </p>
       <FloatingInput
         ref="deleteConfirmationInput"
         v-model="deleteConfirmation"
         :label="t('app.applicationManagement.deleteConfirmationLabel')"
-        :hint="t('app.applicationManagement.deleteConfirmationHint', { clientId })"
+        :hint="t('app.applicationManagement.deleteConfirmationHint', { name: application?.name })"
         :disabled="isDeleting"
         autocomplete="off"
         spellcheck="false"
