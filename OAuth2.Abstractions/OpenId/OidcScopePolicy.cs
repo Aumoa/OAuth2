@@ -6,9 +6,11 @@ public static class OidcScopePolicy
 {
     public const string AllScope = "all";
 
+    public const string OpenIdScope = "openid";
+
     public static readonly string[] ClaimScopes =
     [
-        "openid",
+        OpenIdScope,
         "profile",
         "email",
         "address",

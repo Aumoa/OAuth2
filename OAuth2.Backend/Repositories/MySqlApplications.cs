@@ -215,6 +215,10 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         ArgumentNullException.ThrowIfNull(redirectUris);
         ArgumentNullException.ThrowIfNull(allowedScopes);
+        if (!allowedScopes.Contains(OidcScopePolicy.OpenIdScope, StringComparer.Ordinal))
+        {
+            throw new ArgumentException("The openid scope is required.", nameof(allowedScopes));
+        }
 
         using var connection = new MySqlConnection(mysqlOptions.Value.ConnectionString);
         await connection.OpenAsync(cancellationToken);

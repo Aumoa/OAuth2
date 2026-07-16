@@ -22,12 +22,12 @@ public sealed class UpdateApplicationFormTests
     }
 
     [Fact]
-    public void Verify_AcceptsEmptyConfiguration()
+    public void Verify_AcceptsEmptyRedirectUris()
     {
         var form = new UpdateApplicationForm
         {
             RedirectUris = [],
-            AllowedScopes = []
+            AllowedScopes = ["openid"]
         };
 
         Assert.True(form.Verify(out var error));
@@ -88,5 +88,18 @@ public sealed class UpdateApplicationFormTests
 
         Assert.False(form.Verify(out var error));
         Assert.Equal("body.allowedScopes contains a duplicate value", error);
+    }
+
+    [Fact]
+    public void Verify_RejectsMissingOpenIdScope()
+    {
+        var form = new UpdateApplicationForm
+        {
+            RedirectUris = [],
+            AllowedScopes = ["profile"]
+        };
+
+        Assert.False(form.Verify(out var error));
+        Assert.Equal("body.allowedScopes must contain openid", error);
     }
 }

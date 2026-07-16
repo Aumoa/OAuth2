@@ -9,6 +9,7 @@ import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
 type ViewState = 'loading' | 'ready' | 'error' | 'notFound';
 
+const requiredScope = 'openid';
 const availableScopes = ['openid', 'profile', 'email', 'address', 'phone', 'groups'] as const;
 const { t } = useI18n();
 const route = useRoute();
@@ -111,7 +112,9 @@ async function loadApplicationAsync(): Promise<void> {
 
     application.value = details;
     redirectUrisText.value = details.redirectUris.join('\n');
-    allowedScopes.value = availableScopes.filter(scope => details.allowedScopes.includes(scope));
+    allowedScopes.value = availableScopes.filter(scope => (
+      scope === requiredScope || details.allowedScopes.includes(scope)
+    ));
     state.value = 'ready';
   } catch (error) {
     if (!isMounted || requestId !== loadRequestId) {
@@ -138,7 +141,8 @@ async function saveApplicationAsync(): Promise<void> {
 
   isSaving.value = true;
   try {
-    await Applications.updateAsync(clientId.value, redirectUris, [...allowedScopes.value]);
+    const scopes = [...new Set([requiredScope, ...allowedScopes.value])];
+    await Applications.updateAsync(clientId.value, redirectUris, scopes);
     if (isMounted) {
       savedMessage.value = t('app.applicationManagement.saved');
     }
@@ -725,7 +729,7 @@ onBeforeUnmount(() => {
                   v-model="allowedScopes"
                   type="checkbox"
                   :value="scope"
-                  :disabled="isSaving || isDeleting"
+                  :disabled="scope === requiredScope || isSaving || isDeleting"
                 />
                 <span class="scope-name">{{ scope }}</span>
               </label>

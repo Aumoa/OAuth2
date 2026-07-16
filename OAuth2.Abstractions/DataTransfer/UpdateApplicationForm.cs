@@ -86,6 +86,12 @@ public sealed record UpdateApplicationForm
             }
         }
 
+        if (!allowedScopes.Contains(OidcScopePolicy.OpenIdScope))
+        {
+            error = $"body.allowedScopes must contain {OidcScopePolicy.OpenIdScope}";
+            return false;
+        }
+
         error = null;
         return true;
     }
