@@ -1,6 +1,7 @@
 export const appMessages = {
   ko: {
     app: {
+      title: 'OAuth2',
       common: {
         actions: {
           continue: '계속',
@@ -87,6 +88,7 @@ export const appMessages = {
   },
   en: {
     app: {
+      title: 'OAuth2',
       common: {
         actions: {
           continue: 'Continue',
@@ -173,6 +175,7 @@ export const appMessages = {
   },
   ja: {
     app: {
+      title: 'OAuth2',
       common: {
         actions: {
           continue: '続行',

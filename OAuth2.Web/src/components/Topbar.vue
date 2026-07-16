@@ -2,7 +2,9 @@
 import LanguageSelector from '../core/components/LanguageSelector.vue';
 import ThemeSelector from '../core/components/ThemeSelector.vue';
 import ProfileCard from '../shared/oauth2/components/ProfileCard.vue';
+import { useI18n } from 'vue-i18n';
 
+const { t } = useI18n();
 </script>
 
 <style lang="css">
@@ -52,7 +54,7 @@ import ProfileCard from '../shared/oauth2/components/ProfileCard.vue';
   <div class="top-layout">
     <div class="title-box">
       <h4 class="title">
-        OAuth2
+        {{ t('app.title') }}
       </h4>
     </div>
     <div class="function-box">
