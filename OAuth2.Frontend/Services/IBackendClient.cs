@@ -6,6 +6,10 @@ public interface IBackendClient
 {
     Task<bool> AccountExistsAsync(string id, CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> GetOwnedApplicationsAsync(
+        string ownerId,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> RegisterAccountAsync(
         RegisterForm form,
         string? acceptLanguage,

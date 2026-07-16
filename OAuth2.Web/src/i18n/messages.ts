@@ -21,6 +21,17 @@ export const appMessages = {
         notProvided: '등록되지 않음',
         unknownUser: '알 수 없는 사용자',
       },
+      applicationManagement: {
+        title: '애플리케이션 관리',
+        description: '이 계정이 소유한 OAuth2 애플리케이션을 관리합니다.',
+        loading: '애플리케이션을 불러오는 중...',
+        loadFailed: '애플리케이션 목록을 불러오지 못했습니다.',
+        retry: '다시 시도',
+        emptyTitle: '등록된 애플리케이션이 없습니다',
+        emptyDescription: '애플리케이션을 등록하면 이곳에서 확인할 수 있습니다.',
+        clientId: '클라이언트 ID',
+        createdAt: '생성일',
+      },
       common: {
         actions: {
           continue: '계속',
@@ -127,6 +138,17 @@ export const appMessages = {
         notProvided: 'Not provided',
         unknownUser: 'Unknown user',
       },
+      applicationManagement: {
+        title: 'Application management',
+        description: 'Manage OAuth2 applications owned by this account.',
+        loading: 'Loading applications...',
+        loadFailed: 'Could not load the application list.',
+        retry: 'Try again',
+        emptyTitle: 'No applications registered',
+        emptyDescription: 'Applications you register will appear here.',
+        clientId: 'Client ID',
+        createdAt: 'Created',
+      },
       common: {
         actions: {
           continue: 'Continue',
@@ -232,6 +254,17 @@ export const appMessages = {
         emailUnverified: '未確認',
         notProvided: '未登録',
         unknownUser: '不明なユーザー',
+      },
+      applicationManagement: {
+        title: 'アプリケーション管理',
+        description: 'このアカウントが所有するOAuth2アプリケーションを管理します。',
+        loading: 'アプリケーションを読み込んでいます...',
+        loadFailed: 'アプリケーションの一覧を読み込めませんでした。',
+        retry: '再試行',
+        emptyTitle: '登録済みのアプリケーションはありません',
+        emptyDescription: 'アプリケーションを登録すると、ここに表示されます。',
+        clientId: 'クライアントID',
+        createdAt: '作成日',
       },
       common: {
         actions: {

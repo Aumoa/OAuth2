@@ -25,6 +25,25 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return true;
     }
 
+    public async Task<BackendResponse> GetOwnedApplicationsAsync(
+        string ownerId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+
+        using var response = await http.GetAsync(
+            $"/api/v1/applications?ownerId={Uri.EscapeDataString(ownerId)}",
+            cancellationToken);
+        var content = response.Content.Headers.ContentLength == 0
+            ? null
+            : await response.Content.ReadAsStringAsync(cancellationToken);
+
+        return new BackendResponse(
+            response.StatusCode,
+            content,
+            response.Content.Headers.ContentType?.ToString());
+    }
+
     public Task<BackendResponse> RegisterAccountAsync(
         RegisterForm form,
         string? acceptLanguage,
