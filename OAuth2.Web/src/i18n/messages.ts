@@ -2,6 +2,10 @@ export const appMessages = {
   ko: {
     app: {
       title: 'OAuth2',
+      sidebar: {
+        navigationLabel: '주요 메뉴',
+        accountInformation: '계정 정보',
+      },
       common: {
         actions: {
           continue: '계속',
@@ -89,6 +93,10 @@ export const appMessages = {
   en: {
     app: {
       title: 'OAuth2',
+      sidebar: {
+        navigationLabel: 'Main navigation',
+        accountInformation: 'Account information',
+      },
       common: {
         actions: {
           continue: 'Continue',
@@ -176,6 +184,10 @@ export const appMessages = {
   ja: {
     app: {
       title: 'OAuth2',
+      sidebar: {
+        navigationLabel: 'メインメニュー',
+        accountInformation: 'アカウント情報',
+      },
       common: {
         actions: {
           continue: '続行',
