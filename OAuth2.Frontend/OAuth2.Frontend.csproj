@@ -4,7 +4,9 @@
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
-	<RootNamespace>OAuth2</RootNamespace>
+    <RootNamespace>OAuth2</RootNamespace>
+    <SpaRoot>..\OAuth2.Web\</SpaRoot>
+    <BuildVueOnPublish Condition="'$(BuildVueOnPublish)' == ''">true</BuildVueOnPublish>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,5 +16,27 @@
   <ItemGroup>
     <ProjectReference Include="..\OAuth2.Abstractions\OAuth2.Abstractions.csproj" />
   </ItemGroup>
+
+  <Target Name="PublishVue"
+          BeforeTargets="ComputeFilesToPublish">
+    <Exec WorkingDirectory="$(SpaRoot)"
+          Command="npm ci --no-audit --no-fund"
+          Condition="'$(BuildVueOnPublish)' == 'true' and !Exists('$(SpaRoot)node_modules')" />
+    <Exec WorkingDirectory="$(SpaRoot)"
+          Command="npm run build"
+          Condition="'$(BuildVueOnPublish)' == 'true'" />
+    <Error Condition="!Exists('$(SpaRoot)dist\index.html')"
+           Text="Vue build output was not found. Build OAuth2.Web or publish with BuildVueOnPublish=true." />
+
+    <ItemGroup>
+      <VueDistFiles Include="$(SpaRoot)dist\**\*" />
+      <ResolvedFileToPublish Include="@(VueDistFiles->'%(FullPath)')"
+                             Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>wwwroot\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+        <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
 
 </Project>

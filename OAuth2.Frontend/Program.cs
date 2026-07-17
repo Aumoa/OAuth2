@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.StaticFiles;
 using OAuth2.Options;
 using OAuth2.OpenId;
 using OAuth2.Services;
@@ -8,16 +9,81 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 Configure(builder.Services, builder.Configuration);
 builder.Services.AddControllers();
+builder.Services.AddResponseCompression(options => options.EnableForHttps = true);
 
 var app = builder.Build();
 
+if (!app.Environment.IsDevelopment())
+{
+    app.UseHsts();
+}
+
 app.UseHttpsRedirection();
+app.UseResponseCompression();
+app.UseDefaultFiles();
+app.UseStaticFiles(CreateStaticFileOptions());
 
 app.UseAuthorization();
 
 app.MapControllers();
+MapSpaFallback(app);
 
 app.Run();
+
+static StaticFileOptions CreateStaticFileOptions()
+{
+    return new StaticFileOptions
+    {
+        OnPrepareResponse = static context =>
+        {
+            var path = context.Context.Request.Path;
+            if (path.StartsWithSegments("/assets"))
+            {
+                context.Context.Response.Headers.CacheControl = "public,max-age=31536000,immutable";
+            }
+            else if (path.Equals("/index.html"))
+            {
+                context.Context.Response.Headers.CacheControl = "no-cache";
+            }
+        }
+    };
+}
+
+static void MapSpaFallback(WebApplication app)
+{
+    PathString[] serverPaths =
+    [
+        "/api",
+        "/.well-known",
+        "/authorize",
+        "/token",
+        "/revoke",
+        "/userinfo",
+        "/jwks"
+    ];
+
+    app.MapFallback(async context =>
+    {
+        var request = context.Request;
+        if ((!HttpMethods.IsGet(request.Method) && !HttpMethods.IsHead(request.Method))
+            || serverPaths.Any(request.Path.StartsWithSegments))
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        var indexFile = app.Environment.WebRootFileProvider.GetFileInfo("index.html");
+        if (!indexFile.Exists)
+        {
+            context.Response.StatusCode = StatusCodes.Status404NotFound;
+            return;
+        }
+
+        context.Response.ContentType = "text/html; charset=utf-8";
+        context.Response.Headers.CacheControl = "no-cache";
+        await context.Response.SendFileAsync(indexFile, context.RequestAborted);
+    });
+}
 
 static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
 {
