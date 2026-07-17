@@ -61,7 +61,7 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
             }
 
             const string CLAIM_QUERY = "INSERT INTO `client_claim` (`client_id`, `name`, `value`) VALUES (@ClientId, @Name, @Value)";
-            var defaultScopes = OidcScopePolicy.ClaimScopes
+            var defaultScopes = OidcScopePolicy.DefaultApplicationScopes
                 .Select(scope => new ApplicationClaim(id, ScopeClaimName, scope))
                 .ToArray();
             command = new CommandDefinition(

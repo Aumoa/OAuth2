@@ -20,6 +20,7 @@ public sealed class OidcController(
     IRefreshTokens refreshTokens,
     IAccounts accounts,
     IAccountClaims accountClaims,
+    IOrganizationMembers organizationMembers,
     OidcTokenIssuer tokenIssuer,
     OidcSigningKey signingKey,
     IOptions<OAuthOptions> oauthOptions) : ControllerBase
@@ -110,6 +111,9 @@ public sealed class OidcController(
         }
 
         var claims = await accountClaims.GetClaimsAsync(code.AccountId, cancellationToken);
+        var organizationClaims = await organizationMembers.GetClaimsAsync(
+            code.AccountId,
+            cancellationToken);
         var refreshToken = OidcScopePolicy.Split(code.Scope)
             .Contains(OidcScopePolicy.OfflineAccessScope, StringComparer.Ordinal)
             ? await refreshTokens.CreateAsync(
@@ -122,6 +126,7 @@ public sealed class OidcController(
         return Ok(tokenIssuer.Issue(
             account,
             claims,
+            organizationClaims,
             code.ClientId,
             code.Scope,
             code.AuthTime,
@@ -198,9 +203,13 @@ public sealed class OidcController(
         var claims = await accountClaims.GetClaimsAsync(
             rotation.AccountId,
             cancellationToken);
+        var organizationClaims = await organizationMembers.GetClaimsAsync(
+            rotation.AccountId,
+            cancellationToken);
         return Ok(tokenIssuer.Issue(
             account!,
             claims,
+            organizationClaims,
             rotation.ClientId,
             rotation.Scope,
             rotation.AuthTime,

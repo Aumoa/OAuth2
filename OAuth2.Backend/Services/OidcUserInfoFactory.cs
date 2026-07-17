@@ -11,10 +11,12 @@ internal static class OidcUserInfoFactory
     public static Dictionary<string, JsonElement> Create(
         Account account,
         IReadOnlyList<AccountClaim> accountClaims,
+        IReadOnlyList<OrganizationClaimValue> organizationClaims,
         string scope)
     {
         ArgumentNullException.ThrowIfNull(account);
         ArgumentNullException.ThrowIfNull(accountClaims);
+        ArgumentNullException.ThrowIfNull(organizationClaims);
         ArgumentException.ThrowIfNullOrWhiteSpace(scope);
 
         var allowedClaimNames = OidcClaimPolicy.GetAllowedClaimNames(scope);
@@ -48,7 +50,46 @@ internal static class OidcUserInfoFactory
                 new DateTimeOffset(utcUpdatedAt).ToUnixTimeSeconds());
         }
 
+        AddOrganizationClaims(claims, allowedClaimNames, organizationClaims);
+
         return claims;
+    }
+
+    private static void AddOrganizationClaims(
+        IDictionary<string, JsonElement> claims,
+        IReadOnlySet<string> allowedClaimNames,
+        IReadOnlyList<OrganizationClaimValue> organizationClaims)
+    {
+        if (allowedClaimNames.Contains("groups"))
+        {
+            var groups = new SortedSet<string>(StringComparer.Ordinal);
+            if (claims.TryGetValue("groups", out var savedGroups)
+                && savedGroups.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var savedGroup in savedGroups.EnumerateArray())
+                {
+                    if (savedGroup.ValueKind == JsonValueKind.String
+                        && savedGroup.GetString() is { Length: > 0 } value)
+                    {
+                        groups.Add(value);
+                    }
+                }
+            }
+
+            groups.UnionWith(organizationClaims.Select(static claim => claim.Id));
+            claims["groups"] = JsonSerializer.SerializeToElement(groups.ToArray());
+        }
+
+        if (allowedClaimNames.Contains("organization"))
+        {
+            claims["organization"] = JsonSerializer.SerializeToElement(
+                organizationClaims.Select(static claim => new
+                {
+                    id = claim.Id,
+                    name = claim.Name,
+                    role = claim.Role
+                }).ToArray());
+        }
     }
 
     private static void AddStringClaim(

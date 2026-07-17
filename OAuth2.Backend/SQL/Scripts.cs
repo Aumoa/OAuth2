@@ -24,6 +24,7 @@ public class Scripts : IScripts
         yield return new AddClientApplicationType();
         yield return new AddClientSecret();
         yield return new AddOAuthRefreshToken();
+        yield return new AddOrganizationMemberRoles();
     }
 
     private class Init : IScript
@@ -481,6 +482,34 @@ CREATE TABLE `oauth_refresh_token` (
 
         public string DownSql => @"
 DROP TABLE `oauth_refresh_token`;
+";
+    }
+
+    private class AddOrganizationMemberRoles : IScript
+    {
+        public string Name => "Add_organization_member_roles";
+
+        public int InstalledRank => 18;
+
+        public string UpSql => @"
+ALTER TABLE `organization_member`
+    ADD COLUMN `owner_organization_id` VARCHAR(64)
+        GENERATED ALWAYS AS (
+            CASE WHEN `role` = 'owner' THEN `organization_id` ELSE NULL END
+        ) STORED,
+    ADD CONSTRAINT `CHK__organization_member__role`
+        CHECK (`role` IN ('owner', 'admin', 'member')),
+    ADD UNIQUE INDEX `UNQ__organization_member__owner_organization_id` (`owner_organization_id`),
+    ADD INDEX `IDX__organization_member__organization_id__role__created_at`
+        (`organization_id`, `role`, `created_at`);
+";
+
+        public string DownSql => @"
+ALTER TABLE `organization_member`
+    DROP INDEX `IDX__organization_member__organization_id__role__created_at`,
+    DROP INDEX `UNQ__organization_member__owner_organization_id`,
+    DROP CHECK `CHK__organization_member__role`,
+    DROP COLUMN `owner_organization_id`;
 ";
     }
 }

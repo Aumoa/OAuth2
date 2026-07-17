@@ -8,8 +8,6 @@ namespace OAuth2.Repositories;
 
 internal sealed class MySqlOrganizations(IOptions<MySqlOptions> mysqlOptions) : IOrganizations
 {
-    private const string OwnerRole = "owner";
-
     public async Task<OrganizationMembership?> AddOrganizationAsync(
         string id,
         string name,
@@ -57,7 +55,7 @@ internal sealed class MySqlOrganizations(IOptions<MySqlOptions> mysqlOptions) : 
                 {
                     organizationId = organization.Id,
                     accountId,
-                    role = OwnerRole,
+                    role = OrganizationRoles.Owner,
                     createdAt = organization.CreatedAt
                 },
                 transaction,
@@ -71,7 +69,7 @@ internal sealed class MySqlOrganizations(IOptions<MySqlOptions> mysqlOptions) : 
             return new OrganizationMembership
             {
                 Organization = organization,
-                Role = OwnerRole
+                Role = OrganizationRoles.Owner
             };
         }
         catch (MySqlException exception) when (exception.Number == 1062)

@@ -16,6 +16,7 @@ public sealed class AuthorizationGrantsController(
     IRememberedSessions rememberedSessions,
     IAccounts accounts,
     IAccountClaims accountClaims,
+    IOrganizationMembers organizationMembers,
     IOptions<OAuthOptions> oauthOptions) : ControllerBase
 {
     [HttpPost]
@@ -61,6 +62,9 @@ public sealed class AuthorizationGrantsController(
         }
 
         var claims = await accountClaims.GetClaimsAsync(code.AccountId, cancellationToken);
+        var organizationClaims = await organizationMembers.GetClaimsAsync(
+            code.AccountId,
+            cancellationToken);
         RememberedSessionGrant? rememberedSession = null;
         if (code.CreateRememberedSession)
         {
@@ -79,7 +83,11 @@ public sealed class AuthorizationGrantsController(
         return Ok(new GrantedUserInfo
         {
             Scope = grantedScope,
-            Claims = OidcUserInfoFactory.Create(account, claims, grantedScope),
+            Claims = OidcUserInfoFactory.Create(
+                account,
+                claims,
+                organizationClaims,
+                grantedScope),
             RememberedSession = rememberedSession
         });
     }

@@ -83,6 +83,24 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
+    public Task<BackendResponse> AddOrganizationMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        AddOrganizationMemberForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        return SendAsync(
+            HttpMethod.Post,
+            OrganizationMembersUri(actorAccountId, organizationId),
+            form,
+            null,
+            cancellationToken);
+    }
+
     public async Task<BackendResponse> DeleteApplicationAsync(
         string ownerId,
         string id,
@@ -109,6 +127,22 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
         using var response = await http.DeleteAsync(
             ApplicationSecretUri(ownerId, clientId, secretId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> DeleteOrganizationMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        string accountId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+
+        using var response = await http.DeleteAsync(
+            OrganizationMemberUri(actorAccountId, organizationId, accountId),
             cancellationToken);
         return await ToBackendResponseAsync(response, cancellationToken);
     }
@@ -179,6 +213,43 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return await ToBackendResponseAsync(response, cancellationToken);
     }
 
+    public async Task<BackendResponse> GetOrganizationMembersAsync(
+        string actorAccountId,
+        string organizationId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+
+        using var response = await http.GetAsync(
+            OrganizationMembersUri(actorAccountId, organizationId)
+                + $"&page={page}&pageSize={pageSize}",
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public Task<BackendResponse> TransferOrganizationOwnershipAsync(
+        string actorAccountId,
+        string organizationId,
+        TransferOrganizationOwnershipForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        return SendAsync(
+            HttpMethod.Put,
+            $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/owner?accountId={Uri.EscapeDataString(actorAccountId)}",
+            form,
+            null,
+            cancellationToken);
+    }
+
     public Task<BackendResponse> UpdateApplicationAsync(
         string ownerId,
         string id,
@@ -197,6 +268,26 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return SendAsync(
             HttpMethod.Put,
             ApplicationUri(ownerId, id),
+            form,
+            null,
+            cancellationToken);
+    }
+
+    public Task<BackendResponse> UpdateOrganizationMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        string accountId,
+        UpdateOrganizationMemberForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        return SendAsync(
+            HttpMethod.Put,
+            OrganizationMemberUri(actorAccountId, organizationId, accountId),
             form,
             null,
             cancellationToken);
@@ -437,6 +528,15 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
     private static string ApplicationSecretUri(string ownerId, string clientId, long secretId) =>
         $"/api/v1/applications/{Uri.EscapeDataString(clientId)}/secrets/{secretId}?ownerId={Uri.EscapeDataString(ownerId)}";
+
+    private static string OrganizationMembersUri(string actorAccountId, string organizationId) =>
+        $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/members?accountId={Uri.EscapeDataString(actorAccountId)}";
+
+    private static string OrganizationMemberUri(
+        string actorAccountId,
+        string organizationId,
+        string accountId) =>
+        $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/members/{Uri.EscapeDataString(accountId)}?accountId={Uri.EscapeDataString(actorAccountId)}";
 
     private static async Task<BackendResponse> ToBackendResponseAsync(
         HttpResponseMessage response,

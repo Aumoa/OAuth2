@@ -10,7 +10,9 @@ public static class OidcScopePolicy
 
     public const string OfflineAccessScope = "offline_access";
 
-    public static readonly string[] ClaimScopes =
+    public const string OrganizationScope = "organization";
+
+    public static readonly string[] DefaultApplicationScopes =
     [
         OpenIdScope,
         "profile",
@@ -18,6 +20,12 @@ public static class OidcScopePolicy
         "address",
         "phone",
         "groups"
+    ];
+
+    public static readonly string[] ClaimScopes =
+    [
+        .. DefaultApplicationScopes,
+        OrganizationScope
     ];
 
     public static readonly string[] SupportedScopes =

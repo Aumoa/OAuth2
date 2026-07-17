@@ -55,6 +55,17 @@ public sealed class OidcScopePolicyTests
     }
 
     [Fact]
+    public void OrganizationScope_IsSupportedButRequiresApplicationOptIn()
+    {
+        Assert.Contains(
+            OidcScopePolicy.OrganizationScope,
+            OidcScopePolicy.SupportedScopes);
+        Assert.DoesNotContain(
+            OidcScopePolicy.OrganizationScope,
+            OidcScopePolicy.DefaultApplicationScopes);
+    }
+
+    [Fact]
     public void TryResolveRefreshScope_PreservesOfflineGrantWhenAccessScopeIsNarrowed()
     {
         var result = OidcScopePolicy.TryResolveRefreshScope(
@@ -98,5 +109,27 @@ public sealed class OidcScopePolicyTests
         Assert.Contains("sub", filtered);
         Assert.Contains("name", filtered);
         Assert.DoesNotContain("email", filtered);
+    }
+
+    [Fact]
+    public void Filter_SeparatesGroupsAndOrganizationClaims()
+    {
+        var claims = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+        {
+            ["sub"] = JsonSerializer.SerializeToElement("subject"),
+            ["groups"] = JsonSerializer.SerializeToElement(new[] { "example" }),
+            ["organization"] = JsonSerializer.SerializeToElement(new[]
+            {
+                new { id = "example", name = "Example", role = "member" }
+            })
+        };
+
+        var groupsOnly = OidcClaimPolicy.Filter(claims, "openid groups");
+        var organizationOnly = OidcClaimPolicy.Filter(claims, "openid organization");
+
+        Assert.Contains("groups", groupsOnly);
+        Assert.DoesNotContain("organization", groupsOnly);
+        Assert.Contains("organization", organizationOnly);
+        Assert.DoesNotContain("groups", organizationOnly);
     }
 }

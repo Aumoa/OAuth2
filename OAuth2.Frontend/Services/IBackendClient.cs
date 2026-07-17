@@ -21,6 +21,12 @@ public interface IBackendClient
         CreateOrganizationForm form,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> AddOrganizationMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        AddOrganizationMemberForm form,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> DeleteApplicationAsync(
         string ownerId,
         string id,
@@ -30,6 +36,12 @@ public interface IBackendClient
         string ownerId,
         string clientId,
         long secretId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> DeleteOrganizationMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        string accountId,
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> GetOwnedApplicationAsync(
@@ -55,10 +67,30 @@ public interface IBackendClient
         string accountId,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> GetOrganizationMembersAsync(
+        string actorAccountId,
+        string organizationId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> TransferOrganizationOwnershipAsync(
+        string actorAccountId,
+        string organizationId,
+        TransferOrganizationOwnershipForm form,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> UpdateApplicationAsync(
         string ownerId,
         string id,
         UpdateApplicationForm form,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> UpdateOrganizationMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        string accountId,
+        UpdateOrganizationMemberForm form,
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> RegisterAccountAsync(

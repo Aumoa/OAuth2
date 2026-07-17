@@ -34,6 +34,7 @@ const availableScopes = [
   'address',
   'phone',
   'groups',
+  'organization',
   'offline_access',
 ] as const;
 const { locale, t } = useI18n();

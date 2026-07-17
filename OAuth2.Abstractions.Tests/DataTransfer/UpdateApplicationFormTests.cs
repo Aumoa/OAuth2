@@ -48,6 +48,19 @@ public sealed class UpdateApplicationFormTests
         Assert.Null(error);
     }
 
+    [Fact]
+    public void Verify_AcceptsOrganizationScope()
+    {
+        var form = new UpdateApplicationForm
+        {
+            RedirectUris = [],
+            AllowedScopes = ["openid", "organization"]
+        };
+
+        Assert.True(form.Verify(out var error));
+        Assert.Null(error);
+    }
+
     [Theory]
     [InlineData("http://example.com/callback")]
     [InlineData("https://user@example.com/callback")]

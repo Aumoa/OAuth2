@@ -28,7 +28,8 @@ public static class OidcClaimPolicy
             ["email"] = ["email", "email_verified"],
             ["address"] = ["address"],
             ["phone"] = ["phone_number", "phone_number_verified"],
-            ["groups"] = ["groups"]
+            ["groups"] = ["groups"],
+            ["organization"] = ["organization"]
         };
 
     public static IReadOnlyList<string> ClaimNames { get; } =

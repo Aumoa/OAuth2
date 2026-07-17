@@ -15,6 +15,7 @@ public sealed class OidcTokenIssuer(
     public OidcTokenResponse Issue(
         Account account,
         IReadOnlyList<AccountClaim> accountClaims,
+        IReadOnlyList<OrganizationClaimValue> organizationClaims,
         string clientId,
         string scope,
         long authTime,
@@ -26,6 +27,7 @@ public sealed class OidcTokenIssuer(
         var userClaims = OidcUserInfoFactory.Create(
             account,
             accountClaims,
+            organizationClaims,
             scope);
 
         var accessTokenClaims = CreateTokenClaims(

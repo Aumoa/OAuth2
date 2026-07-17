@@ -13,6 +13,7 @@ namespace OAuth2.Controllers;
 public sealed class AuthorizationCodesController(
     IAccounts accounts,
     IAccountClaims accountClaims,
+    IOrganizationMembers organizationMembers,
     IAuthorizationCodes authorizationCodes,
     IRememberedSessions rememberedSessions,
     OidcAuthorizationRequestValidator authorizationValidator) : ControllerBase
@@ -155,6 +156,9 @@ public sealed class AuthorizationCodesController(
             }
 
             var claims = await accountClaims.GetClaimsAsync(accountId, cancellationToken);
+            var organizationClaims = await organizationMembers.GetClaimsAsync(
+                accountId,
+                cancellationToken);
             var rememberedSession = await rememberedSessions.CreateAsync(
                 accountId,
                 authTime,
@@ -165,6 +169,7 @@ public sealed class AuthorizationCodesController(
                 Claims = OidcUserInfoFactory.Create(
                     account,
                     claims,
+                    organizationClaims,
                     InternalOidcAuthorization.Scope),
                 RememberedSession = new RememberedSessionGrant
                 {
