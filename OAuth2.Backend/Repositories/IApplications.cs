@@ -8,6 +8,7 @@ public interface IApplications
         string id,
         string ownerId,
         string name,
+        string applicationType,
         CancellationToken cancellationToken = default);
 
     Task<bool> DeleteApplicationAsync(

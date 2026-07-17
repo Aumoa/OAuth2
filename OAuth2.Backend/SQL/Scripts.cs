@@ -20,6 +20,7 @@ public class Scripts : IScripts
         yield return new AddOAuthGrant();
         yield return new AddAccountUpdatedAt();
         yield return new AddEmailVerificationExpiration();
+        yield return new AddClientApplicationType();
     }
 
     private class Init : IScript
@@ -367,6 +368,23 @@ WHERE `verify_code` IS NOT NULL;
         public string DownSql => @"
 ALTER TABLE `account`
     DROP COLUMN `verify_code_expires_at`;
+";
+    }
+
+    private class AddClientApplicationType : IScript
+    {
+        public string Name => "Add_client_application_type";
+
+        public int InstalledRank => 14;
+
+        public string UpSql => @"
+ALTER TABLE `client`
+    ADD COLUMN `application_type` VARCHAR(16) NOT NULL DEFAULT 'web' AFTER `name`;
+";
+
+        public string DownSql => @"
+ALTER TABLE `client`
+    DROP COLUMN `application_type`;
 ";
     }
 }

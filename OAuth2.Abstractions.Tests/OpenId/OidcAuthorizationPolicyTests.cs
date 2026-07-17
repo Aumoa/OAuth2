@@ -98,6 +98,7 @@ public sealed class OidcAuthorizationPolicyTests
                 Id = "service-client",
                 OwnerId = "owner",
                 Name = "Service",
+                ApplicationType = OAuthApplicationTypes.Web,
                 CreatedAt = DateTime.UtcNow
             },
             RedirectUris = ["https://service.example/signin-oidc"],

@@ -18,17 +18,26 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         string id,
         string ownerId,
         string name,
+        string applicationType,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (!OAuthApplicationTypes.IsSupported(applicationType))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(applicationType),
+                applicationType,
+                "Unsupported OAuth application type.");
+        }
 
         var application = new OAuthApplication
         {
             Id = id,
             OwnerId = ownerId,
             Name = name,
+            ApplicationType = applicationType,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -36,7 +45,7 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         await connection.OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        const string QUERY = "INSERT INTO `client` (`id`, `owner_id`, `name`, `created_at`) VALUES (@Id, @OwnerId, @Name, @CreatedAt)";
+        const string QUERY = "INSERT INTO `client` (`id`, `owner_id`, `name`, `application_type`, `created_at`) VALUES (@Id, @OwnerId, @Name, @ApplicationType, @CreatedAt)";
         var command = new CommandDefinition(
             QUERY,
             application,
@@ -164,8 +173,8 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         using var connection = new MySqlConnection(mysqlOptions.Value.ConnectionString);
 
         var applicationQuery = ownerId is null
-            ? "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `removed_at` IS NULL"
-            : "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL";
+            ? "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `application_type` AS `ApplicationType`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `removed_at` IS NULL"
+            : "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `application_type` AS `ApplicationType`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL";
         var command = new CommandDefinition(
             applicationQuery,
             new { id, ownerId },
@@ -210,6 +219,7 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
                 `id`,
                 `owner_id` AS `OwnerId`,
                 `name`,
+                `application_type` AS `ApplicationType`,
                 `created_at` AS `CreatedAt`
             FROM `client`
             WHERE `owner_id` = @ownerId

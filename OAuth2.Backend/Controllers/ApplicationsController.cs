@@ -29,6 +29,7 @@ public sealed class ApplicationsController(IApplications applications) : Control
             form.ClientId.Trim(),
             ownerId,
             form.Name.Trim(),
+            form.ApplicationType,
             cancellationToken);
         if (application is null)
         {
@@ -123,6 +124,7 @@ public sealed class ApplicationsController(IApplications applications) : Control
         {
             Id = application.Id,
             Name = application.Name,
+            ApplicationType = application.ApplicationType,
             CreatedAt = application.CreatedAt
         };
 
@@ -131,6 +133,7 @@ public sealed class ApplicationsController(IApplications applications) : Control
         {
             Id = configuration.Application.Id,
             Name = configuration.Application.Name,
+            ApplicationType = configuration.Application.ApplicationType,
             CreatedAt = configuration.Application.CreatedAt,
             RedirectUris = configuration.RedirectUris,
             AllowedScopes = configuration.AllowedScopes

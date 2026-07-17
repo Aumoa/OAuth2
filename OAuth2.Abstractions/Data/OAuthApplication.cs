@@ -8,5 +8,7 @@ public sealed record OAuthApplication
 
     public required string Name { get; init; }
 
+    public required string ApplicationType { get; init; }
+
     public DateTime CreatedAt { get; init; }
 }
