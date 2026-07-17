@@ -219,7 +219,7 @@ onBeforeUnmount(() => {
 <style scoped lang="css">
 .edit-application-page {
   width: min(100%, 960px);
-  margin: 0 auto;
+  margin: 0;
   padding: 16px 0 40px;
   box-sizing: border-box;
   text-align: left;
