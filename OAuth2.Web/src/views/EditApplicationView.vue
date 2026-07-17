@@ -23,6 +23,8 @@ const application = ref<ApplicationDetails | null>(null);
 const redirectUris = ref<RedirectUriEntry[]>([]);
 const redirectUriInputs = ref<HTMLInputElement[]>([]);
 const allowedScopes = ref<string[]>([]);
+const initialRedirectUris = ref<string[]>([]);
+const initialAllowedScopes = ref<string[]>([]);
 const redirectUrisError = ref<string | null>(null);
 const saveError = ref<string | null>(null);
 const savedMessage = ref<string | null>(null);
@@ -55,6 +57,15 @@ const deleteConfirmationMatches = computed(() => (
   application.value !== null
   && deleteConfirmation.value === application.value.name
 ));
+const hasRedirectUriChanges = computed(() => (
+  !areStringArraysEqual(normalizedRedirectUris(), initialRedirectUris.value)
+));
+const hasAllowedScopeChanges = computed(() => (
+  availableScopes.some(isScopeChanged)
+));
+const hasChanges = computed(() => (
+  hasRedirectUriChanges.value || hasAllowedScopeChanges.value
+));
 let isMounted = true;
 let loadRequestId = 0;
 let nextRedirectUriId = 0;
@@ -72,6 +83,31 @@ function normalizedRedirectUris(): string[] {
     .filter(value => value.length > 0);
 }
 
+function normalizedAllowedScopes(): string[] {
+  return availableScopes.filter(scope => (
+    scope === requiredScope || allowedScopes.value.includes(scope)
+  ));
+}
+
+function areStringArraysEqual(left: string[], right: string[]): boolean {
+  return left.length === right.length
+    && left.every((value, index) => value === right[index]);
+}
+
+function isScopeChanged(scope: string): boolean {
+  return allowedScopes.value.includes(scope) !== initialAllowedScopes.value.includes(scope);
+}
+
+function clearSaveFeedback(): void {
+  saveError.value = null;
+  savedMessage.value = null;
+}
+
+function handleRedirectUriInput(): void {
+  redirectUrisError.value = null;
+  clearSaveFeedback();
+}
+
 async function addRedirectUriAsync(): Promise<void> {
   if (redirectUris.value.length >= 20 || isSaving.value || isDeleting.value) {
     return;
@@ -79,6 +115,7 @@ async function addRedirectUriAsync(): Promise<void> {
 
   redirectUris.value.push(createRedirectUriEntry());
   redirectUrisError.value = null;
+  clearSaveFeedback();
   await nextTick();
   redirectUriInputs.value[redirectUriInputs.value.length - 1]?.focus();
 }
@@ -86,6 +123,7 @@ async function addRedirectUriAsync(): Promise<void> {
 function removeRedirectUri(id: number): void {
   redirectUris.value = redirectUris.value.filter(entry => entry.id !== id);
   redirectUrisError.value = null;
+  clearSaveFeedback();
 }
 
 function isLoopbackHostname(hostname: string): boolean {
@@ -146,6 +184,10 @@ async function loadApplicationAsync(): Promise<void> {
   const requestId = ++loadRequestId;
   state.value = 'loading';
   application.value = null;
+  redirectUris.value = [];
+  allowedScopes.value = [];
+  initialRedirectUris.value = [];
+  initialAllowedScopes.value = [];
 
   try {
     const details = await Applications.getAsync(clientId.value, organizationId.value);
@@ -153,11 +195,15 @@ async function loadApplicationAsync(): Promise<void> {
       return;
     }
 
-    application.value = details;
-    redirectUris.value = details.redirectUris.map(createRedirectUriEntry);
-    allowedScopes.value = availableScopes.filter(scope => (
+    const loadedScopes = availableScopes.filter(scope => (
       scope === requiredScope || details.allowedScopes.includes(scope)
     ));
+    application.value = details;
+    redirectUris.value = details.redirectUris.map(createRedirectUriEntry);
+    allowedScopes.value = [...loadedScopes];
+    initialRedirectUris.value = [...details.redirectUris];
+    initialAllowedScopes.value = [...loadedScopes];
+    clearSaveFeedback();
     state.value = 'ready';
   } catch (error) {
     if (!isMounted || requestId !== loadRequestId) {
@@ -171,7 +217,7 @@ async function loadApplicationAsync(): Promise<void> {
 }
 
 async function saveApplicationAsync(): Promise<void> {
-  if (isSaving.value || isDeleting.value) {
+  if (!hasChanges.value || isSaving.value || isDeleting.value) {
     return;
   }
 
@@ -184,7 +230,7 @@ async function saveApplicationAsync(): Promise<void> {
 
   isSaving.value = true;
   try {
-    const scopes = [...new Set([requiredScope, ...allowedScopes.value])];
+    const scopes = normalizedAllowedScopes();
     await Applications.updateAsync(
       clientId.value,
       redirectUriValues,
@@ -192,6 +238,10 @@ async function saveApplicationAsync(): Promise<void> {
       organizationId.value,
     );
     if (isMounted) {
+      redirectUris.value = redirectUriValues.map(createRedirectUriEntry);
+      allowedScopes.value = [...scopes];
+      initialRedirectUris.value = [...redirectUriValues];
+      initialAllowedScopes.value = [...scopes];
       savedMessage.value = t('app.applicationManagement.saved');
     }
   } catch (error) {
@@ -580,6 +630,11 @@ onBeforeUnmount(() => {
   color: var(--text);
   background: var(--surface);
   cursor: pointer;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .scope-option:has(input:checked) {
@@ -588,11 +643,22 @@ onBeforeUnmount(() => {
   background: var(--accent-bg);
 }
 
+.scope-option.changed {
+  color: color-mix(in srgb, #f59e0b 78%, var(--text-h));
+  border-color: color-mix(in srgb, #f59e0b 68%, var(--border));
+  background: color-mix(in srgb, #f59e0b 12%, var(--surface));
+  box-shadow: inset 3px 0 0 #f59e0b;
+}
+
 .scope-option input {
   width: 17px;
   height: 17px;
   margin: 0;
   accent-color: var(--accent);
+}
+
+.scope-option.changed input {
+  accent-color: #f59e0b;
 }
 
 .scope-name {
@@ -642,8 +708,12 @@ onBeforeUnmount(() => {
 }
 
 .form-action:disabled {
-  cursor: wait;
+  cursor: not-allowed;
   opacity: 0.64;
+}
+
+.configuration-form[aria-busy="true"] .form-action {
+  cursor: wait;
 }
 
 .danger-zone {
@@ -748,7 +818,8 @@ onBeforeUnmount(() => {
 
   .redirect-uri-input,
   .redirect-uri-remove,
-  .redirect-uri-add {
+  .redirect-uri-add,
+  .scope-option {
     transition-duration: 0.01ms;
   }
 }
@@ -835,7 +906,7 @@ onBeforeUnmount(() => {
                 :aria-describedby="redirectUrisError ? 'redirect-uris-error' : 'redirect-uris-hint'"
                 inputmode="url"
                 spellcheck="false"
-                @input="redirectUrisError = null"
+                @input="handleRedirectUriInput"
               />
               <button
                 type="button"
@@ -874,12 +945,13 @@ onBeforeUnmount(() => {
           </p>
           <ul class="scope-list">
             <li v-for="scope in availableScopes" :key="scope">
-              <label class="scope-option">
+              <label class="scope-option" :class="{ changed: isScopeChanged(scope) }">
                 <input
                   v-model="allowedScopes"
                   type="checkbox"
                   :value="scope"
                   :disabled="scope === requiredScope || isSaving || isDeleting"
+                  @change="clearSaveFeedback"
                 />
                 <span class="scope-name">{{ scope }}</span>
               </label>
@@ -890,7 +962,11 @@ onBeforeUnmount(() => {
         <div class="configuration-actions">
           <p v-if="saveError" class="save-error" role="alert">{{ saveError }}</p>
           <p v-else-if="savedMessage" class="save-message" role="status">{{ savedMessage }}</p>
-          <button type="submit" class="app-button form-action primary" :disabled="isSaving || isDeleting">
+          <button
+            type="submit"
+            class="app-button form-action primary"
+            :disabled="!hasChanges || isSaving || isDeleting"
+          >
             <span v-if="isSaving" class="material-symbols-outlined button-spinner" aria-hidden="true">
               progress_activity
             </span>
