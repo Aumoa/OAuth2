@@ -18,7 +18,7 @@ const profileSummary = computed(() => (
   ?? auth.user?.sub
   ?? ''
 ));
-const groupsClaim = computed(() => JSON.stringify(auth.user?.groups ?? []));
+const groups = computed(() => auth.user?.groups ?? []);
 </script>
 
 <style lang="css" scoped>
@@ -176,26 +176,43 @@ const groupsClaim = computed(() => JSON.stringify(auth.user?.groups ?? []));
   font-size: 12px;
 }
 
-.groups-claim-value {
-  display: block;
-  width: fit-content;
+.groups-claim-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.groups-claim-tag {
+  display: inline-flex;
+  min-width: 0;
   max-width: 100%;
-  padding: 5px 8px;
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  color: var(--text-h);
-  background: var(--surface-muted);
+  padding: 4px 9px 4px 6px;
+  align-items: center;
+  gap: 4px;
+  border: 1px solid color-mix(in srgb, var(--success) 36%, var(--border));
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--success) 84%, var(--text-h));
+  background: color-mix(in srgb, var(--success) 11%, transparent);
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.35;
   overflow-wrap: anywhere;
 }
 
-.groups-claim-description {
-  display: block;
-  margin-top: 6px;
+.groups-claim-tag .material-symbols-outlined {
+  flex: 0 0 auto;
+  font-size: 14px;
+}
+
+.groups-claim-tag > span:last-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.groups-claim-empty {
   color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 13px;
 }
 
 @media (max-width: 640px) {
@@ -283,10 +300,13 @@ const groupsClaim = computed(() => JSON.stringify(auth.user?.groups ?? []));
             <span class="material-symbols-outlined" aria-hidden="true">groups</span>
             {{ t('app.accountInformation.fields.groups') }}
           </dt>
-          <dd>
-            <code class="groups-claim-value">{{ groupsClaim }}</code>
-            <span class="groups-claim-description">
-              {{ t('app.accountInformation.groupsDescription') }}
+          <dd class="groups-claim-tags">
+            <span v-for="group in groups" :key="group" class="groups-claim-tag">
+              <span class="material-symbols-outlined" aria-hidden="true">label</span>
+              <span>{{ group }}</span>
+            </span>
+            <span v-if="groups.length === 0" class="groups-claim-empty">
+              {{ t('app.accountInformation.notProvided') }}
             </span>
           </dd>
         </div>
