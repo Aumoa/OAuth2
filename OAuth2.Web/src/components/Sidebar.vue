@@ -1,7 +1,8 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import { Applications } from '../api/applications.ts';
 import { useOrganizationsStore } from '../stores/organizations.ts';
 import SidebarMainButton from './SidebarMainButton.vue';
 
@@ -22,12 +23,25 @@ const mainButtonHeight = 44;
 const navigationGap = 4;
 const sectionDividerHeight = 15;
 const focusedButtonKey = ref<string | null>(null);
+const editingApplicationName = ref<string | null>(null);
+let applicationNameRequestId = 0;
 const organizationId = computed(() => {
   const value = route.params.organizationId;
   if (value === undefined) {
     return undefined;
   }
 
+  return Array.isArray(value) ? value.join('/') : value;
+});
+const editingApplicationId = computed(() => {
+  if (
+    route.name !== 'applications-personal-edit'
+    && route.name !== 'applications-organization-edit'
+  ) {
+    return undefined;
+  }
+
+  const value = route.params.clientId;
   return Array.isArray(value) ? value.join('/') : value;
 });
 const applicationGroupButton = computed<NavigationButton | null>(() => {
@@ -83,13 +97,13 @@ const applicationLeafButton = computed<NavigationButton | null>(() => {
     route.name === 'applications-personal-edit'
     || route.name === 'applications-organization-edit'
   ) {
-    const clientIdParam = route.params.clientId;
-    const clientId = Array.isArray(clientIdParam) ? clientIdParam.join('/') : clientIdParam;
     return {
       key: `application-edit-${route.path}`,
       path: route.path,
       icon: 'edit',
-      label: t('app.sidebar.editApplication', { clientId }),
+      label: editingApplicationName.value === null
+        ? t('app.sidebar.editApplicationFallback')
+        : t('app.sidebar.editApplication', { name: editingApplicationName.value }),
       indentLevel: 1,
       tone: organizationId.value === undefined ? 'default' : 'organization',
     };
@@ -207,6 +221,27 @@ function blurButton(key: string): void {
 onMounted(() => {
   void organizationsStore.loadAsync().catch(() => undefined);
 });
+
+watch(
+  [editingApplicationId, organizationId],
+  async ([clientId, currentOrganizationId]) => {
+    const requestId = ++applicationNameRequestId;
+    editingApplicationName.value = null;
+    if (clientId === undefined) {
+      return;
+    }
+
+    try {
+      const application = await Applications.getAsync(clientId, currentOrganizationId);
+      if (requestId === applicationNameRequestId) {
+        editingApplicationName.value = application.name;
+      }
+    } catch {
+      // Keep the client ID as a stable fallback when details cannot be loaded.
+    }
+  },
+  { immediate: true },
+);
 </script>
 
 <style lang="css">

@@ -10,7 +10,8 @@ export const appMessages = {
         personalApplications: '내 애플리케이션',
         organizationApplications: '{organization} 앱',
         newApplication: '새 애플리케이션',
-        editApplication: '{clientId} 편집',
+        editApplicationFallback: '애플리케이션 편집',
+        editApplication: '{name} 편집',
       },
       accountInformation: {
         title: '계정 정보',
@@ -248,7 +249,8 @@ export const appMessages = {
         personalApplications: 'My applications',
         organizationApplications: '{organization} apps',
         newApplication: 'New application',
-        editApplication: 'Edit {clientId}',
+        editApplicationFallback: 'Edit application',
+        editApplication: 'Edit {name}',
       },
       accountInformation: {
         title: 'Account information',
@@ -484,7 +486,8 @@ export const appMessages = {
         applicationManagement: 'アプリケーション管理',
         addOrganization: '組織を追加',
         newApplication: '新しいアプリケーション',
-        editApplication: '{clientId}を編集',
+        editApplicationFallback: 'アプリケーションを編集',
+        editApplication: '{name}を編集',
       },
       accountInformation: {
         title: 'アカウント情報',

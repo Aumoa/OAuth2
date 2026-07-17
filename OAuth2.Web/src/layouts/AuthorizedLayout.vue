@@ -7,7 +7,7 @@ import Topbar from '../components/Topbar.vue';
 <style lang="css">
 .main-layout {
   --topbar-height: 50px;
-  --sidebar-width: 220px;
+  --sidebar-width: 252px;
 
   display: grid;
   grid-template-areas:
