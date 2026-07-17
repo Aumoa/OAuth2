@@ -81,6 +81,44 @@ public sealed class OrganizationsController(
         return FromBackend(response);
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteAsync(
+        [FromRoute] string id,
+        [FromBody] DeleteOrganizationForm form,
+        CancellationToken cancellationToken)
+    {
+        if (!BrowserActionRequest.IsValid(Request))
+        {
+            return Forbid();
+        }
+
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        var accountId = await GetCurrentAccountIdAsync(
+            sessions,
+            sessionOptions.Value.CookieName,
+            cancellationToken);
+        if (string.IsNullOrWhiteSpace(accountId))
+        {
+            return Unauthorized();
+        }
+
+        var response = await backend.DeleteOrganizationAsync(
+            accountId,
+            id,
+            form,
+            cancellationToken);
+        return FromBackend(response);
+    }
+
     [HttpGet("{id}/members")]
     public async Task<IActionResult> GetMembersAsync(
         [FromRoute] string id,

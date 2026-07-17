@@ -147,6 +147,24 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return await ToBackendResponseAsync(response, cancellationToken);
     }
 
+    public Task<BackendResponse> DeleteOrganizationAsync(
+        string actorAccountId,
+        string organizationId,
+        DeleteOrganizationForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        return SendAsync(
+            HttpMethod.Delete,
+            $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}?accountId={Uri.EscapeDataString(actorAccountId)}",
+            form,
+            null,
+            cancellationToken);
+    }
+
     public async Task<BackendResponse> GetOwnedApplicationAsync(
         string ownerId,
         string id,

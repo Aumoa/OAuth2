@@ -18,6 +18,7 @@ const profileSummary = computed(() => (
   ?? auth.user?.sub
   ?? ''
 ));
+const groupsClaim = computed(() => JSON.stringify(auth.user?.groups ?? []));
 </script>
 
 <style lang="css" scoped>
@@ -175,6 +176,28 @@ const profileSummary = computed(() => (
   font-size: 12px;
 }
 
+.groups-claim-value {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  padding: 5px 8px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-h);
+  background: var(--surface-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.groups-claim-description {
+  display: block;
+  margin-top: 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
 @media (max-width: 640px) {
   .account-page {
     padding-top: 8px;
@@ -253,6 +276,19 @@ const profileSummary = computed(() => (
             {{ t('app.accountInformation.fields.subject') }}
           </dt>
           <dd class="subject-value">{{ auth.user.sub }}</dd>
+        </div>
+
+        <div class="profile-field">
+          <dt>
+            <span class="material-symbols-outlined" aria-hidden="true">groups</span>
+            {{ t('app.accountInformation.fields.groups') }}
+          </dt>
+          <dd>
+            <code class="groups-claim-value">{{ groupsClaim }}</code>
+            <span class="groups-claim-description">
+              {{ t('app.accountInformation.groupsDescription') }}
+            </span>
+          </dd>
         </div>
       </dl>
     </article>

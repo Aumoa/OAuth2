@@ -44,6 +44,12 @@ public interface IBackendClient
         string accountId,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> DeleteOrganizationAsync(
+        string actorAccountId,
+        string organizationId,
+        DeleteOrganizationForm form,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> GetOwnedApplicationAsync(
         string ownerId,
         string id,

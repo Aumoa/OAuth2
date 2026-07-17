@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import {
   Organizations,
   type OrganizationMemberPage,
@@ -10,9 +10,12 @@ import {
   type OrganizationSummary,
 } from '../api/Organizations.ts';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
+import { useOrganizationsStore } from '../stores/organizations.ts';
 
 const { locale, t } = useI18n();
 const route = useRoute();
+const router = useRouter();
+const organizationsStore = useOrganizationsStore();
 const organization = ref<OrganizationSummary | null>(null);
 const isLoading = ref(true);
 const loadFailed = ref(false);
@@ -31,6 +34,9 @@ const memberActionError = ref<string | null>(null);
 const transferAccountId = ref('');
 const isTransferringOwnership = ref(false);
 const transferError = ref<string | null>(null);
+const deleteConfirmation = ref('');
+const isDeletingOrganization = ref(false);
+const deleteOrganizationError = ref<string | null>(null);
 let isMounted = true;
 
 const organizationId = computed(() => {
@@ -58,6 +64,10 @@ const addableRoles = computed<OrganizationRole[]>(() => (
   organization.value?.role === 'owner' ? ['admin', 'member'] : ['member']
 ));
 const isOwner = computed(() => organization.value?.role === 'owner');
+const deleteConfirmationMatches = computed(() => (
+  organization.value !== null
+  && deleteConfirmation.value === organization.value.name
+));
 
 function roleRank(role: OrganizationRole): number {
   switch (role) {
@@ -121,6 +131,8 @@ async function loadOrganizationAsync(): Promise<void> {
   notFound.value = false;
   organization.value = null;
   addRole.value = 'member';
+  deleteConfirmation.value = '';
+  deleteOrganizationError.value = null;
 
   try {
     const result = await Organizations.getAsync(organizationId.value);
@@ -253,6 +265,46 @@ async function transferOwnershipAsync(): Promise<void> {
   }
 }
 
+async function deleteOrganizationAsync(): Promise<void> {
+  if (organization.value === null
+    || !deleteConfirmationMatches.value
+    || isDeletingOrganization.value
+    || !window.confirm(t('app.organizationManagement.organizationDelete.confirm', {
+      name: organization.value.name,
+    }))) {
+    return;
+  }
+
+  isDeletingOrganization.value = true;
+  deleteOrganizationError.value = null;
+  try {
+    const deletedOrganizationId = organization.value.id;
+    await Organizations.deleteAsync(deletedOrganizationId, deleteConfirmation.value);
+    organizationsStore.remove(deletedOrganizationId);
+    await router.push('/');
+  } catch (error) {
+    if (error instanceof HttpStatusCodeError && error.status === 403) {
+      deleteOrganizationError.value = t(
+        'app.organizationManagement.organizationDelete.ownerRequired',
+      );
+    } else if (error instanceof HttpStatusCodeError && error.status === 409) {
+      deleteOrganizationError.value = t(
+        'app.organizationManagement.organizationDelete.nameMismatch',
+      );
+    } else if (error instanceof HttpStatusCodeError && error.status === 422) {
+      deleteOrganizationError.value = t(
+        'app.organizationManagement.organizationDelete.ownerConflict',
+      );
+    } else {
+      deleteOrganizationError.value = t(
+        'app.organizationManagement.organizationDelete.failed',
+      );
+    }
+  } finally {
+    isDeletingOrganization.value = false;
+  }
+}
+
 watch(organizationId, loadOrganizationAsync);
 
 onMounted(loadOrganizationAsync);
@@ -330,7 +382,8 @@ onBeforeUnmount(() => {
 }
 
 .members-panel,
-.owner-transfer-panel {
+.owner-transfer-panel,
+.organization-delete-panel {
   width: 100%;
   margin-top: 20px;
   padding: 22px;
@@ -507,6 +560,11 @@ onBeforeUnmount(() => {
   background: color-mix(in srgb, var(--danger-bg) 22%, var(--surface));
 }
 
+.organization-delete-panel {
+  border-color: color-mix(in srgb, var(--danger) 52%, var(--border));
+  background: color-mix(in srgb, var(--danger-bg) 34%, var(--surface));
+}
+
 .danger-title {
   margin: 0;
   color: var(--danger);
@@ -521,10 +579,28 @@ onBeforeUnmount(() => {
   margin-top: 15px;
 }
 
+.organization-delete-form {
+  display: grid;
+  grid-template-columns: minmax(200px, 1fr) auto;
+  gap: 9px;
+  margin-top: 15px;
+}
+
+.organization-delete-input:focus {
+  border-color: var(--danger);
+  outline: 2px solid color-mix(in srgb, var(--danger) 22%, transparent);
+}
+
 .owner-transfer-button {
   border-color: color-mix(in srgb, var(--danger) 55%, var(--border));
   color: var(--danger);
   background: color-mix(in srgb, var(--danger-bg) 55%, transparent);
+}
+
+.organization-delete-button {
+  border-color: color-mix(in srgb, var(--danger) 68%, var(--border));
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger-bg) 62%, transparent);
 }
 
 .organization-section-title,
@@ -605,6 +681,7 @@ onBeforeUnmount(() => {
 
   .add-member-form,
   .owner-transfer-form,
+  .organization-delete-form,
   .member-row {
     grid-template-columns: 1fr;
   }
@@ -823,6 +900,43 @@ onBeforeUnmount(() => {
       </form>
       <p v-if="transferError" class="member-feedback" role="alert">
         {{ transferError }}
+      </p>
+    </section>
+
+    <section
+      v-if="organization && isOwner"
+      class="organization-delete-panel"
+      aria-labelledby="organization-delete-title"
+    >
+      <h2 id="organization-delete-title" class="danger-title">
+        {{ t('app.organizationManagement.organizationDelete.title') }}
+      </h2>
+      <p class="section-description">
+        {{ t('app.organizationManagement.organizationDelete.description') }}
+      </p>
+      <form class="organization-delete-form" @submit.prevent="deleteOrganizationAsync">
+        <input
+          v-model="deleteConfirmation"
+          class="member-input organization-delete-input"
+          type="text"
+          maxlength="128"
+          autocomplete="off"
+          :placeholder="t('app.organizationManagement.organizationDelete.placeholder', {
+            name: organization.name,
+          })"
+          :aria-label="t('app.organizationManagement.organizationDelete.confirmationLabel')"
+          :disabled="isDeletingOrganization"
+        />
+        <button
+          type="submit"
+          class="app-button organization-delete-button"
+          :disabled="isDeletingOrganization || !deleteConfirmationMatches"
+        >
+          {{ t('app.organizationManagement.organizationDelete.submit') }}
+        </button>
+      </form>
+      <p v-if="deleteOrganizationError" class="member-feedback" role="alert">
+        {{ deleteOrganizationError }}
       </p>
     </section>
   </section>

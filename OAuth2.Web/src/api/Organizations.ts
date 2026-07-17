@@ -154,6 +154,21 @@ export class Organizations {
     }
   }
 
+  static async deleteAsync(id: string, name: string): Promise<void> {
+    const response = await fetch(
+      `/api/v1/organizations/${encodeURIComponent(id)}`,
+      {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: actionHeaders,
+        body: JSON.stringify({ name }),
+      },
+    );
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+  }
+
   static async transferOwnershipAsync(id: string, accountId: string): Promise<void> {
     const response = await fetch(
       `/api/v1/organizations/${encodeURIComponent(id)}/owner`,

@@ -54,6 +54,14 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     return organizations.value.find(organization => organization.id === id);
   }
 
+  function remove(id: string): void {
+    const index = organizations.value.findIndex(organization => organization.id === id);
+    if (index >= 0) {
+      organizations.value.splice(index, 1);
+    }
+    status.value = 'loaded';
+  }
+
   return {
     organizations,
     status,
@@ -62,5 +70,6 @@ export const useOrganizationsStore = defineStore('organizations', () => {
     loadAsync,
     createAsync,
     find,
+    remove,
   };
 });

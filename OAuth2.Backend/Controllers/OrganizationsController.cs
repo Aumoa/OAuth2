@@ -71,6 +71,31 @@ public sealed class OrganizationsController(
         return membership is null ? NotFound() : Ok(ToSummary(membership));
     }
 
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteAsync(
+        [FromRoute] string id,
+        [FromQuery] string accountId,
+        [FromBody] DeleteOrganizationForm form,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(id) || string.IsNullOrWhiteSpace(accountId))
+        {
+            return BadRequest();
+        }
+
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        var status = await organizations.DeleteOrganizationAsync(
+            id,
+            accountId,
+            form.Name,
+            cancellationToken);
+        return OrganizationMutationResult(status);
+    }
+
     [HttpGet("{id}/members")]
     public async Task<IActionResult> GetMembersAsync(
         [FromRoute] string id,
@@ -248,6 +273,26 @@ public sealed class OrganizationsController(
         OrganizationMemberMutationStatus.Forbidden => StatusCode(
             StatusCodes.Status403Forbidden,
             new { error = "insufficient_organization_role" }),
+        _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
+    };
+
+    private IActionResult OrganizationMutationResult(OrganizationMutationStatus status) => status switch
+    {
+        OrganizationMutationStatus.Succeeded => NoContent(),
+        OrganizationMutationStatus.OrganizationNotFound => NotFound(new
+        {
+            error = "organization_not_found"
+        }),
+        OrganizationMutationStatus.Forbidden => StatusCode(
+            StatusCodes.Status403Forbidden,
+            new { error = "organization_owner_required" }),
+        OrganizationMutationStatus.ConfirmationMismatch => Conflict(new
+        {
+            error = "organization_name_mismatch"
+        }),
+        OrganizationMutationStatus.ApplicationOwnerConflict => StatusCode(
+            StatusCodes.Status422UnprocessableEntity,
+            new { error = "organization_application_owner_conflict" }),
         _ => throw new ArgumentOutOfRangeException(nameof(status), status, null)
     };
 }

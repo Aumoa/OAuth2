@@ -15,6 +15,12 @@ public interface IOrganizations
         string accountId,
         CancellationToken cancellationToken = default);
 
+    Task<OrganizationMutationStatus> DeleteOrganizationAsync(
+        string id,
+        string accountId,
+        string confirmationName,
+        CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<OrganizationMembership>> GetOrganizationsAsync(
         string accountId,
         CancellationToken cancellationToken = default);

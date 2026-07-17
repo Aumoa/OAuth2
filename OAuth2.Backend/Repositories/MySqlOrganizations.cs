@@ -31,11 +31,27 @@ internal sealed class MySqlOrganizations(IOptions<MySqlOptions> mysqlOptions) : 
 
         try
         {
+            var applicationOwnerId = ApplicationOwnerIds.CreateForOrganization(id);
+            const string OWNER_CONFLICT_QUERY = """
+                SELECT `id`
+                FROM `account`
+                WHERE `id` = @applicationOwnerId
+                """;
+            var command = new CommandDefinition(
+                OWNER_CONFLICT_QUERY,
+                new { applicationOwnerId },
+                transaction,
+                cancellationToken: cancellationToken);
+            if (await connection.QuerySingleOrDefaultAsync<string>(command) is not null)
+            {
+                return null;
+            }
+
             const string ORGANIZATION_QUERY = """
                 INSERT INTO `organization` (`id`, `name`, `created_by`, `created_at`)
                 VALUES (@Id, @Name, @accountId, @CreatedAt)
                 """;
-            var command = new CommandDefinition(
+            command = new CommandDefinition(
                 ORGANIZATION_QUERY,
                 new { organization.Id, organization.Name, accountId, organization.CreatedAt },
                 transaction,
@@ -95,6 +111,171 @@ internal sealed class MySqlOrganizations(IOptions<MySqlOptions> mysqlOptions) : 
             cancellationToken: cancellationToken);
         var row = await connection.QuerySingleOrDefaultAsync<OrganizationMembershipRow>(command);
         return row is null ? null : ToMembership(row);
+    }
+
+    public async Task<OrganizationMutationStatus> DeleteOrganizationAsync(
+        string id,
+        string accountId,
+        string confirmationName,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(confirmationName);
+
+        using var connection = new MySqlConnection(mysqlOptions.Value.ConnectionString);
+        await connection.OpenAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(
+            System.Data.IsolationLevel.Serializable,
+            cancellationToken);
+
+        const string ORGANIZATION_QUERY = """
+            SELECT `name`
+            FROM `organization`
+            WHERE `id` = @id
+            FOR UPDATE
+            """;
+        var command = new CommandDefinition(
+            ORGANIZATION_QUERY,
+            new { id },
+            transaction,
+            cancellationToken: cancellationToken);
+        var organizationName = await connection.QuerySingleOrDefaultAsync<string>(command);
+        if (organizationName is null)
+        {
+            return OrganizationMutationStatus.OrganizationNotFound;
+        }
+
+        const string ROLE_QUERY = """
+            SELECT `role`
+            FROM `organization_member`
+            WHERE `organization_id` = @id
+                AND `account_id` = @accountId
+            """;
+        command = new CommandDefinition(
+            ROLE_QUERY,
+            new { id, accountId },
+            transaction,
+            cancellationToken: cancellationToken);
+        var actorRole = await connection.QuerySingleOrDefaultAsync<string>(command);
+        if (actorRole is null)
+        {
+            return OrganizationMutationStatus.OrganizationNotFound;
+        }
+
+        if (!string.Equals(actorRole, OrganizationRoles.Owner, StringComparison.Ordinal))
+        {
+            return OrganizationMutationStatus.Forbidden;
+        }
+
+        if (!string.Equals(organizationName, confirmationName, StringComparison.Ordinal))
+        {
+            return OrganizationMutationStatus.ConfirmationMismatch;
+        }
+
+        var applicationOwnerId = ApplicationOwnerIds.CreateForOrganization(id);
+        const string OWNER_CONFLICT_QUERY = """
+            SELECT `id`
+            FROM `account`
+            WHERE `id` = @applicationOwnerId
+            """;
+        command = new CommandDefinition(
+            OWNER_CONFLICT_QUERY,
+            new { applicationOwnerId },
+            transaction,
+            cancellationToken: cancellationToken);
+        if (await connection.QuerySingleOrDefaultAsync<string>(command) is not null)
+        {
+            return OrganizationMutationStatus.ApplicationOwnerConflict;
+        }
+
+        const string CLIENT_QUERY = """
+            SELECT `id`
+            FROM `client`
+            WHERE `owner_id` = @applicationOwnerId
+            FOR UPDATE
+            """;
+        command = new CommandDefinition(
+            CLIENT_QUERY,
+            new { applicationOwnerId },
+            transaction,
+            cancellationToken: cancellationToken);
+        var clientIds = (await connection.QueryAsync<string>(command)).ToArray();
+        if (clientIds.Length > 0)
+        {
+            var removedAt = DateTime.UtcNow;
+            const string REVOKE_API_KEYS_QUERY = """
+                UPDATE `client_api_key`
+                SET `removed_at` = @removedAt
+                WHERE `removed_at` IS NULL
+                    AND (`client_id` IN @clientIds OR `allowed_client_id` IN @clientIds)
+                """;
+            command = new CommandDefinition(
+                REVOKE_API_KEYS_QUERY,
+                new { clientIds, removedAt },
+                transaction,
+                cancellationToken: cancellationToken);
+            await connection.ExecuteAsync(command);
+
+            foreach (var query in new[]
+            {
+                "DELETE FROM `client_claim` WHERE `client_id` IN @clientIds",
+                "DELETE FROM `client_user_group` WHERE `client_id` IN @clientIds",
+                "DELETE FROM `oauth_grant` WHERE `client_id` IN @clientIds",
+                "DELETE FROM `oauth_refresh_token` WHERE `client_id` IN @clientIds",
+                "DELETE FROM `client_secret` WHERE `client_id` IN @clientIds"
+            })
+            {
+                command = new CommandDefinition(
+                    query,
+                    new { clientIds },
+                    transaction,
+                    cancellationToken: cancellationToken);
+                await connection.ExecuteAsync(command);
+            }
+
+            const string DELETE_CLIENTS_QUERY = """
+                DELETE FROM `client`
+                WHERE `owner_id` = @applicationOwnerId
+                """;
+            command = new CommandDefinition(
+                DELETE_CLIENTS_QUERY,
+                new { applicationOwnerId },
+                transaction,
+                cancellationToken: cancellationToken);
+            if (await connection.ExecuteAsync(command) != clientIds.Length)
+            {
+                throw new InvalidOperationException("Failed to delete organization applications.");
+            }
+        }
+
+        const string DELETE_MEMBERS_QUERY = """
+            DELETE FROM `organization_member`
+            WHERE `organization_id` = @id
+            """;
+        command = new CommandDefinition(
+            DELETE_MEMBERS_QUERY,
+            new { id },
+            transaction,
+            cancellationToken: cancellationToken);
+        await connection.ExecuteAsync(command);
+
+        const string DELETE_ORGANIZATION_QUERY = """
+            DELETE FROM `organization`
+            WHERE `id` = @id
+            """;
+        command = new CommandDefinition(
+            DELETE_ORGANIZATION_QUERY,
+            new { id },
+            transaction,
+            cancellationToken: cancellationToken);
+        if (await connection.ExecuteAsync(command) != 1)
+        {
+            throw new InvalidOperationException("Failed to delete the organization.");
+        }
+
+        await transaction.CommitAsync(cancellationToken);
+        return OrganizationMutationStatus.Succeeded;
     }
 
     public async Task<IReadOnlyList<OrganizationMembership>> GetOrganizationsAsync(

@@ -1,8 +1,7 @@
 using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using OAuth2.Data;
 using OAuth2.Services;
 using BffSessionOptions = OAuth2.Options.SessionOptions;
 
@@ -54,7 +53,7 @@ public abstract class OwnedApplicationsControllerBase(
 
         return new(
             OwnerResolutionStatus.Success,
-            CreateOrganizationOwnerId(organizationId));
+            ApplicationOwnerIds.CreateForOrganization(organizationId));
     }
 
     protected IActionResult? OwnerResolutionError(OwnerResolution owner) => owner.Status switch
@@ -65,12 +64,6 @@ public abstract class OwnedApplicationsControllerBase(
         OwnerResolutionStatus.BackendFailure => FromBackend(owner.BackendResponse!),
         _ => throw new ArgumentOutOfRangeException(nameof(owner))
     };
-
-    private static string CreateOrganizationOwnerId(string organizationId)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(organizationId));
-        return $"organization:{Convert.ToHexStringLower(hash)}";
-    }
 
     protected enum OwnerResolutionStatus
     {

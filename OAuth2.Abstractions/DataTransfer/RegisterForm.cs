@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using System.Text.RegularExpressions;
+using OAuth2.Data;
 
 namespace OAuth2.DataTransfer;
 
@@ -18,6 +19,12 @@ public partial record RegisterForm
         if (string.IsNullOrWhiteSpace(Id))
         {
             error = "body.id is missing";
+            return false;
+        }
+
+        if (ApplicationOwnerIds.IsReservedAccountId(Id.Trim()))
+        {
+            error = "body.id is reserved";
             return false;
         }
 
