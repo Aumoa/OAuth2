@@ -1,8 +1,16 @@
 <script setup lang="ts">
+import { watchEffect } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { RouterView } from 'vue-router';
 import { theme } from './core/scripts/theme.ts';
 import { useAuthStore } from './shared/oauth2/src/auth.ts';
 import { requiresAuthentication, router } from './router/index.ts';
+
+const { t } = useI18n({ useScope: 'global' });
+
+watchEffect(() => {
+  document.title = t('app.title');
+});
 
 document.documentElement.dataset.theme = theme.value;
 
