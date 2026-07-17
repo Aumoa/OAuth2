@@ -10,5 +10,7 @@ public sealed record OAuthApplication
 
     public required string ApplicationType { get; init; }
 
+    public bool RequiresSecret { get; init; }
+
     public DateTime CreatedAt { get; init; }
 }

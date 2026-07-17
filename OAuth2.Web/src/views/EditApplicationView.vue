@@ -1,10 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router';
+import {
+  onBeforeRouteLeave,
+  onBeforeRouteUpdate,
+  useRoute,
+  useRouter,
+  type RouteLocationRaw,
+} from 'vue-router';
 import {
   Applications,
   type ApplicationDetails,
+  type ApplicationSecretSummary,
+  type CreatedApplicationSecret,
   type OAuthApplicationType,
 } from '../api/applications.ts';
 import Dialog from '../core/components/Dialog.vue';
@@ -20,7 +28,7 @@ type RedirectUriEntry = {
 
 const requiredScope = 'openid';
 const availableScopes = ['openid', 'profile', 'email', 'address', 'phone', 'groups'] as const;
-const { t } = useI18n();
+const { locale, t } = useI18n();
 const route = useRoute();
 const router = useRouter();
 const state = ref<ViewState>('loading');
@@ -39,6 +47,19 @@ const deleteConfirmation = ref('');
 const deleteError = ref<string | null>(null);
 const isDeleting = ref(false);
 const deleteConfirmationInput = ref<InstanceType<typeof FloatingInput> | null>(null);
+const applicationSecrets = ref<ApplicationSecretSummary[]>([]);
+const areSecretsLoading = ref(false);
+const secretsLoadError = ref<string | null>(null);
+const isCreatingSecret = ref(false);
+const secretCreateError = ref<string | null>(null);
+const createdSecret = ref<CreatedApplicationSecret | null>(null);
+const isCreatedSecretDialogOpen = ref(false);
+const isSecretCopied = ref(false);
+const secretCopyError = ref<string | null>(null);
+const deletingSecret = ref<ApplicationSecretSummary | null>(null);
+const isDeleteSecretDialogOpen = ref(false);
+const isDeletingSecret = ref(false);
+const secretDeleteError = ref<string | null>(null);
 const clientId = computed(() => {
   const value = route.params.clientId;
   return Array.isArray(value) ? value.join('/') : (value ?? '');
@@ -79,7 +100,15 @@ const redirectUrisHint = computed(() => t(
 ));
 let isMounted = true;
 let loadRequestId = 0;
+let secretsLoadRequestId = 0;
 let nextRedirectUriId = 0;
+
+function formatSecretCreatedAt(value: string): string {
+  return new Intl.DateTimeFormat(locale.value, {
+    dateStyle: 'medium',
+    timeStyle: 'short',
+  }).format(new Date(value));
+}
 
 function createRedirectUriEntry(value = '', initialValue: string | null = null): RedirectUriEntry {
   return {
@@ -246,12 +275,20 @@ function validateRedirectUris(redirectUris: string[]): boolean {
 
 async function loadApplicationAsync(): Promise<void> {
   const requestId = ++loadRequestId;
+  ++secretsLoadRequestId;
   state.value = 'loading';
   application.value = null;
   redirectUris.value = [];
   allowedScopes.value = [];
   initialRedirectUris.value = [];
   initialAllowedScopes.value = [];
+  applicationSecrets.value = [];
+  secretsLoadError.value = null;
+  secretCreateError.value = null;
+  isCreatedSecretDialogOpen.value = false;
+  createdSecret.value = null;
+  isDeleteSecretDialogOpen.value = false;
+  deletingSecret.value = null;
 
   try {
     const details = await Applications.getAsync(clientId.value, organizationId.value);
@@ -269,6 +306,9 @@ async function loadApplicationAsync(): Promise<void> {
     initialAllowedScopes.value = [...loadedScopes];
     clearSaveFeedback();
     state.value = 'ready';
+    if (details.applicationType === 'web') {
+      void loadApplicationSecretsAsync();
+    }
   } catch (error) {
     if (!isMounted || requestId !== loadRequestId) {
       return;
@@ -277,6 +317,140 @@ async function loadApplicationAsync(): Promise<void> {
     state.value = error instanceof HttpStatusCodeError && error.status === 404
       ? 'notFound'
       : 'error';
+  }
+}
+
+async function loadApplicationSecretsAsync(): Promise<void> {
+  const requestId = ++secretsLoadRequestId;
+  areSecretsLoading.value = true;
+  secretsLoadError.value = null;
+
+  try {
+    const secrets = await Applications.listSecretsAsync(clientId.value, organizationId.value);
+    if (isMounted && requestId === secretsLoadRequestId) {
+      applicationSecrets.value = secrets;
+    }
+  } catch {
+    if (isMounted && requestId === secretsLoadRequestId) {
+      secretsLoadError.value = t('app.applicationManagement.secrets.loadFailed');
+    }
+  } finally {
+    if (isMounted && requestId === secretsLoadRequestId) {
+      areSecretsLoading.value = false;
+    }
+  }
+}
+
+async function createApplicationSecretAsync(): Promise<void> {
+  if (isCreatingSecret.value || applicationSecrets.value.length >= 10) {
+    return;
+  }
+
+  isCreatingSecret.value = true;
+  secretCreateError.value = null;
+  try {
+    const secret = await Applications.createSecretAsync(clientId.value, organizationId.value);
+    if (!isMounted) {
+      return;
+    }
+
+    applicationSecrets.value = [{
+      id: secret.id,
+      prefix: secret.prefix,
+      createdAt: secret.createdAt,
+    }, ...applicationSecrets.value];
+    if (application.value !== null) {
+      application.value.requiresSecret = true;
+    }
+    createdSecret.value = secret;
+    isSecretCopied.value = false;
+    secretCopyError.value = null;
+    isCreatedSecretDialogOpen.value = true;
+  } catch (error) {
+    if (!isMounted) {
+      return;
+    }
+
+    secretCreateError.value = error instanceof HttpStatusCodeError && error.status === 409
+      ? t('app.applicationManagement.secrets.limitReached')
+      : t('app.applicationManagement.secrets.createFailed');
+  } finally {
+    if (isMounted) {
+      isCreatingSecret.value = false;
+    }
+  }
+}
+
+async function copyCreatedSecretAsync(): Promise<void> {
+  if (createdSecret.value === null) {
+    return;
+  }
+
+  try {
+    await navigator.clipboard.writeText(createdSecret.value.secret);
+    isSecretCopied.value = true;
+    secretCopyError.value = null;
+  } catch {
+    secretCopyError.value = t('app.applicationManagement.secrets.copyFailed');
+  }
+}
+
+function updateCreatedSecretDialogOpen(value: boolean): void {
+  isCreatedSecretDialogOpen.value = value;
+  if (!value) {
+    createdSecret.value = null;
+    isSecretCopied.value = false;
+    secretCopyError.value = null;
+  }
+}
+
+function selectCreatedSecret(event: FocusEvent): void {
+  (event.currentTarget as HTMLInputElement).select();
+}
+
+function canNavigateDuringMutation(): boolean {
+  return !isCreatingSecret.value && !isDeletingSecret.value && !isSaving.value;
+}
+
+function openDeleteSecretDialog(secret: ApplicationSecretSummary): void {
+  deletingSecret.value = secret;
+  secretDeleteError.value = null;
+  isDeleteSecretDialogOpen.value = true;
+}
+
+function updateDeleteSecretDialogOpen(value: boolean): void {
+  if (!isDeletingSecret.value) {
+    isDeleteSecretDialogOpen.value = value;
+    if (!value) {
+      deletingSecret.value = null;
+      secretDeleteError.value = null;
+    }
+  }
+}
+
+async function deleteApplicationSecretAsync(): Promise<void> {
+  if (deletingSecret.value === null || isDeletingSecret.value) {
+    return;
+  }
+
+  const secretId = deletingSecret.value.id;
+  isDeletingSecret.value = true;
+  secretDeleteError.value = null;
+  try {
+    await Applications.deleteSecretAsync(clientId.value, secretId, organizationId.value);
+    if (isMounted) {
+      applicationSecrets.value = applicationSecrets.value.filter(secret => secret.id !== secretId);
+      isDeleteSecretDialogOpen.value = false;
+      deletingSecret.value = null;
+    }
+  } catch {
+    if (isMounted) {
+      secretDeleteError.value = t('app.applicationManagement.secrets.deleteFailed');
+    }
+  } finally {
+    if (isMounted) {
+      isDeletingSecret.value = false;
+    }
   }
 }
 
@@ -340,7 +514,13 @@ function updateDeleteDialogOpen(value: boolean): void {
 }
 
 async function deleteApplicationAsync(): Promise<void> {
-  if (!deleteConfirmationMatches.value || isDeleting.value || isSaving.value) {
+  if (
+    !deleteConfirmationMatches.value
+    || isDeleting.value
+    || isSaving.value
+    || isCreatingSecret.value
+    || isDeletingSecret.value
+  ) {
     return;
   }
 
@@ -373,8 +553,12 @@ onMounted(loadApplicationAsync);
 
 watch([clientId, organizationId], loadApplicationAsync);
 
+onBeforeRouteLeave(canNavigateDuringMutation);
+onBeforeRouteUpdate(canNavigateDuringMutation);
+
 onBeforeUnmount(() => {
   isMounted = false;
+  createdSecret.value = null;
 });
 </script>
 
@@ -573,6 +757,186 @@ onBeforeUnmount(() => {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.client-secrets-card {
+  margin-top: 14px;
+}
+
+.client-secrets-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.client-secrets-copy {
+  min-width: 0;
+}
+
+.client-secrets-copy .settings-description {
+  margin-bottom: 0;
+}
+
+.secret-create-button,
+.secret-delete-button,
+.secret-copy-button {
+  width: auto;
+  padding: 0 13px;
+  grid-auto-flow: column;
+  gap: 6px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.secret-create-button {
+  flex: 0 0 auto;
+  color: var(--accent-hover);
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.secret-create-button:hover:not(:disabled) {
+  color: var(--on-accent);
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.secret-create-button:disabled,
+.secret-delete-button:disabled,
+.secret-copy-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
+.secret-list {
+  display: flex;
+  margin: 18px 0 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.secret-row {
+  display: grid;
+  min-height: 54px;
+  padding: 9px 10px 9px 13px;
+  box-sizing: border-box;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  background: var(--surface);
+}
+
+.secret-metadata {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.secret-prefix {
+  width: fit-content;
+  padding: 2px 6px;
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.secret-created-at {
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.secret-delete-button {
+  min-width: 38px;
+  padding: 0 8px;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 34%, var(--border));
+}
+
+.secret-delete-button:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+
+.secret-state,
+.secret-error {
+  margin: 16px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.secret-state {
+  color: var(--text-muted);
+}
+
+.secret-error {
+  color: var(--danger);
+}
+
+.created-secret-warning {
+  display: flex;
+  margin: 0 0 16px;
+  padding: 11px 12px;
+  align-items: flex-start;
+  gap: 9px;
+  border: 1px solid color-mix(in srgb, #f59e0b 42%, var(--border));
+  border-radius: 8px;
+  color: color-mix(in srgb, #f59e0b 76%, var(--text-h));
+  background: color-mix(in srgb, #f59e0b 9%, var(--surface));
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.created-secret-warning .material-symbols-outlined {
+  flex: 0 0 auto;
+  font-size: 20px;
+}
+
+.created-secret-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+}
+
+.created-secret-input {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 11px;
+  box-sizing: border-box;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  color: var(--text-h);
+  background: var(--surface-muted);
+  font-family: var(--mono);
+  font-size: 12px;
+}
+
+.secret-copy-button {
+  min-width: 86px;
+  color: var(--accent-hover);
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.delete-secret-description {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.delete-secret-description code {
+  display: inline;
+  padding: 2px 5px;
+  font-size: 12px;
 }
 
 .redirect-uri-label {
@@ -905,13 +1269,23 @@ onBeforeUnmount(() => {
   }
 
   .configuration-actions,
-  .danger-zone-content {
+  .danger-zone-content,
+  .client-secrets-header {
     align-items: stretch;
     flex-direction: column;
   }
 
   .form-action,
-  .delete-button {
+  .delete-button,
+  .secret-create-button {
+    width: 100%;
+  }
+
+  .created-secret-value {
+    grid-template-columns: 1fr;
+  }
+
+  .secret-copy-button {
     width: 100%;
   }
 }
@@ -1097,6 +1471,92 @@ onBeforeUnmount(() => {
         </div>
       </form>
 
+      <section
+        v-if="application.applicationType === 'web'"
+        class="settings-card client-secrets-card"
+        aria-labelledby="client-secrets-title"
+      >
+        <div class="client-secrets-header">
+          <div class="client-secrets-copy">
+            <h2 id="client-secrets-title" class="settings-title">
+              {{ t('app.applicationManagement.secrets.title') }}
+            </h2>
+            <p class="settings-description">
+              {{ t('app.applicationManagement.secrets.description') }}
+            </p>
+          </div>
+          <button
+            type="button"
+            class="app-button secret-create-button"
+            :disabled="isCreatingSecret || applicationSecrets.length >= 10 || isDeleting"
+            @click="createApplicationSecretAsync"
+          >
+            <span
+              v-if="isCreatingSecret"
+              class="material-symbols-outlined button-spinner"
+              aria-hidden="true"
+            >
+              progress_activity
+            </span>
+            <span v-else class="material-symbols-outlined" aria-hidden="true">key</span>
+            <span>{{ t('app.applicationManagement.secrets.createAction') }}</span>
+          </button>
+        </div>
+
+        <p v-if="areSecretsLoading" class="secret-state" role="status">
+          {{ t('app.applicationManagement.secrets.loading') }}
+        </p>
+        <p v-else-if="secretsLoadError" class="secret-error" role="alert">
+          {{ secretsLoadError }}
+        </p>
+        <p v-else-if="applicationSecrets.length === 0" class="secret-state">
+          {{ t(application.requiresSecret
+            ? 'app.applicationManagement.secrets.emptyRequired'
+            : 'app.applicationManagement.secrets.empty') }}
+        </p>
+        <ul v-else class="secret-list">
+          <li v-for="secret in applicationSecrets" :key="secret.id" class="secret-row">
+            <div class="secret-metadata">
+              <code class="secret-prefix">{{ secret.prefix }}…</code>
+              <span class="secret-created-at">
+                {{ t('app.applicationManagement.secrets.createdAt', {
+                  date: formatSecretCreatedAt(secret.createdAt),
+                }) }}
+              </span>
+            </div>
+            <button
+              type="button"
+              class="app-button secret-delete-button"
+              :disabled="isDeletingSecret || isDeleting"
+              :aria-label="t('app.applicationManagement.secrets.deleteLabel', {
+                prefix: secret.prefix,
+              })"
+              @click="openDeleteSecretDialog(secret)"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+            </button>
+          </li>
+        </ul>
+        <p v-if="secretCreateError" class="secret-error" role="alert">
+          {{ secretCreateError }}
+        </p>
+      </section>
+
+      <section
+        v-else
+        class="settings-card client-secrets-card"
+        aria-labelledby="public-client-secrets-title"
+      >
+        <div class="client-secrets-copy">
+          <h2 id="public-client-secrets-title" class="settings-title">
+            {{ t('app.applicationManagement.secrets.title') }}
+          </h2>
+          <p class="settings-description">
+            {{ t('app.applicationManagement.secrets.publicClientDescription') }}
+          </p>
+        </div>
+      </section>
+
       <section class="danger-zone" aria-labelledby="danger-zone-title">
         <div class="danger-zone-content">
           <div>
@@ -1110,7 +1570,7 @@ onBeforeUnmount(() => {
           <button
             type="button"
             class="app-button delete-button"
-            :disabled="isSaving || isDeleting"
+            :disabled="isSaving || isDeleting || isCreatingSecret || isDeletingSecret"
             @click="openDeleteDialogAsync"
           >
             <span class="material-symbols-outlined" aria-hidden="true">delete</span>
@@ -1163,6 +1623,91 @@ onBeforeUnmount(() => {
             progress_activity
           </span>
           <span>{{ t('app.applicationManagement.deleteConfirmAction') }}</span>
+        </button>
+      </template>
+    </Dialog>
+
+    <Dialog
+      :is-open="isCreatedSecretDialogOpen"
+      :title="t('app.applicationManagement.secrets.createdDialogTitle')"
+      @update:is-open="updateCreatedSecretDialogOpen"
+    >
+      <div class="created-secret-warning" role="alert">
+        <span class="material-symbols-outlined" aria-hidden="true">warning</span>
+        <span>{{ t('app.applicationManagement.secrets.createdDialogWarning') }}</span>
+      </div>
+      <div v-if="createdSecret" class="created-secret-value">
+        <input
+          class="created-secret-input"
+          :value="createdSecret.secret"
+          :aria-label="t('app.applicationManagement.secrets.secretValueLabel')"
+          readonly
+          autocomplete="off"
+          spellcheck="false"
+          @focus="selectCreatedSecret"
+        />
+        <button type="button" class="app-button secret-copy-button" @click="copyCreatedSecretAsync">
+          <span class="material-symbols-outlined" aria-hidden="true">
+            {{ isSecretCopied ? 'check' : 'content_copy' }}
+          </span>
+          <span>{{ isSecretCopied
+            ? t('app.applicationManagement.secrets.copied')
+            : t('app.applicationManagement.secrets.copyAction') }}</span>
+        </button>
+      </div>
+      <p v-if="secretCopyError" class="secret-error" role="alert">{{ secretCopyError }}</p>
+
+      <template #footer>
+        <button
+          type="button"
+          class="app-button form-action primary"
+          @click="updateCreatedSecretDialogOpen(false)"
+        >
+          {{ t('app.applicationManagement.secrets.done') }}
+        </button>
+      </template>
+    </Dialog>
+
+    <Dialog
+      :is-open="isDeleteSecretDialogOpen"
+      :title="t('app.applicationManagement.secrets.deleteDialogTitle')"
+      :close-on-backdrop="!isDeletingSecret"
+      :close-on-escape="!isDeletingSecret"
+      :show-close-button="!isDeletingSecret"
+      @update:is-open="updateDeleteSecretDialogOpen"
+    >
+      <p class="delete-secret-description">
+        <i18n-t keypath="app.applicationManagement.secrets.deleteDialogDescription" tag="span">
+          <template #prefix><code>{{ deletingSecret?.prefix }}…</code></template>
+        </i18n-t>
+      </p>
+      <p v-if="secretDeleteError" class="secret-error" role="alert">
+        {{ secretDeleteError }}
+      </p>
+
+      <template #footer>
+        <button
+          type="button"
+          class="app-button form-action"
+          :disabled="isDeletingSecret"
+          @click="updateDeleteSecretDialogOpen(false)"
+        >
+          {{ t('app.applicationManagement.createCancel') }}
+        </button>
+        <button
+          type="button"
+          class="app-button delete-button"
+          :disabled="isDeletingSecret"
+          @click="deleteApplicationSecretAsync"
+        >
+          <span
+            v-if="isDeletingSecret"
+            class="material-symbols-outlined button-spinner"
+            aria-hidden="true"
+          >
+            progress_activity
+          </span>
+          <span>{{ t('app.applicationManagement.secrets.deleteConfirmAction') }}</span>
         </button>
       </template>
     </Dialog>

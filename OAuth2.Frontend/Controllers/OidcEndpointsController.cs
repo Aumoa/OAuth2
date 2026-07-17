@@ -1,3 +1,5 @@
+using System.Net;
+using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using OAuth2.DataTransfer;
@@ -29,7 +31,12 @@ public sealed class OidcEndpointsController(
             ["grant_types_supported"] = new[] { "authorization_code" },
             ["subject_types_supported"] = new[] { "public" },
             ["id_token_signing_alg_values_supported"] = new[] { "RS256" },
-            ["token_endpoint_auth_methods_supported"] = new[] { "none" },
+            ["token_endpoint_auth_methods_supported"] = new[]
+            {
+                "none",
+                "client_secret_basic",
+                "client_secret_post"
+            },
             ["code_challenge_methods_supported"] = new[] { "S256" },
             ["scopes_supported"] = OidcScopePolicy.ClaimScopes,
             ["claims_supported"] = OidcClaimPolicy.ClaimNames
@@ -43,14 +50,28 @@ public sealed class OidcEndpointsController(
         [FromForm(Name = "grant_type")] string? grantType,
         [FromForm(Name = "code")] string? code,
         [FromForm(Name = "client_id")] string? clientId,
+        [FromForm(Name = "client_secret")] string? clientSecret,
         [FromForm(Name = "redirect_uri")] string? redirectUri,
         [FromForm(Name = "code_verifier")] string? codeVerifier,
         CancellationToken cancellationToken)
     {
         Response.Headers.Pragma = "no-cache";
-        if (Request.Headers.ContainsKey("Authorization"))
+        var authorization = Request.Headers.Authorization.ToString();
+        if (!string.IsNullOrEmpty(authorization))
         {
-            return BadRequest(new { error = "invalid_client" });
+            if (clientSecret is not null
+                || !TryReadBasicClientCredentials(
+                    authorization,
+                    out var basicClientId,
+                    out var basicClientSecret)
+                || (!string.IsNullOrWhiteSpace(clientId)
+                    && !string.Equals(clientId, basicClientId, StringComparison.Ordinal)))
+            {
+                return InvalidClient();
+            }
+
+            clientId = basicClientId;
+            clientSecret = basicClientSecret;
         }
 
         if (!string.Equals(grantType, "authorization_code", StringComparison.Ordinal))
@@ -71,10 +92,16 @@ public sealed class OidcEndpointsController(
             {
                 Code = code,
                 ClientId = clientId,
+                ClientSecret = clientSecret,
                 RedirectUri = redirectUri,
                 CodeVerifier = codeVerifier
             },
             cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+        {
+            Response.Headers.WWWAuthenticate = "Basic realm=\"token\"";
+        }
+
         return FromBackend(new BackendResponse(
             response.StatusCode,
             response.Content,
@@ -119,5 +146,51 @@ public sealed class OidcEndpointsController(
             response.StatusCode,
             response.Content,
             response.ContentType));
+    }
+
+    private IActionResult InvalidClient()
+    {
+        Response.Headers.WWWAuthenticate = "Basic realm=\"token\"";
+        return Unauthorized(new { error = "invalid_client" });
+    }
+
+    private static bool TryReadBasicClientCredentials(
+        string authorization,
+        out string clientId,
+        out string clientSecret)
+    {
+        const string BasicPrefix = "Basic ";
+        clientId = string.Empty;
+        clientSecret = string.Empty;
+        if (!authorization.StartsWith(BasicPrefix, StringComparison.OrdinalIgnoreCase)
+            || authorization.Length > 2048)
+        {
+            return false;
+        }
+
+        try
+        {
+            var encodedCredentials = authorization[BasicPrefix.Length..].Trim();
+            var credentials = new UTF8Encoding(false, true).GetString(
+                Convert.FromBase64String(encodedCredentials));
+            var separatorIndex = credentials.IndexOf(':');
+            if (separatorIndex <= 0)
+            {
+                return false;
+            }
+
+            clientId = WebUtility.UrlDecode(credentials[..separatorIndex]);
+            clientSecret = WebUtility.UrlDecode(credentials[(separatorIndex + 1)..]);
+            return !string.IsNullOrWhiteSpace(clientId)
+                && !string.IsNullOrWhiteSpace(clientSecret);
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        catch (DecoderFallbackException)
+        {
+            return false;
+        }
     }
 }

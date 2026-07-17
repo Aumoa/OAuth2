@@ -22,6 +22,7 @@ public class Scripts : IScripts
         yield return new AddEmailVerificationExpiration();
         yield return new AddOrganization();
         yield return new AddClientApplicationType();
+        yield return new AddClientSecret();
     }
 
     private class Init : IScript
@@ -417,6 +418,36 @@ ALTER TABLE `client`
         public string DownSql => @"
 ALTER TABLE `client`
     DROP COLUMN `application_type`;
+";
+    }
+
+    private class AddClientSecret : IScript
+    {
+        public string Name => "Add_client_secret";
+
+        public int InstalledRank => 16;
+
+        public string UpSql => @"
+ALTER TABLE `client`
+    ADD COLUMN `requires_secret` BOOLEAN NOT NULL DEFAULT FALSE AFTER `application_type`;
+
+CREATE TABLE `client_secret` (
+    `id` BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    `client_id` VARCHAR(128) NOT NULL,
+    `secret_prefix` VARCHAR(12) NOT NULL,
+    `secret_hash` BINARY(32) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT NOW(),
+    `removed_at` DATETIME,
+    INDEX `IDX__client_secret__client_id__removed_at` (`client_id`, `removed_at`),
+    INDEX `IDX__client_secret__client_id__prefix__removed_at` (`client_id`, `secret_prefix`, `removed_at`)
+);
+";
+
+        public string DownSql => @"
+DROP TABLE `client_secret`;
+
+ALTER TABLE `client`
+    DROP COLUMN `requires_secret`;
 ";
     }
 }

@@ -38,6 +38,7 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
             OwnerId = ownerId,
             Name = name,
             ApplicationType = applicationType,
+            RequiresSecret = false,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -118,7 +119,8 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         {
             "DELETE FROM `client_claim` WHERE `client_id` = @id",
             "DELETE FROM `client_user_group` WHERE `client_id` = @id",
-            "DELETE FROM `oauth_grant` WHERE `client_id` = @id"
+            "DELETE FROM `oauth_grant` WHERE `client_id` = @id",
+            "DELETE FROM `client_secret` WHERE `client_id` = @id"
         })
         {
             command = new CommandDefinition(
@@ -173,8 +175,8 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         using var connection = new MySqlConnection(mysqlOptions.Value.ConnectionString);
 
         var applicationQuery = ownerId is null
-            ? "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `application_type` AS `ApplicationType`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `removed_at` IS NULL"
-            : "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `application_type` AS `ApplicationType`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL";
+            ? "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `application_type` AS `ApplicationType`, `requires_secret` AS `RequiresSecret`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `removed_at` IS NULL"
+            : "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `application_type` AS `ApplicationType`, `requires_secret` AS `RequiresSecret`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL";
         var command = new CommandDefinition(
             applicationQuery,
             new { id, ownerId },
@@ -220,6 +222,7 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
                 `owner_id` AS `OwnerId`,
                 `name`,
                 `application_type` AS `ApplicationType`,
+                `requires_secret` AS `RequiresSecret`,
                 `created_at` AS `CreatedAt`
             FROM `client`
             WHERE `owner_id` = @ownerId

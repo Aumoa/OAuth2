@@ -46,6 +46,22 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
+    public Task<BackendResponse> CreateApplicationSecretAsync(
+        string ownerId,
+        string clientId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+        return SendAsync(
+            HttpMethod.Post,
+            ApplicationSecretsUri(ownerId, clientId),
+            new { },
+            null,
+            cancellationToken);
+    }
+
     public Task<BackendResponse> CreateOrganizationAsync(
         string accountId,
         CreateOrganizationForm form,
@@ -81,6 +97,22 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return await ToBackendResponseAsync(response, cancellationToken);
     }
 
+    public async Task<BackendResponse> DeleteApplicationSecretAsync(
+        string ownerId,
+        string clientId,
+        long secretId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(secretId);
+
+        using var response = await http.DeleteAsync(
+            ApplicationSecretUri(ownerId, clientId, secretId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
     public async Task<BackendResponse> GetOwnedApplicationAsync(
         string ownerId,
         string id,
@@ -103,6 +135,20 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
         using var response = await http.GetAsync(
             $"/api/v1/applications?ownerId={Uri.EscapeDataString(ownerId)}",
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetApplicationSecretsAsync(
+        string ownerId,
+        string clientId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+        using var response = await http.GetAsync(
+            ApplicationSecretsUri(ownerId, clientId),
             cancellationToken);
         return await ToBackendResponseAsync(response, cancellationToken);
     }
@@ -360,6 +406,12 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
     private static string ApplicationUri(string ownerId, string id) =>
         $"/api/v1/applications/{Uri.EscapeDataString(id)}?ownerId={Uri.EscapeDataString(ownerId)}";
+
+    private static string ApplicationSecretsUri(string ownerId, string clientId) =>
+        $"/api/v1/applications/{Uri.EscapeDataString(clientId)}/secrets?ownerId={Uri.EscapeDataString(ownerId)}";
+
+    private static string ApplicationSecretUri(string ownerId, string clientId, long secretId) =>
+        $"/api/v1/applications/{Uri.EscapeDataString(clientId)}/secrets/{secretId}?ownerId={Uri.EscapeDataString(ownerId)}";
 
     private static async Task<BackendResponse> ToBackendResponseAsync(
         HttpResponseMessage response,

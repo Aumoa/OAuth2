@@ -6,6 +6,8 @@ public sealed record OidcTokenExchange
 
     public required string ClientId { get; init; }
 
+    public string? ClientSecret { get; init; }
+
     public required string RedirectUri { get; init; }
 
     public required string CodeVerifier { get; init; }

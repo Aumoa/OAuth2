@@ -153,6 +153,7 @@ public sealed class ApplicationsController(IApplications applications) : Control
             Id = configuration.Application.Id,
             Name = configuration.Application.Name,
             ApplicationType = configuration.Application.ApplicationType,
+            RequiresSecret = configuration.Application.RequiresSecret,
             CreatedAt = configuration.Application.CreatedAt,
             RedirectUris = configuration.RedirectUris,
             AllowedScopes = configuration.AllowedScopes

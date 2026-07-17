@@ -1,6 +1,3 @@
-using System.Net;
-using System.Security.Cryptography;
-using System.Text;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using OAuth2.DataTransfer;
@@ -15,7 +12,8 @@ namespace OAuth2.Controllers;
 public sealed class ApplicationsController(
     ISessionsRepository sessions,
     IBackendClient backend,
-    IOptions<BffSessionOptions> sessionOptions) : BackendProxyControllerBase
+    IOptions<BffSessionOptions> sessionOptions)
+    : OwnedApplicationsControllerBase(sessions, backend, sessionOptions)
 {
     [HttpPost]
     public async Task<IActionResult> CreateAsync(
@@ -39,7 +37,7 @@ public sealed class ApplicationsController(
             return ownerError;
         }
 
-        var response = await backend.CreateApplicationAsync(owner.OwnerId!, form, cancellationToken);
+        var response = await Backend.CreateApplicationAsync(owner.OwnerId!, form, cancellationToken);
         return FromBackend(response);
     }
 
@@ -54,7 +52,7 @@ public sealed class ApplicationsController(
             return ownerError;
         }
 
-        var response = await backend.GetOwnedApplicationsAsync(owner.OwnerId!, cancellationToken);
+        var response = await Backend.GetOwnedApplicationsAsync(owner.OwnerId!, cancellationToken);
         return FromBackend(response);
     }
 
@@ -75,7 +73,7 @@ public sealed class ApplicationsController(
             return ownerError;
         }
 
-        var response = await backend.GetOwnedApplicationAsync(owner.OwnerId!, id, cancellationToken);
+        var response = await Backend.GetOwnedApplicationAsync(owner.OwnerId!, id, cancellationToken);
         return FromBackend(response);
     }
 
@@ -107,7 +105,7 @@ public sealed class ApplicationsController(
             return ownerError;
         }
 
-        var response = await backend.UpdateApplicationAsync(
+        var response = await Backend.UpdateApplicationAsync(
             owner.OwnerId!,
             id,
             form,
@@ -137,77 +135,8 @@ public sealed class ApplicationsController(
             return ownerError;
         }
 
-        var response = await backend.DeleteApplicationAsync(owner.OwnerId!, id, cancellationToken);
+        var response = await Backend.DeleteApplicationAsync(owner.OwnerId!, id, cancellationToken);
         return FromBackend(response);
     }
 
-    private async Task<OwnerResolution> ResolveOwnerAsync(
-        string? organizationId,
-        CancellationToken cancellationToken)
-    {
-        var accountId = await GetCurrentAccountIdAsync(
-            sessions,
-            sessionOptions.Value.CookieName,
-            cancellationToken);
-        if (string.IsNullOrWhiteSpace(accountId))
-        {
-            return new(OwnerResolutionStatus.Unauthorized, null);
-        }
-
-        if (organizationId is null)
-        {
-            return new(OwnerResolutionStatus.Success, accountId);
-        }
-
-        if (string.IsNullOrWhiteSpace(organizationId))
-        {
-            return new(OwnerResolutionStatus.Forbidden, null);
-        }
-
-        var organization = await backend.GetOrganizationAsync(
-            accountId,
-            organizationId,
-            cancellationToken);
-        if (organization.StatusCode == HttpStatusCode.NotFound)
-        {
-            return new(OwnerResolutionStatus.Forbidden, null);
-        }
-
-        if (organization.StatusCode is < HttpStatusCode.OK or >= HttpStatusCode.MultipleChoices)
-        {
-            return new(OwnerResolutionStatus.BackendFailure, null, organization);
-        }
-
-        return new(
-            OwnerResolutionStatus.Success,
-            CreateOrganizationOwnerId(organizationId));
-    }
-
-    private IActionResult? OwnerResolutionError(OwnerResolution owner) => owner.Status switch
-    {
-        OwnerResolutionStatus.Success => null,
-        OwnerResolutionStatus.Unauthorized => Unauthorized(),
-        OwnerResolutionStatus.Forbidden => Forbid(),
-        OwnerResolutionStatus.BackendFailure => FromBackend(owner.BackendResponse!),
-        _ => throw new ArgumentOutOfRangeException(nameof(owner))
-    };
-
-    private static string CreateOrganizationOwnerId(string organizationId)
-    {
-        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(organizationId));
-        return $"organization:{Convert.ToHexStringLower(hash)}";
-    }
-
-    private enum OwnerResolutionStatus
-    {
-        Success,
-        Unauthorized,
-        Forbidden,
-        BackendFailure
-    }
-
-    private readonly record struct OwnerResolution(
-        OwnerResolutionStatus Status,
-        string? OwnerId,
-        BackendResponse? BackendResponse = null);
 }

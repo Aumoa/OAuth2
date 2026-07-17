@@ -15,6 +15,7 @@ public sealed class OidcController(
     OidcAuthorizationRequestValidator authorizationValidator,
     IAuthorizationCodes authorizationCodes,
     IApplications applications,
+    IApplicationSecrets applicationSecrets,
     IAccounts accounts,
     IAccountClaims accountClaims,
     OidcTokenIssuer tokenIssuer,
@@ -42,6 +43,31 @@ public sealed class OidcController(
             return InvalidGrant();
         }
 
+        var application = await applications.GetApplicationAsync(
+            exchange.ClientId,
+            cancellationToken);
+        if (application is null)
+        {
+            return InvalidClient();
+        }
+
+        if (application.Application.RequiresSecret)
+        {
+            if (string.IsNullOrWhiteSpace(exchange.ClientSecret)
+                || exchange.ClientSecret.Length > 256
+                || !await applicationSecrets.VerifyAsync(
+                    exchange.ClientId,
+                    exchange.ClientSecret,
+                    cancellationToken))
+            {
+                return InvalidClient();
+            }
+        }
+        else if (exchange.ClientSecret is not null)
+        {
+            return InvalidClient();
+        }
+
         var authorizationCode = await authorizationCodes.PopAsync(
             exchange.Code,
             cancellationToken);
@@ -62,11 +88,7 @@ public sealed class OidcController(
             return InvalidGrant();
         }
 
-        var application = await applications.GetApplicationAsync(
-            code.ClientId,
-            cancellationToken);
-        if (application is null
-            || !OidcAuthorizationPolicy.TryValidateRegisteredApplication(
+        if (!OidcAuthorizationPolicy.TryValidateRegisteredApplication(
                 new OidcAuthorizationRequest
                 {
                     ClientId = code.ClientId,
@@ -118,5 +140,10 @@ public sealed class OidcController(
     private BadRequestObjectResult InvalidGrant()
     {
         return BadRequest(new { error = "invalid_grant" });
+    }
+
+    private UnauthorizedObjectResult InvalidClient()
+    {
+        return Unauthorized(new { error = "invalid_client" });
     }
 }

@@ -8,6 +8,8 @@ public sealed record ApplicationDetails
 
     public required string ApplicationType { get; init; }
 
+    public bool RequiresSecret { get; init; }
+
     public DateTime CreatedAt { get; init; }
 
     public required IReadOnlyList<string> RedirectUris { get; init; }

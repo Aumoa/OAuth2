@@ -10,11 +10,42 @@ export interface ApplicationSummary {
 }
 
 export interface ApplicationDetails extends ApplicationSummary {
+  requiresSecret: boolean;
   redirectUris: string[];
   allowedScopes: string[];
 }
 
+export interface ApplicationSecretSummary {
+  id: number;
+  prefix: string;
+  createdAt: string;
+}
+
+export interface CreatedApplicationSecret extends ApplicationSecretSummary {
+  secret: string;
+}
+
 export class Applications {
+  static async createSecretAsync(
+    clientId: string,
+    organizationId?: string,
+  ): Promise<CreatedApplicationSecret> {
+    const response = await fetch(Applications.applicationSecretsUri(clientId, organizationId), {
+      method: 'POST',
+      cache: 'no-store',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'X-OAuth2-Action': '1',
+      },
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as CreatedApplicationSecret;
+  }
+
   static async createAsync(
     clientId: string,
     name: string,
@@ -51,6 +82,26 @@ export class Applications {
     }
   }
 
+  static async deleteSecretAsync(
+    clientId: string,
+    secretId: number,
+    organizationId?: string,
+  ): Promise<void> {
+    const response = await fetch(
+      Applications.applicationSecretUri(clientId, secretId, organizationId),
+      {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'X-OAuth2-Action': '1',
+        },
+      },
+    );
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+  }
+
   static async getAsync(clientId: string, organizationId?: string): Promise<ApplicationDetails> {
     const response = await fetch(Applications.applicationUri(clientId, organizationId), {
       credentials: 'include',
@@ -77,6 +128,24 @@ export class Applications {
     }
 
     return await response.json() as ApplicationSummary[];
+  }
+
+  static async listSecretsAsync(
+    clientId: string,
+    organizationId?: string,
+  ): Promise<ApplicationSecretSummary[]> {
+    const response = await fetch(Applications.applicationSecretsUri(clientId, organizationId), {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as ApplicationSecretSummary[];
   }
 
   static async updateAsync(
@@ -109,6 +178,24 @@ export class Applications {
 
   private static applicationUri(clientId: string, organizationId?: string): string {
     const baseUri = `/api/v1/applications/${encodeURIComponent(clientId)}`;
+    return organizationId === undefined
+      ? baseUri
+      : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;
+  }
+
+  private static applicationSecretsUri(clientId: string, organizationId?: string): string {
+    const baseUri = `/api/v1/applications/${encodeURIComponent(clientId)}/secrets`;
+    return organizationId === undefined
+      ? baseUri
+      : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;
+  }
+
+  private static applicationSecretUri(
+    clientId: string,
+    secretId: number,
+    organizationId?: string,
+  ): string {
+    const baseUri = `/api/v1/applications/${encodeURIComponent(clientId)}/secrets/${secretId}`;
     return organizationId === undefined
       ? baseUri
       : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;

@@ -11,6 +11,11 @@ public interface IBackendClient
         CreateApplicationForm form,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> CreateApplicationSecretAsync(
+        string ownerId,
+        string clientId,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> CreateOrganizationAsync(
         string accountId,
         CreateOrganizationForm form,
@@ -21,6 +26,12 @@ public interface IBackendClient
         string id,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> DeleteApplicationSecretAsync(
+        string ownerId,
+        string clientId,
+        long secretId,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> GetOwnedApplicationAsync(
         string ownerId,
         string id,
@@ -28,6 +39,11 @@ public interface IBackendClient
 
     Task<BackendResponse> GetOwnedApplicationsAsync(
         string ownerId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetApplicationSecretsAsync(
+        string ownerId,
+        string clientId,
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> GetOrganizationAsync(
