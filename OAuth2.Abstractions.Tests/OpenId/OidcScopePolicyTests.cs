@@ -36,6 +36,50 @@ public sealed class OidcScopePolicyTests
 
         Assert.True(result);
         Assert.Equal(string.Join(' ', OidcScopePolicy.ClaimScopes), effectiveScope);
+        Assert.DoesNotContain(OidcScopePolicy.OfflineAccessScope, effectiveScope);
+    }
+
+    [Fact]
+    public void TryNormalize_PutsOfflineAccessAfterClaimScopes()
+    {
+        var result = OidcScopePolicy.TryNormalize(
+            "offline_access email openid",
+            false,
+            out var normalizedScope);
+
+        Assert.True(result);
+        Assert.Equal("openid email offline_access", normalizedScope);
+        Assert.Contains(
+            OidcScopePolicy.OfflineAccessScope,
+            OidcScopePolicy.SupportedScopes);
+    }
+
+    [Fact]
+    public void TryResolveRefreshScope_PreservesOfflineGrantWhenAccessScopeIsNarrowed()
+    {
+        var result = OidcScopePolicy.TryResolveRefreshScope(
+            "openid profile offline_access",
+            "openid",
+            out var accessTokenScope,
+            out var replacementGrantScope);
+
+        Assert.True(result);
+        Assert.Equal("openid", accessTokenScope);
+        Assert.Equal("openid offline_access", replacementGrantScope);
+    }
+
+    [Fact]
+    public void TryResolveRefreshScope_RejectsScopeOutsideOriginalGrant()
+    {
+        var result = OidcScopePolicy.TryResolveRefreshScope(
+            "openid offline_access",
+            "openid email",
+            out var accessTokenScope,
+            out var replacementGrantScope);
+
+        Assert.False(result);
+        Assert.Null(accessTokenScope);
+        Assert.Null(replacementGrantScope);
     }
 
     [Fact]

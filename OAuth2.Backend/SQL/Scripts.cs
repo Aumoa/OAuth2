@@ -23,6 +23,7 @@ public class Scripts : IScripts
         yield return new AddOrganization();
         yield return new AddClientApplicationType();
         yield return new AddClientSecret();
+        yield return new AddOAuthRefreshToken();
     }
 
     private class Init : IScript
@@ -448,6 +449,38 @@ DROP TABLE `client_secret`;
 
 ALTER TABLE `client`
     DROP COLUMN `requires_secret`;
+";
+    }
+
+    private class AddOAuthRefreshToken : IScript
+    {
+        public string Name => "Add_oauth_refresh_token";
+
+        public int InstalledRank => 17;
+
+        public string UpSql => @"
+CREATE TABLE `oauth_refresh_token` (
+    `id` BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    `family_id` BINARY(16) NOT NULL,
+    `account_id` VARCHAR(128) NOT NULL,
+    `client_id` VARCHAR(128) NOT NULL,
+    `scope` VARCHAR(512) NOT NULL,
+    `token_prefix` VARCHAR(12) NOT NULL,
+    `token_hash` BINARY(32) NOT NULL,
+    `auth_time` BIGINT NOT NULL,
+    `created_at` DATETIME NOT NULL,
+    `expires_at` DATETIME NOT NULL,
+    `consumed_at` DATETIME,
+    `revoked_at` DATETIME,
+    `replacement_id` BIGINT,
+    INDEX `IDX__oauth_refresh_token__client_id__prefix` (`client_id`, `token_prefix`),
+    INDEX `IDX__oauth_refresh_token__family_id__revoked_at` (`family_id`, `revoked_at`),
+    INDEX `IDX__oauth_refresh_token__account_id__client_id__revoked_at` (`account_id`, `client_id`, `revoked_at`)
+);
+";
+
+        public string DownSql => @"
+DROP TABLE `oauth_refresh_token`;
 ";
     }
 }

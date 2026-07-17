@@ -50,6 +50,7 @@ public sealed class OidcAuthorizationController(
         [FromQuery] string? scope,
         [FromQuery] string? state,
         [FromQuery] string? nonce,
+        [FromQuery] string? prompt,
         [FromQuery(Name = "code_challenge")] string? codeChallenge,
         [FromQuery(Name = "code_challenge_method")] string? codeChallengeMethod,
         CancellationToken cancellationToken)
@@ -62,6 +63,7 @@ public sealed class OidcAuthorizationController(
             Scope = scope,
             State = state,
             Nonce = nonce,
+            Prompt = prompt,
             CodeChallenge = codeChallenge,
             CodeChallengeMethod = codeChallengeMethod
         };
@@ -107,6 +109,7 @@ public sealed class OidcAuthorizationController(
                 ["scope"] = validation.NormalizedScope,
                 ["state"] = authorization.State,
                 ["nonce"] = authorization.Nonce,
+                ["prompt"] = authorization.Prompt,
                 ["code_challenge"] = authorization.CodeChallenge,
                 ["code_challenge_method"] = authorization.CodeChallengeMethod
             }));

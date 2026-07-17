@@ -3,22 +3,14 @@ using OAuth2.OpenId;
 
 namespace OAuth2.DataTransfer;
 
-public sealed record RememberedLoginForm
+public sealed record RememberedAuthorizationForm
 {
-    public required string Token { get; init; }
-
-    public OidcAuthorizationRequest? Authorization { get; init; }
+    public required OidcAuthorizationRequest Authorization { get; init; }
 
     public bool ConsentGranted { get; init; }
 
     public bool Verify([NotNullWhen(false)] out string? error)
     {
-        if (string.IsNullOrWhiteSpace(Token))
-        {
-            error = "body.token is missing";
-            return false;
-        }
-
         if (Authorization is null)
         {
             error = "body.authorization is missing";

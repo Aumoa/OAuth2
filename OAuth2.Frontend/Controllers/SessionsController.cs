@@ -68,12 +68,17 @@ public sealed class SessionsController(
     [HttpPost("accounts/{accountKey}/authorization-codes")]
     public async Task<IActionResult> CreateAuthorizationCodeAsync(
         [FromRoute] string accountKey,
-        [FromBody] OidcAuthorizationRequest authorization,
+        [FromBody] RememberedAuthorizationForm form,
         CancellationToken cancellationToken)
     {
         if (!BrowserActionRequest.IsValid(Request))
         {
             return Forbid();
+        }
+
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
         }
 
         if (!TryGetSessionId(out var sessionId))
@@ -99,7 +104,8 @@ public sealed class SessionsController(
             new RememberedLoginForm
             {
                 Token = credential.Token,
-                Authorization = authorization
+                Authorization = form.Authorization,
+                ConsentGranted = form.ConsentGranted
             },
             cancellationToken);
         if (response.StatusCode == HttpStatusCode.Unauthorized)

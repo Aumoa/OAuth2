@@ -24,6 +24,7 @@ const errorMessage = ref<string | null>(null);
 const failedPictures = ref<Set<string>>(new Set());
 const idInput = ref<InstanceType<typeof FloatingInput> | null>(null);
 const passwordInput = ref<InstanceType<typeof FloatingInput> | null>(null);
+const consentGranted = ref(false);
 
 const authorization = computed<AuthorizationRequest | null>(() => {
   const clientId = queryValue('client_id');
@@ -53,10 +54,15 @@ const authorization = computed<AuthorizationRequest | null>(() => {
     scope,
     state: authorizationState,
     nonce: queryValue('nonce'),
+    prompt: queryValue('prompt'),
     codeChallenge,
     codeChallengeMethod,
   };
 });
+
+const requiresOfflineAccessConsent = computed(() => (
+  authorization.value?.scope.split(/\s+/).includes('offline_access') === true
+));
 
 const visibility = {
   password: computed(() => state.value === 'password'),
@@ -127,7 +133,9 @@ function onPictureError(accountKey: string): void {
 async function continueWithRememberedAccountAsync(
   account: RememberedAccount,
 ): Promise<void> {
-  if (requesting.value || authorization.value === null) {
+  if (requesting.value
+    || authorization.value === null
+    || (requiresOfflineAccessConsent.value && !consentGranted.value)) {
     return;
   }
 
@@ -142,6 +150,7 @@ async function continueWithRememberedAccountAsync(
     await Sessions.continueWithRememberedAccountAsync(
       account.accountKey,
       authorization.value,
+      consentGranted.value,
     );
   } catch (error) {
     if (error instanceof HttpStatusCodeError
@@ -182,7 +191,9 @@ async function removeRememberedAccountAsync(
 }
 
 async function continueAsync() {
-  if (requesting.value || authorization.value === null) {
+  if (requesting.value
+    || authorization.value === null
+    || (requiresOfflineAccessConsent.value && !consentGranted.value)) {
     return;
   }
 
@@ -219,7 +230,12 @@ async function continueAsync() {
 
       requesting.value = true;
       try {
-        await Accounts.loginAsync(id.value, password.value, authorization.value);
+        await Accounts.loginAsync(
+          id.value,
+          password.value,
+          authorization.value,
+          consentGranted.value,
+        );
       } catch (error) {
         if (error instanceof HttpStatusCodeError && error.status === 401) {
           passwordInput.value?.notifyError(t('app.login.errors.invalidPassword'));
@@ -280,6 +296,34 @@ onMounted(async () => {
 .error-message {
   font-size: 0.82rem;
   text-align: left;
+}
+
+.offline-consent {
+  display: flex;
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  gap: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, var(--border));
+  border-radius: 9px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent-bg) 38%, var(--surface));
+  font-size: 0.82rem;
+  line-height: 1.45;
+  cursor: pointer;
+}
+
+.offline-consent input {
+  width: 16px;
+  height: 16px;
+  margin: 2px 0 0;
+  flex: 0 0 auto;
+  accent-color: var(--accent);
+}
+
+.offline-consent strong {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--text-h);
 }
 
 .error-message {
@@ -427,6 +471,16 @@ button:disabled {
 
 <template>
   <UnauthorizedForm :title="t('app.login.title')">
+    <label
+      v-if="requiresOfflineAccessConsent && state !== 'loading'"
+      class="offline-consent"
+    >
+      <input v-model="consentGranted" type="checkbox" :disabled="requesting" />
+      <span>
+        <strong>{{ t('app.login.offlineConsentTitle', { client: authorization?.clientId }) }}</strong>
+        {{ t('app.login.offlineConsentDescription') }}
+      </span>
+    </label>
     <p v-if="state === 'loading'" class="status-message" role="status">
       {{ t('app.login.loadingAccounts') }}
     </p>
@@ -443,7 +497,7 @@ button:disabled {
           <button
             type="button"
             class="remembered-account"
-            :disabled="requesting"
+            :disabled="requesting || (requiresOfflineAccessConsent && !consentGranted)"
             @click="continueWithRememberedAccountAsync(account)"
           >
             <img
@@ -513,7 +567,11 @@ button:disabled {
           />
       </Expander>
       <div class="button-container">
-        <button type="submit" class="app-button accent-button" :disabled="requesting">
+        <button
+          type="submit"
+          class="app-button accent-button"
+          :disabled="requesting || (requiresOfflineAccessConsent && !consentGranted)"
+        >
           {{ t('app.common.actions.continue') }}
         </button>
         <button v-if="visibility.previous.value" type="button" class="app-button" :disabled="requesting" @click="previous">

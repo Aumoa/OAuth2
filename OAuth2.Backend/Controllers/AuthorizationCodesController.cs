@@ -35,6 +35,12 @@ public sealed class AuthorizationCodesController(
             return BadRequest(validation.Error);
         }
 
+        if (RequiresOfflineAccessConsent(validation.NormalizedScope)
+            && !form.ConsentGranted)
+        {
+            return BadRequest(new { error = "consent_required" });
+        }
+
         var login = await accounts.LoginAsync(form.Id, form.Password, cancellationToken);
         if (login is null)
         {
@@ -75,6 +81,12 @@ public sealed class AuthorizationCodesController(
         if (!validation.IsValid || validation.NormalizedScope is null)
         {
             return BadRequest(validation.Error);
+        }
+
+        if (RequiresOfflineAccessConsent(validation.NormalizedScope)
+            && !form.ConsentGranted)
+        {
+            return BadRequest(new { error = "consent_required" });
         }
 
         var rememberedSession = await rememberedSessions.GetAsync(
@@ -170,4 +182,8 @@ public sealed class AuthorizationCodesController(
             SessionGrant = sessionGrant
         });
     }
+
+    private static bool RequiresOfflineAccessConsent(string scope) =>
+        OidcScopePolicy.Split(scope)
+            .Contains(OidcScopePolicy.OfflineAccessScope, StringComparer.Ordinal);
 }

@@ -67,7 +67,7 @@ public sealed record UpdateApplicationForm
         {
             var scope = value?.Trim();
             if (string.IsNullOrWhiteSpace(scope)
-                || !OidcScopePolicy.ClaimScopes.Contains(scope, StringComparer.Ordinal))
+                || !OidcScopePolicy.SupportedScopes.Contains(scope, StringComparer.Ordinal))
             {
                 error = "body.allowedScopes contains an unsupported scope";
                 return false;

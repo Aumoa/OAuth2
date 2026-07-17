@@ -50,6 +50,9 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
         .Validate(
             static options => options.AccessTokenLifetimeMinutes > 0,
             "OpenId:AccessTokenLifetimeMinutes must be positive.")
+        .Validate(
+            static options => options.RefreshTokenLifetimeDays > 0,
+            "OpenId:RefreshTokenLifetimeDays must be positive.")
         .ValidateOnStart();
     s.AddOptions<SESOptions>()
         .Bind(config.GetRequiredSection(nameof(SESOptions)))
@@ -87,6 +90,7 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddScoped<IAccountClaims, MySqlAccountClaims>();
     s.AddScoped<IApplications, MySqlApplications>();
     s.AddScoped<IApplicationSecrets, MySqlApplicationSecrets>();
+    s.AddScoped<IRefreshTokens, MySqlRefreshTokens>();
     s.AddScoped<IOrganizations, MySqlOrganizations>();
     s.AddScoped<IAuthorizationCodes, RedisAuthorizationCodes>();
     s.AddScoped<IRememberedSessions, RedisRememberedSessions>();

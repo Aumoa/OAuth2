@@ -27,7 +27,15 @@ type RedirectUriEntry = {
 };
 
 const requiredScope = 'openid';
-const availableScopes = ['openid', 'profile', 'email', 'address', 'phone', 'groups'] as const;
+const availableScopes = [
+  'openid',
+  'profile',
+  'email',
+  'address',
+  'phone',
+  'groups',
+  'offline_access',
+] as const;
 const { locale, t } = useI18n();
 const route = useRoute();
 const router = useRouter();

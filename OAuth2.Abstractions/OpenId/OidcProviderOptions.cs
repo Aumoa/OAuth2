@@ -6,5 +6,7 @@ public sealed record OidcProviderOptions
 
     public int AccessTokenLifetimeMinutes { get; init; } = 30;
 
+    public int RefreshTokenLifetimeDays { get; init; } = 30;
+
     public string? SigningKeyPath { get; init; }
 }

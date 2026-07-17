@@ -11,6 +11,8 @@ public sealed record LoginForm
 
     public OidcAuthorizationRequest? Authorization { get; init; }
 
+    public bool ConsentGranted { get; init; }
+
     public bool Verify([NotNullWhen(false)] out string? error)
     {
         if (string.IsNullOrWhiteSpace(Id))

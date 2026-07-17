@@ -29,6 +29,8 @@ public static class OidcEndpointUris
 
     public static string Token(string issuer) => Endpoint(issuer, "/token");
 
+    public static string Revocation(string issuer) => Endpoint(issuer, "/revoke");
+
     public static string UserInfo(string issuer) => Endpoint(issuer, "/userinfo");
 
     public static string JsonWebKeys(string issuer) => Endpoint(issuer, "/jwks");

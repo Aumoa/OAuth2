@@ -97,6 +97,70 @@ public sealed class OidcAuthorizationPolicyTests
         Assert.Null(error);
     }
 
+    [Fact]
+    public void TryValidateRegisteredApplication_IgnoresOfflineAccessWithoutConsentPrompt()
+    {
+        var request = CreateRequest() with
+        {
+            Scope = "openid profile offline_access"
+        };
+        var application = CreateApplication() with
+        {
+            AllowedScopes = ["openid", "profile", "email", "offline_access"]
+        };
+
+        var result = OidcAuthorizationPolicy.TryValidateRegisteredApplication(
+            request,
+            application,
+            out var scope,
+            out var error,
+            out _);
+
+        Assert.True(result);
+        Assert.Equal("openid profile", scope);
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public void TryValidateRegisteredApplication_AcceptsOfflineAccessWithConsentPrompt()
+    {
+        var request = CreateRequest() with
+        {
+            Scope = "offline_access openid profile",
+            Prompt = "consent"
+        };
+        var application = CreateApplication() with
+        {
+            AllowedScopes = ["openid", "profile", "email", "offline_access"]
+        };
+
+        var result = OidcAuthorizationPolicy.TryValidateRegisteredApplication(
+            request,
+            application,
+            out var scope,
+            out var error,
+            out _);
+
+        Assert.True(result);
+        Assert.Equal("openid profile offline_access", scope);
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public void TryValidateRegisteredApplication_RejectsUnsupportedPrompt()
+    {
+        var result = OidcAuthorizationPolicy.TryValidateRegisteredApplication(
+            CreateRequest() with { Prompt = "none consent" },
+            CreateApplication(),
+            out _,
+            out var error,
+            out var canRedirect);
+
+        Assert.False(result);
+        Assert.True(canRedirect);
+        Assert.Equal("invalid_request", error);
+    }
+
     private static OidcAuthorizationRequest CreateRequest()
     {
         var verifier = Pkce.CreateCodeVerifier();

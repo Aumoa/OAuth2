@@ -15,33 +15,39 @@ public sealed class OidcTokenIssuer(
     public OidcTokenResponse Issue(
         Account account,
         IReadOnlyList<AccountClaim> accountClaims,
-        AuthorizationCodeBody authorizationCode)
+        string clientId,
+        string scope,
+        long authTime,
+        string? nonce,
+        string? refreshToken = null)
     {
         var now = DateTimeOffset.UtcNow;
         var expiresAt = now.AddMinutes(options.Value.AccessTokenLifetimeMinutes);
         var userClaims = OidcUserInfoFactory.Create(
             account,
             accountClaims,
-            authorizationCode.Scope);
+            scope);
 
         var accessTokenClaims = CreateTokenClaims(
             userClaims,
-            authorizationCode,
+            clientId,
+            authTime,
             now,
             expiresAt);
-        accessTokenClaims["scope"] = authorizationCode.Scope;
-        accessTokenClaims["client_id"] = authorizationCode.ClientId;
+        accessTokenClaims["scope"] = scope;
+        accessTokenClaims["client_id"] = clientId;
         accessTokenClaims["jti"] = OidcJwt.Base64UrlEncode(
             RandomNumberGenerator.GetBytes(16));
 
         var idTokenClaims = CreateTokenClaims(
             userClaims,
-            authorizationCode,
+            clientId,
+            authTime,
             now,
             expiresAt);
-        if (!string.IsNullOrWhiteSpace(authorizationCode.Nonce))
+        if (!string.IsNullOrWhiteSpace(nonce))
         {
-            idTokenClaims["nonce"] = authorizationCode.Nonce;
+            idTokenClaims["nonce"] = nonce;
         }
 
         return new OidcTokenResponse
@@ -49,7 +55,8 @@ public sealed class OidcTokenIssuer(
             AccessToken = signingKey.CreateToken("at+jwt", accessTokenClaims),
             ExpiresIn = (long)(expiresAt - now).TotalSeconds,
             IdToken = signingKey.CreateToken("JWT", idTokenClaims),
-            Scope = authorizationCode.Scope
+            RefreshToken = refreshToken,
+            Scope = scope
         };
     }
 
@@ -83,7 +90,8 @@ public sealed class OidcTokenIssuer(
 
     private Dictionary<string, object?> CreateTokenClaims(
         IReadOnlyDictionary<string, JsonElement> userClaims,
-        AuthorizationCodeBody authorizationCode,
+        string clientId,
+        long authTime,
         DateTimeOffset now,
         DateTimeOffset expiresAt)
     {
@@ -92,10 +100,10 @@ public sealed class OidcTokenIssuer(
             static pair => (object?)pair.Value,
             StringComparer.Ordinal);
         claims["iss"] = GetIssuer();
-        claims["aud"] = authorizationCode.ClientId;
+        claims["aud"] = clientId;
         claims["iat"] = now.ToUnixTimeSeconds();
         claims["exp"] = expiresAt.ToUnixTimeSeconds();
-        claims["auth_time"] = authorizationCode.AuthTime;
+        claims["auth_time"] = authTime;
         return claims;
     }
 

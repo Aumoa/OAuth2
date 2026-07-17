@@ -208,6 +208,8 @@ export const appMessages = {
         removeAccountLabel: '{account} 계정 삭제',
         confirmRemoveAccount: '{account} 계정을 이 브라우저에서 삭제할까요?',
         useAnotherAccount: '다른 계정으로 계속',
+        offlineConsentTitle: '{client}의 오프라인 접근을 허용합니다.',
+        offlineConsentDescription: '로그인하지 않은 동안에도 이 애플리케이션이 새 액세스 토큰을 발급받을 수 있습니다. 언제든 애플리케이션에서 권한을 철회할 수 있습니다.',
         errors: {
           idRequired: 'ID를 입력하세요.',
           accountNotFound: '일치하는 계정이 존재하지 않습니다.',
@@ -475,6 +477,8 @@ export const appMessages = {
         removeAccountLabel: 'Remove {account}',
         confirmRemoveAccount: 'Remove {account} from this browser?',
         useAnotherAccount: 'Use another account',
+        offlineConsentTitle: 'Allow offline access for {client}.',
+        offlineConsentDescription: 'This application can obtain new access tokens while you are signed out. You can revoke access from the application at any time.',
         errors: {
           idRequired: 'Enter your ID.',
           accountNotFound: 'No matching account was found.',
@@ -723,6 +727,8 @@ export const appMessages = {
         removeAccountLabel: '{account}を削除',
         confirmRemoveAccount: 'このブラウザーから{account}を削除しますか？',
         useAnotherAccount: '別のアカウントを使用',
+        offlineConsentTitle: '{client}のオフラインアクセスを許可します。',
+        offlineConsentDescription: 'ログアウト中でも、このアプリケーションは新しいアクセストークンを取得できます。アクセス権はいつでもアプリケーションから取り消せます。',
         errors: {
           idRequired: 'IDを入力してください。',
           accountNotFound: '該当するアカウントが見つかりません。',

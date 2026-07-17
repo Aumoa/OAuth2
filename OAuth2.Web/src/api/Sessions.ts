@@ -37,6 +37,7 @@ export class Sessions {
   static async continueWithRememberedAccountAsync(
     accountKey: string,
     authorization: AuthorizationRequest,
+    consentGranted: boolean,
   ): Promise<LoginResponse> {
     const response = await fetch(
       `/api/v1/session/accounts/${encodeURIComponent(accountKey)}/authorization-codes`,
@@ -47,7 +48,7 @@ export class Sessions {
           ...actionHeaders,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(authorization),
+        body: JSON.stringify({ authorization, consentGranted }),
       },
     );
     if (!response.ok) {

@@ -13,6 +13,7 @@ export interface AuthorizationRequest {
   scope: string;
   state: string;
   nonce?: string | null;
+  prompt?: string | null;
   codeChallenge: string;
   codeChallengeMethod: string;
 }
@@ -145,12 +146,13 @@ export class Accounts {
     id: string,
     password: string,
     authorization: AuthorizationRequest,
+    consentGranted: boolean,
   ): Promise<LoginResponse> {
     const response = await fetch('/api/v1/authorization-codes', {
       method: 'POST',
       headers: jsonRequestHeaders(),
       credentials: 'include',
-      body: JSON.stringify({ id, password, authorization }),
+      body: JSON.stringify({ id, password, authorization, consentGranted }),
     });
     if (!response.ok) {
       throw new HttpStatusCodeError(response.status, response.statusText);

@@ -78,6 +78,14 @@ public interface IBackendClient
         OidcTokenExchange exchange,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse<OidcTokenResponse>> ExchangeOidcRefreshTokenAsync(
+        OidcRefreshTokenExchange exchange,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> RevokeOidcTokenAsync(
+        OidcTokenRevocation revocation,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse<Dictionary<string, System.Text.Json.JsonElement>>> GetOidcUserInfoAsync(
         string accessToken,
         CancellationToken cancellationToken = default);

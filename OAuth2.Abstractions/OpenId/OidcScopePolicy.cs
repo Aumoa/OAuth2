@@ -8,6 +8,8 @@ public static class OidcScopePolicy
 
     public const string OpenIdScope = "openid";
 
+    public const string OfflineAccessScope = "offline_access";
+
     public static readonly string[] ClaimScopes =
     [
         OpenIdScope,
@@ -16,6 +18,12 @@ public static class OidcScopePolicy
         "address",
         "phone",
         "groups"
+    ];
+
+    public static readonly string[] SupportedScopes =
+    [
+        .. ClaimScopes,
+        OfflineAccessScope
     ];
 
     public static bool TryNormalize(
@@ -71,6 +79,58 @@ public static class OidcScopePolicy
             StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
     }
 
+    public static bool TryResolveRefreshScope(
+        string? grantedScope,
+        string? requestedScope,
+        [NotNullWhen(true)] out string? accessTokenScope,
+        [NotNullWhen(true)] out string? replacementGrantScope)
+    {
+        accessTokenScope = null;
+        replacementGrantScope = null;
+        if (!TryNormalize(grantedScope, false, out var normalizedGrant))
+        {
+            return false;
+        }
+
+        if (string.IsNullOrWhiteSpace(requestedScope))
+        {
+            accessTokenScope = normalizedGrant;
+            replacementGrantScope = normalizedGrant;
+            return true;
+        }
+
+        if (!TryNormalize(requestedScope, false, out var normalizedRequest))
+        {
+            return false;
+        }
+
+        var requestedScopes = Split(normalizedRequest);
+        if (!requestedScopes.Contains(OpenIdScope, StringComparer.Ordinal)
+            || requestedScopes.Except(Split(normalizedGrant), StringComparer.Ordinal).Any())
+        {
+            return false;
+        }
+
+        var replacementScopes = new HashSet<string>(
+            requestedScopes,
+            StringComparer.Ordinal);
+        if (Split(normalizedGrant).Contains(OfflineAccessScope, StringComparer.Ordinal))
+        {
+            replacementScopes.Add(OfflineAccessScope);
+        }
+
+        if (!TryNormalize(
+                string.Join(' ', replacementScopes),
+                false,
+                out replacementGrantScope))
+        {
+            return false;
+        }
+
+        accessTokenScope = normalizedRequest;
+        return true;
+    }
+
     private static bool TryExpand(
         string? scope,
         [NotNullWhen(true)] out HashSet<string>? scopes)
@@ -90,7 +150,7 @@ public static class OidcScopePolicy
     private static string JoinCanonical(IEnumerable<string> scopes)
     {
         var scopeSet = new HashSet<string>(scopes, StringComparer.Ordinal);
-        var knownScopes = ClaimScopes.Where(scopeSet.Remove);
+        var knownScopes = SupportedScopes.Where(scopeSet.Remove);
         var extensionScopes = scopeSet.Order(StringComparer.Ordinal);
         return string.Join(' ', knownScopes.Concat(extensionScopes));
     }

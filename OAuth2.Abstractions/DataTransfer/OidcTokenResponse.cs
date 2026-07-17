@@ -16,6 +16,10 @@ public sealed record OidcTokenResponse
     [JsonPropertyName("id_token")]
     public required string IdToken { get; init; }
 
+    [JsonPropertyName("refresh_token")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? RefreshToken { get; init; }
+
     [JsonPropertyName("scope")]
     public required string Scope { get; init; }
 }

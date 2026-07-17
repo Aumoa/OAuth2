@@ -260,6 +260,31 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
+    public Task<BackendResponse<OidcTokenResponse>> ExchangeOidcRefreshTokenAsync(
+        OidcRefreshTokenExchange exchange,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(exchange);
+        return SendForValueAsync<OidcRefreshTokenExchange, OidcTokenResponse>(
+            HttpMethod.Post,
+            "/api/v1/oidc/token/refresh",
+            exchange,
+            cancellationToken);
+    }
+
+    public Task<BackendResponse> RevokeOidcTokenAsync(
+        OidcTokenRevocation revocation,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(revocation);
+        return SendAsync(
+            HttpMethod.Post,
+            "/api/v1/oidc/token/revocation",
+            revocation,
+            null,
+            cancellationToken);
+    }
+
     public Task<BackendResponse<Dictionary<string, JsonElement>>> GetOidcUserInfoAsync(
         string accessToken,
         CancellationToken cancellationToken = default)

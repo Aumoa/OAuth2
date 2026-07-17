@@ -24,11 +24,12 @@ public sealed class OidcEndpointsController(
             ["issuer"] = issuer!,
             ["authorization_endpoint"] = OidcEndpointUris.Authorization(issuer!),
             ["token_endpoint"] = OidcEndpointUris.Token(issuer!),
+            ["revocation_endpoint"] = OidcEndpointUris.Revocation(issuer!),
             ["userinfo_endpoint"] = OidcEndpointUris.UserInfo(issuer!),
             ["jwks_uri"] = OidcEndpointUris.JsonWebKeys(issuer!),
             ["response_types_supported"] = new[] { "code" },
             ["response_modes_supported"] = new[] { "query" },
-            ["grant_types_supported"] = new[] { "authorization_code" },
+            ["grant_types_supported"] = new[] { "authorization_code", "refresh_token" },
             ["subject_types_supported"] = new[] { "public" },
             ["id_token_signing_alg_values_supported"] = new[] { "RS256" },
             ["token_endpoint_auth_methods_supported"] = new[]
@@ -37,8 +38,15 @@ public sealed class OidcEndpointsController(
                 "client_secret_basic",
                 "client_secret_post"
             },
+            ["revocation_endpoint_auth_methods_supported"] = new[]
+            {
+                "none",
+                "client_secret_basic",
+                "client_secret_post"
+            },
+            ["prompt_values_supported"] = new[] { OidcAuthorizationPolicy.ConsentPrompt },
             ["code_challenge_methods_supported"] = new[] { "S256" },
-            ["scopes_supported"] = OidcScopePolicy.ClaimScopes,
+            ["scopes_supported"] = OidcScopePolicy.SupportedScopes,
             ["claims_supported"] = OidcClaimPolicy.ClaimNames
         });
     }
@@ -53,25 +61,50 @@ public sealed class OidcEndpointsController(
         [FromForm(Name = "client_secret")] string? clientSecret,
         [FromForm(Name = "redirect_uri")] string? redirectUri,
         [FromForm(Name = "code_verifier")] string? codeVerifier,
+        [FromForm(Name = "refresh_token")] string? refreshToken,
+        [FromForm] string? scope,
         CancellationToken cancellationToken)
     {
         Response.Headers.Pragma = "no-cache";
         var authorization = Request.Headers.Authorization.ToString();
-        if (!string.IsNullOrEmpty(authorization))
+        if (!TryResolveClientCredentials(
+                authorization,
+                ref clientId,
+                ref clientSecret))
         {
-            if (clientSecret is not null
-                || !TryReadBasicClientCredentials(
-                    authorization,
-                    out var basicClientId,
-                    out var basicClientSecret)
-                || (!string.IsNullOrWhiteSpace(clientId)
-                    && !string.Equals(clientId, basicClientId, StringComparison.Ordinal)))
+            return InvalidClient();
+        }
+
+        if (string.IsNullOrWhiteSpace(clientId))
+        {
+            return BadRequest(new { error = "invalid_request" });
+        }
+
+        if (string.Equals(grantType, "refresh_token", StringComparison.Ordinal))
+        {
+            if (string.IsNullOrWhiteSpace(refreshToken))
             {
-                return InvalidClient();
+                return BadRequest(new { error = "invalid_request" });
             }
 
-            clientId = basicClientId;
-            clientSecret = basicClientSecret;
+            var refreshResponse = await backend.ExchangeOidcRefreshTokenAsync(
+                new OidcRefreshTokenExchange
+                {
+                    RefreshToken = refreshToken,
+                    ClientId = clientId,
+                    ClientSecret = clientSecret,
+                    Scope = scope
+                },
+                cancellationToken);
+            if (refreshResponse.StatusCode == HttpStatusCode.Unauthorized)
+            {
+                Response.Headers.WWWAuthenticate = "Basic realm=\"token\"";
+            }
+
+            return FromBackend(new BackendResponse(
+                refreshResponse.StatusCode,
+                refreshResponse.Content,
+                refreshResponse.ContentType));
         }
 
         if (!string.Equals(grantType, "authorization_code", StringComparison.Ordinal))
@@ -80,7 +113,6 @@ public sealed class OidcEndpointsController(
         }
 
         if (string.IsNullOrWhiteSpace(code)
-            || string.IsNullOrWhiteSpace(clientId)
             || string.IsNullOrWhiteSpace(redirectUri)
             || string.IsNullOrWhiteSpace(codeVerifier))
         {
@@ -106,6 +138,45 @@ public sealed class OidcEndpointsController(
             response.StatusCode,
             response.Content,
             response.ContentType));
+    }
+
+    [HttpPost("/revoke")]
+    [Consumes("application/x-www-form-urlencoded")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> RevokeTokenAsync(
+        [FromForm] string? token,
+        [FromForm(Name = "client_id")] string? clientId,
+        [FromForm(Name = "client_secret")] string? clientSecret,
+        CancellationToken cancellationToken)
+    {
+        var authorization = Request.Headers.Authorization.ToString();
+        if (!TryResolveClientCredentials(
+                authorization,
+                ref clientId,
+                ref clientSecret))
+        {
+            return InvalidClient();
+        }
+
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(clientId))
+        {
+            return BadRequest(new { error = "invalid_request" });
+        }
+
+        var response = await backend.RevokeOidcTokenAsync(
+            new OidcTokenRevocation
+            {
+                Token = token,
+                ClientId = clientId,
+                ClientSecret = clientSecret
+            },
+            cancellationToken);
+        if (response.StatusCode == HttpStatusCode.Unauthorized)
+        {
+            Response.Headers.WWWAuthenticate = "Basic realm=\"token\"";
+        }
+
+        return FromBackend(response);
     }
 
     [HttpGet("/userinfo")]
@@ -152,6 +223,32 @@ public sealed class OidcEndpointsController(
     {
         Response.Headers.WWWAuthenticate = "Basic realm=\"token\"";
         return Unauthorized(new { error = "invalid_client" });
+    }
+
+    private static bool TryResolveClientCredentials(
+        string authorization,
+        ref string? clientId,
+        ref string? clientSecret)
+    {
+        if (string.IsNullOrEmpty(authorization))
+        {
+            return true;
+        }
+
+        if (clientSecret is not null
+            || !TryReadBasicClientCredentials(
+                authorization,
+                out var basicClientId,
+                out var basicClientSecret)
+            || (!string.IsNullOrWhiteSpace(clientId)
+                && !string.Equals(clientId, basicClientId, StringComparison.Ordinal)))
+        {
+            return false;
+        }
+
+        clientId = basicClientId;
+        clientSecret = basicClientSecret;
+        return true;
     }
 
     private static bool TryReadBasicClientCredentials(

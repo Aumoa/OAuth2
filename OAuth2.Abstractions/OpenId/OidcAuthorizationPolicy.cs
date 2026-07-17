@@ -5,6 +5,8 @@ namespace OAuth2.OpenId;
 
 public static class OidcAuthorizationPolicy
 {
+    public const string ConsentPrompt = "consent";
+
     public static bool TryValidateRegisteredApplication(
         OidcAuthorizationRequest? request,
         OAuthApplicationConfiguration configuration,
@@ -52,8 +54,41 @@ public static class OidcAuthorizationPolicy
             return false;
         }
 
-        if (!OidcScopePolicy.TryNormalize(request.Scope, false, out normalizedScope)
-            || !OidcScopePolicy.Split(normalizedScope)
+        var prompts = OidcScopePolicy.Split(request.Prompt);
+        if (prompts.Distinct(StringComparer.Ordinal).Count() != prompts.Length
+            || prompts.Any(prompt => !string.Equals(
+                prompt,
+                ConsentPrompt,
+                StringComparison.Ordinal)))
+        {
+            error = "invalid_request";
+            return false;
+        }
+
+        if (!OidcScopePolicy.TryNormalize(request.Scope, false, out normalizedScope))
+        {
+            error = "invalid_scope";
+            return false;
+        }
+
+        var normalizedScopes = new HashSet<string>(
+            OidcScopePolicy.Split(normalizedScope),
+            StringComparer.Ordinal);
+        if (normalizedScopes.Contains(OidcScopePolicy.OfflineAccessScope)
+            && !prompts.Contains(ConsentPrompt, StringComparer.Ordinal))
+        {
+            normalizedScopes.Remove(OidcScopePolicy.OfflineAccessScope);
+            if (!OidcScopePolicy.TryNormalize(
+                    string.Join(' ', normalizedScopes),
+                    false,
+                    out normalizedScope))
+            {
+                error = "invalid_scope";
+                return false;
+            }
+        }
+
+        if (!OidcScopePolicy.Split(normalizedScope)
                 .Contains(OidcScopePolicy.OpenIdScope, StringComparer.Ordinal)
             || OidcScopePolicy.Split(normalizedScope)
                 .Except(configuration.AllowedScopes, StringComparer.Ordinal)
