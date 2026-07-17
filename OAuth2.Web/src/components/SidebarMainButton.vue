@@ -105,6 +105,10 @@ function onFocus(event: FocusEvent): void {
   color: color-mix(in srgb, #a78bfa 84%, var(--text-h));
 }
 
+.sidebar-main-button.is-organization.router-link-exact-active:hover {
+  background: transparent;
+}
+
 .sidebar-main-button-label {
   overflow: hidden;
   text-overflow: ellipsis;
