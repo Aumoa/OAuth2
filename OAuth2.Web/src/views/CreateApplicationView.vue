@@ -2,7 +2,7 @@
 import { onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
-import { Applications } from '../api/applications.ts';
+import { Applications, type OAuthApplicationType } from '../api/applications.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
@@ -10,6 +10,8 @@ const { t } = useI18n();
 const router = useRouter();
 const clientId = ref('');
 const applicationName = ref('');
+const applicationType = ref<OAuthApplicationType>('web');
+const applicationTypes: readonly OAuthApplicationType[] = ['web', 'android', 'ios', 'macos'];
 const isCreating = ref(false);
 const createError = ref<string | null>(null);
 const clientIdInput = ref<InstanceType<typeof FloatingInput> | null>(null);
@@ -47,7 +49,7 @@ async function createApplicationAsync(): Promise<void> {
 
   isCreating.value = true;
   try {
-    await Applications.createAsync(normalizedClientId, normalizedName);
+    await Applications.createAsync(normalizedClientId, normalizedName, applicationType.value);
     if (isMounted) {
       await router.replace('/applications');
     }
@@ -130,6 +132,49 @@ onBeforeUnmount(() => {
   margin: 0;
   color: var(--danger);
   font-size: 13px;
+  line-height: 1.45;
+}
+
+.application-type-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.application-type-label {
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.application-type-select {
+  width: 100%;
+  min-height: 44px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  font: inherit;
+  font-size: 14px;
+}
+
+.application-type-select:focus-visible {
+  border-color: var(--accent);
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.application-type-select:disabled {
+  cursor: wait;
+  opacity: 0.64;
+}
+
+.application-type-hint {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
   line-height: 1.45;
 }
 
@@ -240,6 +285,25 @@ onBeforeUnmount(() => {
         autocomplete="off"
         required
       />
+
+      <div class="application-type-field">
+        <label class="application-type-label" for="application-type">
+          {{ t('app.applicationManagement.applicationType') }}
+        </label>
+        <select
+          id="application-type"
+          v-model="applicationType"
+          class="application-type-select"
+          :disabled="isCreating"
+        >
+          <option v-for="type in applicationTypes" :key="type" :value="type">
+            {{ t(`app.applicationManagement.applicationTypes.${type}`) }}
+          </option>
+        </select>
+        <p class="application-type-hint">
+          {{ t(`app.applicationManagement.applicationTypeDescriptions.${applicationType}`) }}
+        </p>
+      </div>
 
       <p v-if="createError" class="create-application-error" role="alert">{{ createError }}</p>
 
