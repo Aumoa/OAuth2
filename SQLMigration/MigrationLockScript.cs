@@ -1,4 +1,5 @@
-﻿using System.Data;
+using System.Security.Cryptography;
+using System.Text;
 using Dapper;
 using MySql.Data.MySqlClient;
 
@@ -6,48 +7,72 @@ namespace SQLMigration;
 
 internal static class MigrationLockScript
 {
-    public static async ValueTask EnterAsync(MySqlConnection connection, TextWriter logger, CancellationToken cancellationToken = default)
+    private const int LockTimeoutSeconds = 300;
+
+    public static async ValueTask<string> EnterAsync(
+        MySqlConnection connection,
+        string databaseName,
+        TextWriter logger,
+        CancellationToken cancellationToken = default)
     {
-        const string QUERY1 = @";
-CREATE TABLE IF NOT EXISTS `__MigrationLock` (
-    `Key` INT NOT NULL PRIMARY KEY,
-    `LockedAt` DATETIME NOT NULL DEFAULT NOW()
-);
-";
+        var lockName = CreateLockName(databaseName);
+        logger.WriteLine("Waiting to acquire the database migration lock...");
 
-        var commandDef = new CommandDefinition(QUERY1, cancellationToken: cancellationToken);
-        await connection.ExecuteAsync(commandDef);
-
-        while (true)
+        const string QUERY = "SELECT GET_LOCK(@lockName, @timeoutSeconds)";
+        var command = new CommandDefinition(
+            QUERY,
+            new { lockName, timeoutSeconds = LockTimeoutSeconds },
+            commandTimeout: LockTimeoutSeconds + 5,
+            cancellationToken: cancellationToken);
+        var acquired = await connection.ExecuteScalarAsync<int?>(command);
+        if (acquired == 1)
         {
-            await using var tx = await connection.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-
-            const string QUERY2 = @"SELECT `LockedAt` FROM `__MigrationLock` WHERE `Key` = 1";
-            commandDef = new CommandDefinition(QUERY2, cancellationToken: cancellationToken);
-            var lockedAt = await connection.QuerySingleOrDefaultAsync<DateTime>(commandDef);
-            if (lockedAt != default && lockedAt >= DateTime.UtcNow - TimeSpan.FromMinutes(5))
-            {
-                logger.WriteLine("Waiting for another worker to complete migration...");
-                tx.Rollback();
-                await Task.Delay(TimeSpan.FromSeconds(10), cancellationToken);
-                continue;
-            }
-
-            const string QUERY3 = @"INSERT INTO `__MigrationLock` (`Key`) VALUES(0) ON DUPLICATE KEY UPDATE `LockedAt` = NOW()";
-            commandDef = new CommandDefinition(QUERY3, cancellationToken: cancellationToken);
-            await connection.ExecuteAsync(commandDef);
-            await tx.CommitAsync(cancellationToken);
-
-            break;
+            logger.WriteLine("Database migration lock acquired.");
+            return lockName;
         }
+
+        if (acquired == 0)
+        {
+            throw new TimeoutException(
+                $"Could not acquire the database migration lock within {LockTimeoutSeconds} seconds.");
+        }
+
+        throw new InvalidOperationException("MySQL could not acquire the database migration lock.");
     }
 
-    public static async ValueTask LeaveAsync(MySqlConnection connection, CancellationToken cancellationToken = default)
+    public static async ValueTask LeaveAsync(
+        MySqlConnection connection,
+        string lockName,
+        TextWriter logger,
+        CancellationToken cancellationToken = default)
     {
-        const string QUERY1 = @"DELETE FROM `__MigrationLock` WHERE `Key` = 0";
-        await using var tx = await connection.BeginTransactionAsync(IsolationLevel.Serializable, cancellationToken);
-        var commandDef = new CommandDefinition(QUERY1, cancellationToken: cancellationToken);
-        await connection.ExecuteAsync(commandDef);
-        await tx.CommitAsync(cancellationToken);
+        const string QUERY = "SELECT RELEASE_LOCK(@lockName)";
+        var command = new CommandDefinition(
+            QUERY,
+            new { lockName },
+            commandTimeout: 5,
+            cancellationToken: cancellationToken);
+        var released = await connection.ExecuteScalarAsync<int?>(command);
+        if (released == 1)
+        {
+            logger.WriteLine("Database migration lock released.");
+            return;
+        }
+
+        logger.WriteLine("The database migration lock was no longer owned by this connection.");
+    }
+
+    private static string CreateLockName(string databaseName)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(databaseName);
+
+        var readableName = $"SQLMigration:{databaseName}";
+        if (readableName.Length <= 64)
+        {
+            return readableName;
+        }
+
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(databaseName));
+        return $"SQLMigration:{Convert.ToHexString(hash.AsSpan(0, 25))}";
     }
 }
