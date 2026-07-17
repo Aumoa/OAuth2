@@ -227,7 +227,7 @@ function isValidRedirectUriForType(
     return true;
   }
 
-  return applicationType === 'macos'
+  return applicationType === 'desktop'
     && redirectUri.protocol === 'http:'
     && (redirectUri.hostname === '127.0.0.1' || redirectUri.hostname === '[::1]')
     && redirectUri.port.length === 0;

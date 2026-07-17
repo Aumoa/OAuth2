@@ -9,7 +9,7 @@ public static class OidcRedirectUriPolicy
         return IsValidRegistration(value, OAuthApplicationTypes.Web)
             || IsValidRegistration(value, OAuthApplicationTypes.Android)
             || IsValidRegistration(value, OAuthApplicationTypes.Ios)
-            || IsValidRegistration(value, OAuthApplicationTypes.MacOs);
+            || IsValidRegistration(value, OAuthApplicationTypes.Desktop);
     }
 
     public static bool IsValidRegistration(
@@ -27,10 +27,10 @@ public static class OidcRedirectUriPolicy
                 IsHttps(uri) || IsWebDevelopmentLoopback(uri),
             OAuthApplicationTypes.Android or OAuthApplicationTypes.Ios =>
                 IsHttps(uri) || IsPrivateUseScheme(value!, uri),
-            OAuthApplicationTypes.MacOs =>
+            OAuthApplicationTypes.Desktop =>
                 IsHttps(uri)
                 || IsPrivateUseScheme(value!, uri)
-                || IsMacOsLoopbackRegistration(uri),
+                || IsDesktopLoopbackRegistration(uri),
             _ => false
         };
     }
@@ -46,12 +46,12 @@ public static class OidcRedirectUriPolicy
             return false;
         }
 
-        if (applicationType == OAuthApplicationTypes.MacOs
+        if (applicationType == OAuthApplicationTypes.Desktop
             && Uri.TryCreate(registeredRedirectUri, UriKind.Absolute, out var registered)
-            && IsMacOsLoopbackRegistration(registered))
+            && IsDesktopLoopbackRegistration(registered))
         {
             return Uri.TryCreate(requestedRedirectUri, UriKind.Absolute, out var requested)
-                && IsMacOsLoopbackRequest(requested)
+                && IsDesktopLoopbackRequest(requested)
                 && string.Equals(
                     registered.Scheme,
                     requested.Scheme,
@@ -109,12 +109,12 @@ public static class OidcRedirectUriPolicy
             && uri.IsLoopback;
     }
 
-    private static bool IsMacOsLoopbackRegistration(Uri uri)
+    private static bool IsDesktopLoopbackRegistration(Uri uri)
     {
-        return IsMacOsLoopbackRequest(uri) && uri.IsDefaultPort;
+        return IsDesktopLoopbackRequest(uri) && uri.IsDefaultPort;
     }
 
-    private static bool IsMacOsLoopbackRequest(Uri uri)
+    private static bool IsDesktopLoopbackRequest(Uri uri)
     {
         return string.Equals(
                 uri.Scheme,

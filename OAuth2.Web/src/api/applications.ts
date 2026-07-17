@@ -1,6 +1,6 @@
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
-export type OAuthApplicationType = 'web' | 'android' | 'ios' | 'macos';
+export type OAuthApplicationType = 'web' | 'android' | 'ios' | 'desktop';
 
 export interface ApplicationSummary {
   id: string;

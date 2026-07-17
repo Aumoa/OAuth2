@@ -56,8 +56,8 @@ function applicationTypeIcon(applicationType: OAuthApplicationType): string {
       return 'android';
     case 'ios':
       return 'phone_iphone';
-    case 'macos':
-      return 'laptop_mac';
+    case 'desktop':
+      return 'desktop_windows';
     default:
       return 'web_asset';
   }

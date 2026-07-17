@@ -75,14 +75,14 @@ public sealed class OidcAuthorizationPolicyTests
     }
 
     [Fact]
-    public void TryValidateRegisteredApplication_AcceptsDynamicMacOsLoopbackPort()
+    public void TryValidateRegisteredApplication_AcceptsDynamicDesktopLoopbackPort()
     {
         var request = CreateRequest() with
         {
             RedirectUri = "http://127.0.0.1:52147/signin-oidc"
         };
         var application = CreateApplication(
-            OAuthApplicationTypes.MacOs,
+            OAuthApplicationTypes.Desktop,
             "http://127.0.0.1/signin-oidc");
 
         var result = OidcAuthorizationPolicy.TryValidateRegisteredApplication(

@@ -26,6 +26,7 @@ public class Scripts : IScripts
         yield return new AddOAuthRefreshToken();
         yield return new AddOrganizationMemberRoles();
         yield return new AddOrganizationGroups();
+        yield return new RenameMacOsApplicationTypeToDesktop();
     }
 
     private class Init : IScript
@@ -546,6 +547,25 @@ CREATE TABLE `organization_group_member` (
         public string DownSql => @"
 DROP TABLE IF EXISTS `organization_group_member`;
 DROP TABLE IF EXISTS `organization_group`;
+";
+    }
+
+    private class RenameMacOsApplicationTypeToDesktop : IScript
+    {
+        public string Name => "Rename_macos_application_type_to_desktop";
+
+        public int InstalledRank => 20;
+
+        public string UpSql => @"
+UPDATE `client`
+SET `application_type` = 'desktop'
+WHERE `application_type` = 'macos';
+";
+
+        public string DownSql => @"
+UPDATE `client`
+SET `application_type` = 'macos'
+WHERE `application_type` = 'desktop';
 ";
     }
 }

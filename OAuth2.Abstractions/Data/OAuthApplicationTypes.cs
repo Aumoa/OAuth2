@@ -8,13 +8,13 @@ public static class OAuthApplicationTypes
 
     public const string Ios = "ios";
 
-    public const string MacOs = "macos";
+    public const string Desktop = "desktop";
 
     public static IReadOnlyList<string> All { get; } =
-        [Web, Android, Ios, MacOs];
+        [Web, Android, Ios, Desktop];
 
     public static bool IsSupported(string? value)
     {
-        return value is Web or Android or Ios or MacOs;
+        return value is Web or Android or Ios or Desktop;
     }
 }

@@ -22,7 +22,7 @@ public sealed class CreateApplicationFormTests
     [InlineData(OAuthApplicationTypes.Web)]
     [InlineData(OAuthApplicationTypes.Android)]
     [InlineData(OAuthApplicationTypes.Ios)]
-    [InlineData(OAuthApplicationTypes.MacOs)]
+    [InlineData(OAuthApplicationTypes.Desktop)]
     public void Verify_AcceptsSupportedApplicationType(string applicationType)
     {
         var form = new CreateApplicationForm
@@ -36,14 +36,16 @@ public sealed class CreateApplicationFormTests
         Assert.Null(error);
     }
 
-    [Fact]
-    public void Verify_RejectsUnsupportedApplicationType()
+    [Theory]
+    [InlineData("macos")]
+    [InlineData("unsupported")]
+    public void Verify_RejectsUnsupportedApplicationType(string applicationType)
     {
         var form = new CreateApplicationForm
         {
             ClientId = "example-client",
             Name = "Example application",
-            ApplicationType = "desktop"
+            ApplicationType = applicationType
         };
 
         Assert.False(form.Verify(out var error));
