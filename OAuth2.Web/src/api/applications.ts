@@ -1,8 +1,11 @@
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
+export type OAuthApplicationType = 'web' | 'android' | 'ios' | 'macos';
+
 export interface ApplicationSummary {
   id: string;
   name: string;
+  applicationType: OAuthApplicationType;
   createdAt: string;
 }
 
@@ -15,6 +18,7 @@ export class Applications {
   static async createAsync(
     clientId: string,
     name: string,
+    applicationType: OAuthApplicationType,
     organizationId?: string,
   ): Promise<ApplicationSummary> {
     const response = await fetch(Applications.collectionUri(organizationId), {
@@ -25,7 +29,7 @@ export class Applications {
         'Content-Type': 'application/json',
         'X-OAuth2-Action': '1',
       },
-      body: JSON.stringify({ clientId, name }),
+      body: JSON.stringify({ clientId, name, applicationType }),
     });
     if (!response.ok) {
       throw new HttpStatusCodeError(response.status, response.statusText);

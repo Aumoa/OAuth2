@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using OAuth2.Data;
 
 namespace OAuth2.DataTransfer;
 
@@ -11,6 +12,8 @@ public sealed record CreateApplicationForm
     public required string ClientId { get; init; }
 
     public required string Name { get; init; }
+
+    public string ApplicationType { get; init; } = OAuthApplicationTypes.Web;
 
     public bool Verify([NotNullWhen(false)] out string? error)
     {
@@ -35,6 +38,12 @@ public sealed record CreateApplicationForm
         if (Name.Trim().Length > NameMaxLength)
         {
             error = $"body.name exceeds {NameMaxLength} characters";
+            return false;
+        }
+
+        if (!OAuthApplicationTypes.IsSupported(ApplicationType))
+        {
+            error = "body.applicationType is unsupported";
             return false;
         }
 

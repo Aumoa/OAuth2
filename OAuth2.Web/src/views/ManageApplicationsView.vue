@@ -2,7 +2,11 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, type RouteLocationRaw } from 'vue-router';
-import { Applications, type ApplicationSummary } from '../api/applications.ts';
+import {
+  Applications,
+  type ApplicationSummary,
+  type OAuthApplicationType,
+} from '../api/applications.ts';
 
 type ViewState = 'loading' | 'ready' | 'error';
 
@@ -44,6 +48,19 @@ let loadRequestId = 0;
 function formatCreatedAt(value: string): string {
   const date = new Date(value);
   return Number.isNaN(date.valueOf()) ? value : dateFormatter.value.format(date);
+}
+
+function applicationTypeIcon(applicationType: OAuthApplicationType): string {
+  switch (applicationType) {
+    case 'android':
+      return 'android';
+    case 'ios':
+      return 'phone_iphone';
+    case 'macos':
+      return 'laptop_mac';
+    default:
+      return 'web_asset';
+  }
 }
 
 async function loadApplicationsAsync(): Promise<void> {
@@ -313,10 +330,30 @@ onBeforeUnmount(() => {
 }
 
 .application-id {
-  margin-top: 3px;
+  margin: 0;
   color: var(--text-muted);
   font-family: var(--mono);
   font-size: 11px;
+  line-height: 1.4;
+}
+
+.application-metadata {
+  display: flex;
+  min-width: 0;
+  margin-top: 4px;
+  align-items: center;
+  gap: 7px;
+}
+
+.application-type-badge {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  color: var(--accent-hover);
+  background: var(--accent-bg);
+  font-size: 10px;
+  font-weight: 700;
   line-height: 1.4;
 }
 
@@ -482,14 +519,21 @@ onBeforeUnmount(() => {
           ></RouterLink>
 
           <span class="application-icon" aria-hidden="true">
-            <span class="material-symbols-outlined">web_asset</span>
+            <span class="material-symbols-outlined">
+              {{ applicationTypeIcon(application.applicationType) }}
+            </span>
           </span>
 
           <div class="application-identity">
             <h2 class="application-name" :title="application.name">{{ application.name }}</h2>
-            <p class="application-id" :title="application.id">
-              {{ t('app.applicationManagement.clientId') }}: {{ application.id }}
-            </p>
+            <div class="application-metadata">
+              <p class="application-id" :title="application.id">
+                {{ t('app.applicationManagement.clientId') }}: {{ application.id }}
+              </p>
+              <span class="application-type-badge">
+                {{ t(`app.applicationManagement.applicationTypes.${application.applicationType}`) }}
+              </span>
+            </div>
           </div>
 
           <div class="application-date">

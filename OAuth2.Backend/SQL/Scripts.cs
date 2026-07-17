@@ -21,6 +21,7 @@ public class Scripts : IScripts
         yield return new AddAccountUpdatedAt();
         yield return new AddEmailVerificationExpiration();
         yield return new AddOrganization();
+        yield return new AddClientApplicationType();
     }
 
     private class Init : IScript
@@ -399,6 +400,23 @@ CREATE TABLE `organization_member` (
         public string DownSql => @"
 DROP TABLE `organization_member`;
 DROP TABLE `organization`;
+";
+    }
+
+    private class AddClientApplicationType : IScript
+    {
+        public string Name => "Add_client_application_type";
+
+        public int InstalledRank => 15;
+
+        public string UpSql => @"
+ALTER TABLE `client`
+    ADD COLUMN `application_type` VARCHAR(16) NOT NULL DEFAULT 'web' AFTER `name`;
+";
+
+        public string DownSql => @"
+ALTER TABLE `client`
+    DROP COLUMN `application_type`;
 ";
     }
 }

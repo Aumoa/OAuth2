@@ -9,7 +9,9 @@ namespace OAuth2.Controllers;
 
 [ApiController]
 [Route("api/v1/auth")]
-public sealed class OidcAuthorizationController(IOptions<OAuthOptions> oauthOptions) : ControllerBase
+public sealed class OidcAuthorizationController(
+    IOptions<OAuthOptions> oauthOptions,
+    IBackendClient backend) : ControllerBase
 {
     [HttpGet("login")]
     public IActionResult StartLogin()
@@ -40,7 +42,8 @@ public sealed class OidcAuthorizationController(IOptions<OAuthOptions> oauthOpti
     }
 
     [HttpGet("authorize")]
-    public IActionResult Authorize(
+    [HttpGet("/authorize")]
+    public async Task<IActionResult> AuthorizeAsync(
         [FromQuery(Name = "client_id")] string? clientId,
         [FromQuery(Name = "redirect_uri")] string? redirectUri,
         [FromQuery(Name = "response_type")] string? responseType,
@@ -48,7 +51,8 @@ public sealed class OidcAuthorizationController(IOptions<OAuthOptions> oauthOpti
         [FromQuery] string? state,
         [FromQuery] string? nonce,
         [FromQuery(Name = "code_challenge")] string? codeChallenge,
-        [FromQuery(Name = "code_challenge_method")] string? codeChallengeMethod)
+        [FromQuery(Name = "code_challenge_method")] string? codeChallengeMethod,
+        CancellationToken cancellationToken)
     {
         var authorization = new OidcAuthorizationRequest
         {
@@ -62,13 +66,35 @@ public sealed class OidcAuthorizationController(IOptions<OAuthOptions> oauthOpti
             CodeChallengeMethod = codeChallengeMethod
         };
 
-        if (!InternalOidcAuthorization.TryValidate(
+        var backendResponse = await backend.ValidateOidcAuthorizationAsync(
             authorization,
-            oauthOptions.Value.ClientId,
-            out var normalizedScope,
-            out var error))
+            cancellationToken);
+        if (backendResponse.Value is null)
         {
-            return BadRequest(new { error });
+            return StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                error = "temporarily_unavailable"
+            });
+        }
+
+        var validation = backendResponse.Value;
+        if (!validation.IsValid || validation.NormalizedScope is null)
+        {
+            if (validation.CanRedirect && !string.IsNullOrWhiteSpace(redirectUri))
+            {
+                return Redirect(QueryHelpers.AddQueryString(
+                    redirectUri,
+                    new Dictionary<string, string?>
+                    {
+                        ["error"] = validation.Error ?? "invalid_request",
+                        ["state"] = state
+                    }));
+            }
+
+            return BadRequest(new
+            {
+                error = validation.Error ?? "invalid_request"
+            });
         }
 
         return Redirect(QueryHelpers.AddQueryString(
@@ -78,7 +104,7 @@ public sealed class OidcAuthorizationController(IOptions<OAuthOptions> oauthOpti
                 ["client_id"] = authorization.ClientId,
                 ["redirect_uri"] = authorization.RedirectUri,
                 ["response_type"] = authorization.ResponseType,
-                ["scope"] = normalizedScope,
+                ["scope"] = validation.NormalizedScope,
                 ["state"] = authorization.State,
                 ["nonce"] = authorization.Nonce,
                 ["code_challenge"] = authorization.CodeChallenge,

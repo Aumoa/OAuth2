@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using OAuth2.Data;
 using OAuth2.DataTransfer;
+using OAuth2.OpenId;
 using OAuth2.Repositories;
 
 namespace OAuth2.Controllers;
@@ -29,6 +30,7 @@ public sealed class ApplicationsController(IApplications applications) : Control
             form.ClientId.Trim(),
             ownerId,
             form.Name.Trim(),
+            form.ApplicationType,
             cancellationToken);
         if (application is null)
         {
@@ -93,6 +95,24 @@ public sealed class ApplicationsController(IApplications applications) : Control
             return BadRequest(error);
         }
 
+        var configuration = await applications.GetOwnedApplicationAsync(
+            id,
+            ownerId,
+            cancellationToken);
+        if (configuration is null)
+        {
+            return NotFound();
+        }
+
+        if (form.RedirectUris.Any(value =>
+            !OidcRedirectUriPolicy.IsValidRegistration(
+                value.Trim(),
+                configuration.Application.ApplicationType)))
+        {
+            return BadRequest(
+                "body.redirectUris contains a URI unsupported for the application type");
+        }
+
         var updated = await applications.UpdateApplicationAsync(
             id,
             ownerId,
@@ -123,6 +143,7 @@ public sealed class ApplicationsController(IApplications applications) : Control
         {
             Id = application.Id,
             Name = application.Name,
+            ApplicationType = application.ApplicationType,
             CreatedAt = application.CreatedAt
         };
 
@@ -131,6 +152,7 @@ public sealed class ApplicationsController(IApplications applications) : Control
         {
             Id = configuration.Application.Id,
             Name = configuration.Application.Name,
+            ApplicationType = configuration.Application.ApplicationType,
             CreatedAt = configuration.Application.CreatedAt,
             RedirectUris = configuration.RedirectUris,
             AllowedScopes = configuration.AllowedScopes

@@ -12,7 +12,8 @@ public sealed class UpdateApplicationFormTests
             RedirectUris =
             [
                 "https://example.com/oauth/callback",
-                "http://localhost:5173/callback"
+                "http://localhost:5173/callback",
+                "com.example.app:/oauth/callback"
             ],
             AllowedScopes = ["openid", "profile", "email"]
         };
@@ -38,6 +39,7 @@ public sealed class UpdateApplicationFormTests
     [InlineData("http://example.com/callback")]
     [InlineData("https://user@example.com/callback")]
     [InlineData("https://example.com/callback#fragment")]
+    [InlineData("myapp:/oauth/callback")]
     [InlineData("not-a-uri")]
     public void Verify_RejectsInvalidRedirectUri(string redirectUri)
     {

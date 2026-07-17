@@ -7,7 +7,9 @@ namespace OAuth2.Controllers;
 [ApiController]
 [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
 [Route("api/v1/authorization-codes")]
-public sealed class AuthorizationCodesController(IBackendClient backend) : BackendProxyControllerBase
+public sealed class AuthorizationCodesController(
+    IBackendClient backend,
+    BrowserSessionSignIn browserSignIn) : BackendProxyControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> CreateAsync(
@@ -24,6 +26,28 @@ public sealed class AuthorizationCodesController(IBackendClient backend) : Backe
             return BadRequest(error);
         }
 
-        return FromBackend(await backend.CreateAuthorizationCodeAsync(form, cancellationToken));
+        var response = await backend.CreateAuthorizationCodeAsync(form, cancellationToken);
+        if (response.Value is null
+            || !string.Equals(
+                response.Value.State,
+                LoginStates.Authenticated,
+                StringComparison.Ordinal))
+        {
+            return FromBackend(new BackendResponse(
+                response.StatusCode,
+                response.Content,
+                response.ContentType));
+        }
+
+        var login = response.Value;
+        if (login.SessionGrant is not null)
+        {
+            await browserSignIn.SignInAsync(
+                HttpContext,
+                login.SessionGrant,
+                cancellationToken);
+        }
+
+        return Ok(login with { SessionGrant = null });
     }
 }
