@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using OAuth2.DataTransfer;
 
@@ -23,6 +24,79 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
         response.EnsureSuccessStatusCode();
         return true;
+    }
+
+    public async Task<BackendBinaryResponse> GetProfileImageAsync(
+        string id,
+        string? version,
+        string? ifNoneMatch,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        var requestUri = $"/api/v1/accounts/profile-image?id={Uri.EscapeDataString(id)}";
+        if (!string.IsNullOrWhiteSpace(version))
+        {
+            requestUri += $"&v={Uri.EscapeDataString(version)}";
+        }
+
+        using var request = new HttpRequestMessage(HttpMethod.Get, requestUri);
+        if (!string.IsNullOrWhiteSpace(ifNoneMatch))
+        {
+            request.Headers.TryAddWithoutValidation("If-None-Match", ifNoneMatch);
+        }
+
+        using var response = await http.SendAsync(
+            request,
+            HttpCompletionOption.ResponseHeadersRead,
+            cancellationToken);
+        var content = response.IsSuccessStatusCode
+            && response.StatusCode != HttpStatusCode.NotModified
+                ? await response.Content.ReadAsByteArrayAsync(cancellationToken)
+                : null;
+        return new BackendBinaryResponse(
+            response.StatusCode,
+            content,
+            response.Content.Headers.ContentType?.ToString(),
+            response.Headers.ETag?.ToString(),
+            response.Headers.CacheControl?.ToString());
+    }
+
+    public async Task<BackendResponse<ProfileImageReference>> UpdateProfileImageAsync(
+        string id,
+        Stream content,
+        string? contentType,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(content);
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Put,
+            $"/api/v1/accounts/profile-image?id={Uri.EscapeDataString(id)}")
+        {
+            Content = new StreamContent(content)
+        };
+        request.Content.Headers.ContentType = MediaTypeHeaderValue.TryParse(
+            contentType,
+            out var parsedContentType)
+                ? parsedContentType
+                : new MediaTypeHeaderValue("application/octet-stream");
+        using var response = await http.SendAsync(request, cancellationToken);
+        return await ToBackendResponseAsync<ProfileImageReference>(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> DeleteProfileImageAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        using var request = new HttpRequestMessage(
+            HttpMethod.Delete,
+            $"/api/v1/accounts/profile-image?id={Uri.EscapeDataString(id)}");
+        using var response = await http.SendAsync(request, cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
     }
 
     public Task<BackendResponse> CreateApplicationAsync(

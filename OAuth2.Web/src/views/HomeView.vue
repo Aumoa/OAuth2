@@ -1,6 +1,8 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { Accounts } from '../api/accounts.ts';
+import ProfileImageEditor from '../components/ProfileImageEditor.vue';
 import Avatar from '../shared/oauth2/components/Avatar.vue';
 import { useAuthStore } from '../shared/oauth2/src/auth.ts';
 
@@ -19,6 +21,63 @@ const profileSummary = computed(() => (
   ?? ''
 ));
 const groups = computed(() => auth.user?.groups ?? []);
+const hasProfileImage = computed(() => Boolean(auth.user?.picture));
+const isProfileImageEditorOpen = ref(false);
+const isSavingProfileImage = ref(false);
+const profileImageError = ref<string | null>(null);
+
+function openProfileImageEditor(): void {
+  profileImageError.value = null;
+  isProfileImageEditorOpen.value = true;
+}
+
+function updateProfileImageEditorOpen(value: boolean): void {
+  if (!isSavingProfileImage.value) {
+    isProfileImageEditorOpen.value = value;
+    if (!value) {
+      profileImageError.value = null;
+    }
+  }
+}
+
+async function saveProfileImageAsync(image: Blob): Promise<void> {
+  if (isSavingProfileImage.value) {
+    return;
+  }
+
+  isSavingProfileImage.value = true;
+  profileImageError.value = null;
+  try {
+    const reference = await Accounts.updateProfileImageAsync(image);
+    auth.setPicture(reference.picture);
+    isProfileImageEditorOpen.value = false;
+  } catch {
+    profileImageError.value = t('app.accountInformation.profileImage.uploadFailed');
+  } finally {
+    isSavingProfileImage.value = false;
+  }
+}
+
+async function removeProfileImageAsync(): Promise<void> {
+  if (
+    isSavingProfileImage.value
+    || !window.confirm(t('app.accountInformation.profileImage.removeConfirmation'))
+  ) {
+    return;
+  }
+
+  isSavingProfileImage.value = true;
+  profileImageError.value = null;
+  try {
+    await Accounts.deleteProfileImageAsync();
+    auth.setPicture(undefined);
+    isProfileImageEditorOpen.value = false;
+  } catch {
+    profileImageError.value = t('app.accountInformation.profileImage.removeFailed');
+  } finally {
+    isSavingProfileImage.value = false;
+  }
+}
 </script>
 
 <style lang="css" scoped>
@@ -70,6 +129,42 @@ const groups = computed(() => auth.user?.groups ?? []);
 
 .profile-heading {
   min-width: 0;
+}
+
+.profile-avatar-editor {
+  position: relative;
+}
+
+.profile-image-edit-button {
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  display: grid;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  place-items: center;
+  color: var(--on-accent);
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: transform 140ms ease, filter 140ms ease;
+}
+
+.profile-image-edit-button:hover {
+  filter: brightness(1.08);
+  transform: scale(1.06);
+}
+
+.profile-image-edit-button:focus-visible {
+  outline: 3px solid var(--accent-border);
+  outline-offset: 2px;
+}
+
+.profile-image-edit-button .material-symbols-outlined {
+  font-size: 16px;
 }
 
 .profile-section-label {
@@ -245,7 +340,18 @@ const groups = computed(() => auth.user?.groups ?? []);
 
     <article v-if="auth.user" class="profile-panel">
       <div class="profile-summary">
-        <Avatar size="large" :alt="displayName" />
+        <div class="profile-avatar-editor">
+          <Avatar size="large" :alt="displayName" />
+          <button
+            type="button"
+            class="app-button profile-image-edit-button"
+            :aria-label="t('app.accountInformation.profileImage.editAction')"
+            :title="t('app.accountInformation.profileImage.editAction')"
+            @click="openProfileImageEditor"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">photo_camera</span>
+          </button>
+        </div>
 
         <div class="profile-heading">
           <p class="profile-section-label">
@@ -312,5 +418,15 @@ const groups = computed(() => auth.user?.groups ?? []);
         </div>
       </dl>
     </article>
+
+    <ProfileImageEditor
+      :is-open="isProfileImageEditorOpen"
+      :is-saving="isSavingProfileImage"
+      :has-image="hasProfileImage"
+      :error="profileImageError"
+      @update:is-open="updateProfileImageEditorOpen"
+      @save="saveProfileImageAsync"
+      @remove="removeProfileImageAsync"
+    />
   </section>
 </template>

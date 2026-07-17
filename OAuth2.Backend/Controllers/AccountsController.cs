@@ -1,6 +1,9 @@
 using System.Net.Mail;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using OAuth2.Data;
 using OAuth2.DataTransfer;
+using OAuth2.OpenId;
 using OAuth2.Repositories;
 using OAuth2.Services;
 
@@ -10,7 +13,10 @@ namespace OAuth2.Controllers;
 [Route("api/v1/accounts")]
 public sealed class AccountsController(
     IAccounts accounts,
-    IEmailVerify emailVerify) : ControllerBase
+    IAccountProfileImages profileImages,
+    ProfileImageProcessor profileImageProcessor,
+    IEmailVerify emailVerify,
+    IOptions<OidcProviderOptions> oidcOptions) : ControllerBase
 {
     [HttpHead("{id}")]
     public async Task<IActionResult> ExistsAsync(
@@ -60,5 +66,103 @@ public sealed class AccountsController(
             {
                 Sub = registration.Sub
             });
+    }
+
+    [HttpGet("profile-image")]
+    public async Task<IActionResult> GetProfileImageAsync(
+        [FromQuery] string id,
+        [FromQuery] string? v,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        var image = await profileImages.GetAsync(id, cancellationToken);
+        if (image is null)
+        {
+            Response.Headers.CacheControl = "no-store";
+            return NotFound();
+        }
+
+        Response.Headers.ETag = image.EntityTag;
+        Response.Headers.CacheControl = string.Equals(v, image.Version, StringComparison.Ordinal)
+            ? "public,max-age=31536000,immutable"
+            : "public,no-cache";
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+
+        var ifNoneMatch = Request.Headers.IfNoneMatch.ToString();
+        if (ifNoneMatch.Split(',').Any(value =>
+                value.Trim() is "*" || string.Equals(
+                    value.Trim(),
+                    image.EntityTag,
+                    StringComparison.Ordinal)))
+        {
+            return StatusCode(StatusCodes.Status304NotModified);
+        }
+
+        return File(image.Data, image.ContentType);
+    }
+
+    [HttpPut("profile-image")]
+    [RequestSizeLimit(ProfileImagePolicy.MaxUploadBytes)]
+    public async Task<IActionResult> UpdateProfileImageAsync(
+        [FromQuery] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        if (Request.ContentLength is > ProfileImagePolicy.MaxUploadBytes)
+        {
+            return StatusCode(StatusCodes.Status413PayloadTooLarge);
+        }
+
+        ProcessedProfileImage image;
+        try
+        {
+            image = await profileImageProcessor.ProcessAsync(Request.Body, cancellationToken);
+        }
+        catch (ProfileImageProcessingException exception)
+        {
+            return BadRequest(new
+            {
+                error = "invalid_profile_image",
+                description = exception.Message
+            });
+        }
+
+        if (!await profileImages.UpsertAsync(id, image, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        return Ok(new ProfileImageReference
+        {
+            Picture = OidcEndpointUris.ProfileImage(
+                oidcOptions.Value.Issuer,
+                id,
+                image.Version),
+            Width = image.Width,
+            Height = image.Height
+        });
+    }
+
+    [HttpDelete("profile-image")]
+    public async Task<IActionResult> DeleteProfileImageAsync(
+        [FromQuery] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        return await profileImages.DeleteAsync(id, cancellationToken)
+            ? NoContent()
+            : NotFound();
     }
 }

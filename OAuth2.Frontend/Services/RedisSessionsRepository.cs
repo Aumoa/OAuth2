@@ -264,6 +264,65 @@ internal sealed class RedisSessionsRepository(
             "The browser session changed too frequently to sign out.");
     }
 
+    public async ValueTask<bool> UpdateActiveAccountClaimAsync(
+        string sessionId,
+        string claimName,
+        JsonElement? value,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(claimName);
+
+        var database = connection.GetDatabase();
+        var key = CreateKey(sessionId);
+
+        for (var attempt = 0; attempt < MaxUpdateAttempts; attempt++)
+        {
+            var savedValue = await database.StringGetAsync(key).WaitAsync(cancellationToken);
+            if (savedValue.IsNullOrEmpty || !TryDeserialize(savedValue, out var record))
+            {
+                return false;
+            }
+
+            var activeIndex = record.Accounts.FindIndex(account => string.Equals(
+                account.Key,
+                record.ActiveAccountKey,
+                StringComparison.Ordinal));
+            if (activeIndex < 0)
+            {
+                return false;
+            }
+
+            var account = record.Accounts[activeIndex];
+            var claims = new Dictionary<string, JsonElement>(account.Claims, StringComparer.Ordinal);
+            if (value.HasValue)
+            {
+                claims[claimName] = value.Value.Clone();
+            }
+            else
+            {
+                claims.Remove(claimName);
+            }
+
+            var accounts = record.Accounts.ToList();
+            accounts[activeIndex] = account with { Claims = claims };
+            var updated = record with { Accounts = accounts };
+            var transaction = database.CreateTransaction();
+            transaction.AddCondition(Condition.StringEqual(key, savedValue));
+            _ = transaction.StringSetAsync(
+                key,
+                Serialize(updated),
+                RemainingLifetime(updated));
+            if (await transaction.ExecuteAsync().WaitAsync(cancellationToken))
+            {
+                return true;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "The browser session changed too frequently to update an account claim.");
+    }
+
     private async ValueTask<CreatedSession?> TryUpdateExistingAsync(
         string sessionId,
         GrantedUserInfo userInfo,

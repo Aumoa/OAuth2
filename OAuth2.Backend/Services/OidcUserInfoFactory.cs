@@ -12,12 +12,14 @@ internal static class OidcUserInfoFactory
         Account account,
         IReadOnlyList<AccountClaim> accountClaims,
         IReadOnlyList<OrganizationClaimValue> organizationClaims,
-        string scope)
+        string scope,
+        string issuer)
     {
         ArgumentNullException.ThrowIfNull(account);
         ArgumentNullException.ThrowIfNull(accountClaims);
         ArgumentNullException.ThrowIfNull(organizationClaims);
         ArgumentException.ThrowIfNullOrWhiteSpace(scope);
+        ArgumentException.ThrowIfNullOrWhiteSpace(issuer);
 
         var allowedClaimNames = OidcClaimPolicy.GetAllowedClaimNames(scope);
         var claims = new Dictionary<string, JsonElement>(StringComparer.Ordinal);
@@ -35,6 +37,16 @@ internal static class OidcUserInfoFactory
         AddStringClaim(claims, allowedClaimNames, "name", account.Name);
         AddStringClaim(claims, allowedClaimNames, "preferred_username", account.Id);
         AddStringClaim(claims, allowedClaimNames, "email", account.Email);
+        if (allowedClaimNames.Contains("picture")
+            && !string.IsNullOrWhiteSpace(account.Id)
+            && !string.IsNullOrWhiteSpace(account.ProfileImageVersion))
+        {
+            claims["picture"] = JsonSerializer.SerializeToElement(
+                OidcEndpointUris.ProfileImage(
+                    issuer,
+                    account.Id,
+                    account.ProfileImageVersion));
+        }
 
         if (allowedClaimNames.Contains("email_verified"))
         {

@@ -28,7 +28,8 @@ public sealed class OidcTokenIssuer(
             account,
             accountClaims,
             organizationClaims,
-            scope);
+            scope,
+            options.Value.Issuer);
 
         var accessTokenClaims = CreateTokenClaims(
             userClaims,

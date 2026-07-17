@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
+using Microsoft.Extensions.Options;
 using OAuth2.DataTransfer;
 using OAuth2.OpenId;
 using OAuth2.Repositories;
@@ -16,7 +17,8 @@ public sealed class AuthorizationCodesController(
     IOrganizationMembers organizationMembers,
     IAuthorizationCodes authorizationCodes,
     IRememberedSessions rememberedSessions,
-    OidcAuthorizationRequestValidator authorizationValidator) : ControllerBase
+    OidcAuthorizationRequestValidator authorizationValidator,
+    IOptions<OidcProviderOptions> oidcOptions) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> CreateAsync(
@@ -170,7 +172,8 @@ public sealed class AuthorizationCodesController(
                     account,
                     claims,
                     organizationClaims,
-                    InternalOidcAuthorization.Scope),
+                    InternalOidcAuthorization.Scope,
+                    oidcOptions.Value.Issuer),
                 RememberedSession = new RememberedSessionGrant
                 {
                     Token = rememberedSession.Token,

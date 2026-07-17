@@ -17,7 +17,8 @@ public sealed class AuthorizationGrantsController(
     IAccounts accounts,
     IAccountClaims accountClaims,
     IOrganizationMembers organizationMembers,
-    IOptions<OAuthOptions> oauthOptions) : ControllerBase
+    IOptions<OAuthOptions> oauthOptions,
+    IOptions<OidcProviderOptions> oidcOptions) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> CreateAsync(
@@ -87,7 +88,8 @@ public sealed class AuthorizationGrantsController(
                 account,
                 claims,
                 organizationClaims,
-                grantedScope),
+                grantedScope,
+                oidcOptions.Value.Issuer),
             RememberedSession = rememberedSession
         });
     }

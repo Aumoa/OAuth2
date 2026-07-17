@@ -6,6 +6,22 @@ public interface IBackendClient
 {
     Task<bool> AccountExistsAsync(string id, CancellationToken cancellationToken = default);
 
+    Task<BackendBinaryResponse> GetProfileImageAsync(
+        string id,
+        string? version,
+        string? ifNoneMatch,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse<ProfileImageReference>> UpdateProfileImageAsync(
+        string id,
+        Stream content,
+        string? contentType,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> DeleteProfileImageAsync(
+        string id,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> CreateApplicationAsync(
         string ownerId,
         CreateApplicationForm form,

@@ -28,6 +28,12 @@ public interface ISessionsRepository
         string accountKey,
         CancellationToken cancellationToken = default);
 
+    ValueTask<bool> UpdateActiveAccountClaimAsync(
+        string sessionId,
+        string claimName,
+        System.Text.Json.JsonElement? value,
+        CancellationToken cancellationToken = default);
+
     ValueTask<bool> SignOutAsync(
         string sessionId,
         CancellationToken cancellationToken = default);

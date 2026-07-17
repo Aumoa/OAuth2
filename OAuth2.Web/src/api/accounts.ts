@@ -31,6 +31,12 @@ export interface AuthorizationValidation {
   error?: string | null;
 }
 
+export interface ProfileImageReference {
+  picture: string;
+  width: number;
+  height: number;
+}
+
 export function resolveAuthorizationRedirect(
   login: LoginResponse,
   authorization: AuthorizationRequest,
@@ -113,6 +119,36 @@ export class RegisterForm {
 }
 
 export class Accounts {
+  static async updateProfileImageAsync(image: Blob): Promise<ProfileImageReference> {
+    const response = await fetch('/api/v1/accounts/profile-image', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': image.type || 'application/octet-stream',
+        'X-OAuth2-Action': '1',
+      },
+      credentials: 'include',
+      body: image,
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as ProfileImageReference;
+  }
+
+  static async deleteProfileImageAsync(): Promise<void> {
+    const response = await fetch('/api/v1/accounts/profile-image', {
+      method: 'DELETE',
+      headers: {
+        'X-OAuth2-Action': '1',
+      },
+      credentials: 'include',
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+  }
+
   static async validateAuthorizationAsync(
     authorization: AuthorizationRequest,
   ): Promise<AuthorizationValidation> {

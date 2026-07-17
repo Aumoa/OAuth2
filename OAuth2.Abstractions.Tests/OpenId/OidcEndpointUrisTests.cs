@@ -24,4 +24,17 @@ public sealed class OidcEndpointUrisTests
     {
         Assert.False(OidcEndpointUris.TryNormalizeIssuer(value, out _));
     }
+
+    [Fact]
+    public void ProfileImage_EncodesAccountAndVersionAsQueryValues()
+    {
+        var uri = OidcEndpointUris.ProfileImage(
+            "https://sso.example/",
+            "user/name+alias",
+            "version/1+");
+
+        Assert.Equal(
+            "https://sso.example/api/v1/accounts/profile-image?id=user%2Fname%2Balias&v=version%2F1%2B",
+            uri);
+    }
 }

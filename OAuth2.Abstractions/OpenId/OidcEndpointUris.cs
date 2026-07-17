@@ -35,6 +35,20 @@ public static class OidcEndpointUris
 
     public static string JsonWebKeys(string issuer) => Endpoint(issuer, "/jwks");
 
+    public static string ProfileImage(
+        string issuer,
+        string accountId,
+        string? version = null)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+
+        var uri = Endpoint(issuer, "/api/v1/accounts/profile-image")
+            + $"?id={Uri.EscapeDataString(accountId)}";
+        return string.IsNullOrWhiteSpace(version)
+            ? uri
+            : uri + $"&v={Uri.EscapeDataString(version)}";
+    }
+
     private static string Endpoint(string issuer, string path)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(issuer);

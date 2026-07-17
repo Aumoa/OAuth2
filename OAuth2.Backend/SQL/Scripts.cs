@@ -27,6 +27,7 @@ public class Scripts : IScripts
         yield return new AddOrganizationMemberRoles();
         yield return new AddOrganizationGroups();
         yield return new RenameMacOsApplicationTypeToDesktop();
+        yield return new AddAccountProfileImage();
     }
 
     private class Init : IScript
@@ -566,6 +567,37 @@ WHERE `application_type` = 'macos';
 UPDATE `client`
 SET `application_type` = 'macos'
 WHERE `application_type` = 'desktop';
+";
+    }
+
+    private class AddAccountProfileImage : IScript
+    {
+        public string Name => "Add_account_profile_image";
+
+        public int InstalledRank => 21;
+
+        public string UpSql => @"
+CREATE TABLE `account_profile_image` (
+    `account_id` VARCHAR(128) NOT NULL PRIMARY KEY,
+    `content_type` VARCHAR(32) NOT NULL,
+    `data` MEDIUMBLOB NOT NULL,
+    `width` SMALLINT UNSIGNED NOT NULL,
+    `height` SMALLINT UNSIGNED NOT NULL,
+    `hash` BINARY(32) NOT NULL,
+    `updated_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    CONSTRAINT `FK__account_profile_image__account`
+        FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE,
+    CONSTRAINT `CHK__account_profile_image__content_type`
+        CHECK (`content_type` = 'image/webp'),
+    CONSTRAINT `CHK__account_profile_image__dimensions`
+        CHECK (`width` BETWEEN 1 AND 256 AND `height` BETWEEN 1 AND 256),
+    CONSTRAINT `CHK__account_profile_image__data_size`
+        CHECK (OCTET_LENGTH(`data`) BETWEEN 1 AND 1048576)
+);
+";
+
+        public string DownSql => @"
+DROP TABLE `account_profile_image`;
 ";
     }
 }

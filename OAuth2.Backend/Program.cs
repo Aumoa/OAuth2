@@ -84,9 +84,11 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     });
 
     s.AddScoped<PasswordHasher>();
+    s.AddScoped<ProfileImageProcessor>();
     s.AddScoped<OidcAuthorizationRequestValidator>();
     s.AddScoped<OidcTokenIssuer>();
     s.AddScoped<IAccounts, MySqlAccounts>();
+    s.AddScoped<IAccountProfileImages, MySqlAccountProfileImages>();
     s.AddScoped<IAccountClaims, MySqlAccountClaims>();
     s.AddScoped<IApplications, MySqlApplications>();
     s.AddScoped<IApplicationSecrets, MySqlApplicationSecrets>();

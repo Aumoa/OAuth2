@@ -56,6 +56,17 @@ export const useAuthStore = defineStore('auth', () => {
     status.value = 'unauthenticated';
   }
 
+  function setPicture(picture?: string): void {
+    if (!user.value) {
+      return;
+    }
+
+    user.value = {
+      ...user.value,
+      picture,
+    };
+  }
+
   async function loadSessionAsync(): Promise<void> {
     try {
       const response = await fetch('/api/v1/session', {
@@ -116,5 +127,6 @@ export const useAuthStore = defineStore('auth', () => {
     user,
     isAuthenticated,
     initializeAsync,
+    setPicture,
   };
 });

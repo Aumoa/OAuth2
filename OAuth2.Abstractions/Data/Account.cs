@@ -19,4 +19,6 @@ public record Account
     public DateTime? CreatedAt { get; set; }
 
     public DateTime? UpdatedAt { get; set; }
+
+    public string? ProfileImageVersion { get; set; }
 }

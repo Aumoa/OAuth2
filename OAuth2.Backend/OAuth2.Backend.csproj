@@ -11,6 +11,8 @@
     <PackageReference Include="AWSSDK.SimpleEmail" Version="4.0.2.14" />
     <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="MySql.Data" Version="9.7.0" />
+    <PackageReference Include="SkiaSharp" Version="4.150.1" />
+    <PackageReference Include="SkiaSharp.NativeAssets.Linux" Version="4.150.1" />
     <PackageReference Include="StackExchange.Redis" Version="3.0.17" />
   </ItemGroup>
 
