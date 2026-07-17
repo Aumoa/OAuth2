@@ -1,16 +1,45 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRoute, type RouteLocationRaw } from 'vue-router';
 import { Applications, type ApplicationSummary } from '../api/applications.ts';
 
 type ViewState = 'loading' | 'ready' | 'error';
 
 const { locale, t } = useI18n();
+const route = useRoute();
 const state = ref<ViewState>('loading');
 const applications = ref<ApplicationSummary[]>([]);
+const organizationId = computed(() => {
+  const value = route.params.organizationId;
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return Array.isArray(value) ? value.join('/') : value;
+});
+const isOrganization = computed(() => organizationId.value !== undefined);
+const pageTitle = computed(() => isOrganization.value
+  ? t('app.applicationManagement.organizationApplicationsTitle', {
+    organization: organizationId.value,
+  })
+  : t('app.applicationManagement.personalApplicationsTitle'));
+const pageDescription = computed(() => isOrganization.value
+  ? t('app.applicationManagement.organizationApplicationsDescription', {
+    organization: organizationId.value,
+  })
+  : t('app.applicationManagement.personalApplicationsDescription'));
+const createRoute = computed<RouteLocationRaw>(() => isOrganization.value
+  ? {
+    name: 'applications-organization-new',
+    params: { organizationId: organizationId.value },
+  }
+  : { name: 'applications-personal-new' });
 const dateFormatter = computed(() => new Intl.DateTimeFormat(locale.value, {
   dateStyle: 'medium',
 }));
+let isMounted = true;
+let loadRequestId = 0;
 
 function formatCreatedAt(value: string): string {
   const date = new Date(value);
@@ -18,17 +47,41 @@ function formatCreatedAt(value: string): string {
 }
 
 async function loadApplicationsAsync(): Promise<void> {
+  const requestId = ++loadRequestId;
   state.value = 'loading';
 
   try {
-    applications.value = await Applications.listAsync();
+    const loadedApplications = await Applications.listAsync(organizationId.value);
+    if (!isMounted || requestId !== loadRequestId) {
+      return;
+    }
+
+    applications.value = loadedApplications;
     state.value = 'ready';
   } catch {
-    state.value = 'error';
+    if (isMounted && requestId === loadRequestId) {
+      state.value = 'error';
+    }
   }
 }
 
-onMounted(loadApplicationsAsync);
+function applicationEditRoute(clientId: string): RouteLocationRaw {
+  return isOrganization.value
+    ? {
+      name: 'applications-organization-edit',
+      params: { organizationId: organizationId.value, clientId },
+    }
+    : {
+      name: 'applications-personal-edit',
+      params: { clientId },
+    };
+}
+
+watch(organizationId, loadApplicationsAsync, { immediate: true });
+
+onBeforeUnmount(() => {
+  isMounted = false;
+});
 </script>
 
 <style scoped lang="css">
@@ -66,6 +119,30 @@ onMounted(loadApplicationsAsync);
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.applications-page.is-organization {
+  --application-context-accent: #a78bfa;
+  --application-context-strong: #8b5cf6;
+}
+
+.applications-page.is-organization .applications-title {
+  color: color-mix(in srgb, var(--application-context-accent) 70%, var(--text-h));
+}
+
+.applications-page.is-organization .application-card {
+  border-color: color-mix(in srgb, var(--application-context-accent) 24%, var(--border));
+}
+
+.applications-page.is-organization .application-card:has(.application-card-link:hover) {
+  border-color: color-mix(in srgb, var(--application-context-accent) 68%, var(--border));
+  background: color-mix(in srgb, var(--application-context-strong) 11%, var(--surface));
+  box-shadow: var(--shadow-sm), inset 3px 0 0 var(--application-context-strong);
+}
+
+.applications-page.is-organization .application-icon {
+  color: color-mix(in srgb, var(--application-context-accent) 84%, var(--text-h));
+  background: color-mix(in srgb, var(--application-context-strong) 14%, transparent);
 }
 
 .create-application-button {
@@ -339,20 +416,24 @@ onMounted(loadApplicationsAsync);
 </style>
 
 <template>
-  <section class="applications-page" aria-labelledby="applications-title">
+  <section
+    class="applications-page"
+    :class="{ 'is-organization': isOrganization }"
+    aria-labelledby="applications-title"
+  >
     <header class="applications-header">
       <div class="applications-heading">
         <h1 id="applications-title" class="applications-title">
-          {{ t('app.applicationManagement.title') }}
+          {{ pageTitle }}
         </h1>
         <p class="applications-description">
-          {{ t('app.applicationManagement.description') }}
+          {{ pageDescription }}
         </p>
       </div>
 
       <RouterLink
         class="app-button create-application-button"
-        to="/applications/new"
+        :to="createRoute"
       >
         <span class="material-symbols-outlined" aria-hidden="true">add</span>
         <span>{{ t('app.applicationManagement.createAction') }}</span>
@@ -396,7 +477,7 @@ onMounted(loadApplicationsAsync);
         <article class="application-card">
           <RouterLink
             class="application-card-link"
-            :to="{ name: 'applications-edit', params: { clientId: application.id } }"
+            :to="applicationEditRoute(application.id)"
             :aria-label="t('app.applicationManagement.openApplicationLabel', { name: application.name })"
           ></RouterLink>
 
@@ -420,7 +501,7 @@ onMounted(loadApplicationsAsync);
 
           <RouterLink
             class="app-button edit-application-button"
-            :to="{ name: 'applications-edit', params: { clientId: application.id } }"
+            :to="applicationEditRoute(application.id)"
             :aria-label="t('app.applicationManagement.editApplicationLabel', { name: application.name })"
           >
             <span class="material-symbols-outlined" aria-hidden="true">edit</span>

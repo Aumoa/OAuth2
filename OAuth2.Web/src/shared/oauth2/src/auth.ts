@@ -15,6 +15,7 @@ export interface User {
   email?: string;
   emailVerified?: boolean;
   name?: string;
+  groups?: string[];
 }
 
 interface SessionClaims {
@@ -27,6 +28,17 @@ interface SessionClaims {
   emailVerified?: boolean;
   email_verified?: boolean;
   name?: string;
+  groups?: unknown;
+}
+
+function readGroups(groups: unknown): string[] {
+  if (!Array.isArray(groups)) {
+    return [];
+  }
+
+  return [...new Set(groups.filter((group): group is string => (
+    typeof group === 'string' && group.trim().length > 0
+  )))];
 }
 
 export const useAuthStore = defineStore('auth', () => {
@@ -71,6 +83,7 @@ export const useAuthStore = defineStore('auth', () => {
         email: claims.email,
         emailVerified: claims.emailVerified ?? claims.email_verified,
         name: claims.name,
+        groups: readGroups(claims.groups),
       };
       status.value = 'authenticated';
     } catch (error) {

@@ -6,10 +6,12 @@ interface Props {
   label: string;
   to: string;
   indentLevel?: number;
+  tone?: 'default' | 'organization';
 }
 
 const props = withDefaults(defineProps<Props>(), {
   indentLevel: 0,
+  tone: 'default',
 });
 
 const emit = defineEmits<{
@@ -90,6 +92,19 @@ function onFocus(event: FocusEvent): void {
   font-variation-settings: 'FILL' 1;
 }
 
+.sidebar-main-button.is-organization {
+  color: color-mix(in srgb, #a78bfa 76%, var(--text));
+}
+
+.sidebar-main-button.is-organization:hover {
+  color: color-mix(in srgb, #c4b5fd 82%, var(--text-h));
+  background: color-mix(in srgb, #8b5cf6 9%, var(--surface-muted));
+}
+
+.sidebar-main-button.is-organization.router-link-exact-active {
+  color: color-mix(in srgb, #a78bfa 84%, var(--text-h));
+}
+
 .sidebar-main-button-label {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -106,7 +121,10 @@ function onFocus(event: FocusEvent): void {
 <template>
   <RouterLink
     class="sidebar-main-button"
-    :class="{ 'is-indented': indentLevel > 0 }"
+    :class="{
+      'is-indented': indentLevel > 0,
+      'is-organization': tone === 'organization',
+    }"
     :style="buttonStyle"
     :to="to"
     @focus="onFocus"

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute, useRouter } from 'vue-router';
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router';
 import { Applications, type ApplicationDetails } from '../api/applications.ts';
 import Dialog from '../core/components/Dialog.vue';
 import FloatingInput from '../core/components/FloatingInput.vue';
@@ -31,6 +31,21 @@ const clientId = computed(() => {
   const value = route.params.clientId;
   return Array.isArray(value) ? value.join('/') : (value ?? '');
 });
+const organizationId = computed(() => {
+  const value = route.params.organizationId;
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return Array.isArray(value) ? value.join('/') : value;
+});
+const isOrganization = computed(() => organizationId.value !== undefined);
+const applicationsListRoute = computed<RouteLocationRaw>(() => organizationId.value === undefined
+  ? { name: 'applications-personal' }
+  : {
+    name: 'applications-organization',
+    params: { organizationId: organizationId.value },
+  });
 const deleteConfirmationMatches = computed(() => (
   application.value !== null
   && deleteConfirmation.value === application.value.name
@@ -105,7 +120,7 @@ async function loadApplicationAsync(): Promise<void> {
   application.value = null;
 
   try {
-    const details = await Applications.getAsync(clientId.value);
+    const details = await Applications.getAsync(clientId.value, organizationId.value);
     if (!isMounted || requestId !== loadRequestId) {
       return;
     }
@@ -142,7 +157,12 @@ async function saveApplicationAsync(): Promise<void> {
   isSaving.value = true;
   try {
     const scopes = [...new Set([requiredScope, ...allowedScopes.value])];
-    await Applications.updateAsync(clientId.value, redirectUris, scopes);
+    await Applications.updateAsync(
+      clientId.value,
+      redirectUris,
+      scopes,
+      organizationId.value,
+    );
     if (isMounted) {
       savedMessage.value = t('app.applicationManagement.saved');
     }
@@ -185,9 +205,9 @@ async function deleteApplicationAsync(): Promise<void> {
   isDeleting.value = true;
   deleteError.value = null;
   try {
-    await Applications.deleteAsync(clientId.value);
+    await Applications.deleteAsync(clientId.value, organizationId.value);
     if (isMounted) {
-      await router.replace('/applications');
+      await router.replace(applicationsListRoute.value);
     }
   } catch (error) {
     if (!isMounted) {
@@ -209,7 +229,7 @@ async function deleteApplicationAsync(): Promise<void> {
 
 onMounted(loadApplicationAsync);
 
-watch(clientId, loadApplicationAsync);
+watch([clientId, organizationId], loadApplicationAsync);
 
 onBeforeUnmount(() => {
   isMounted = false;
@@ -243,6 +263,21 @@ onBeforeUnmount(() => {
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.edit-application-page.is-organization {
+  --application-context-accent: #a78bfa;
+  --application-context-strong: #8b5cf6;
+}
+
+.edit-application-page.is-organization .edit-application-title {
+  color: color-mix(in srgb, var(--application-context-accent) 70%, var(--text-h));
+}
+
+.edit-application-page.is-organization .application-identity,
+.edit-application-page.is-organization .settings-card {
+  border-color: color-mix(in srgb, var(--application-context-accent) 27%, var(--border));
+  background: color-mix(in srgb, var(--application-context-strong) 6%, var(--surface));
 }
 
 .details-state {
@@ -633,7 +668,11 @@ onBeforeUnmount(() => {
 </style>
 
 <template>
-  <section class="edit-application-page" aria-labelledby="edit-application-title">
+  <section
+    class="edit-application-page"
+    :class="{ 'is-organization': isOrganization }"
+    aria-labelledby="edit-application-title"
+  >
     <header class="edit-application-header">
       <h1 id="edit-application-title" class="edit-application-title">
         {{ t('app.applicationManagement.editTitle') }}
@@ -671,7 +710,7 @@ onBeforeUnmount(() => {
         </span>
         <h2 class="state-title">{{ t('app.applicationManagement.notFoundTitle') }}</h2>
         <p class="state-description">{{ t('app.applicationManagement.notFoundDescription') }}</p>
-        <RouterLink class="app-button state-action" to="/applications">
+        <RouterLink class="app-button state-action" :to="applicationsListRoute">
           {{ t('app.applicationManagement.backToApplications') }}
         </RouterLink>
       </div>

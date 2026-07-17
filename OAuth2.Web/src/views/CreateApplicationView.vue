@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router';
 import { Applications } from '../api/applications.ts';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
 const { t } = useI18n();
+const route = useRoute();
 const router = useRouter();
 const clientId = ref('');
 const applicationName = ref('');
@@ -14,6 +15,26 @@ const isCreating = ref(false);
 const createError = ref<string | null>(null);
 const clientIdInput = ref<InstanceType<typeof FloatingInput> | null>(null);
 const applicationNameInput = ref<InstanceType<typeof FloatingInput> | null>(null);
+const organizationId = computed(() => {
+  const value = route.params.organizationId;
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return Array.isArray(value) ? value.join('/') : value;
+});
+const isOrganization = computed(() => organizationId.value !== undefined);
+const createDescription = computed(() => isOrganization.value
+  ? t('app.applicationManagement.organizationCreateDescription', {
+    organization: organizationId.value,
+  })
+  : t('app.applicationManagement.createDescription'));
+const applicationsListRoute = computed<RouteLocationRaw>(() => organizationId.value === undefined
+  ? { name: 'applications-personal' }
+  : {
+    name: 'applications-organization',
+    params: { organizationId: organizationId.value },
+  });
 let isMounted = true;
 
 async function createApplicationAsync(): Promise<void> {
@@ -47,9 +68,13 @@ async function createApplicationAsync(): Promise<void> {
 
   isCreating.value = true;
   try {
-    await Applications.createAsync(normalizedClientId, normalizedName);
+    await Applications.createAsync(
+      normalizedClientId,
+      normalizedName,
+      organizationId.value,
+    );
     if (isMounted) {
-      await router.replace('/applications');
+      await router.replace(applicationsListRoute.value);
     }
   } catch (error) {
     if (!isMounted) {
@@ -70,7 +95,7 @@ async function createApplicationAsync(): Promise<void> {
 
 async function cancelAsync(): Promise<void> {
   if (!isCreating.value) {
-    await router.replace('/applications');
+    await router.replace(applicationsListRoute.value);
   }
 }
 
@@ -111,6 +136,20 @@ onBeforeUnmount(() => {
   color: var(--text-muted);
   font-size: 14px;
   line-height: 1.5;
+}
+
+.create-application-page.is-organization {
+  --application-context-accent: #a78bfa;
+  --application-context-strong: #8b5cf6;
+}
+
+.create-application-page.is-organization .create-application-title {
+  color: color-mix(in srgb, var(--application-context-accent) 70%, var(--text-h));
+}
+
+.create-application-page.is-organization .create-application-form {
+  border-color: color-mix(in srgb, var(--application-context-accent) 30%, var(--border));
+  background: color-mix(in srgb, var(--application-context-strong) 7%, var(--surface));
 }
 
 .create-application-form {
@@ -204,13 +243,17 @@ onBeforeUnmount(() => {
 </style>
 
 <template>
-  <section class="create-application-page" aria-labelledby="create-application-title">
+  <section
+    class="create-application-page"
+    :class="{ 'is-organization': isOrganization }"
+    aria-labelledby="create-application-title"
+  >
     <header class="create-application-header">
       <h1 id="create-application-title" class="create-application-title">
         {{ t('app.applicationManagement.createTitle') }}
       </h1>
       <p class="create-application-description">
-        {{ t('app.applicationManagement.createDescription') }}
+        {{ createDescription }}
       </p>
     </header>
 
