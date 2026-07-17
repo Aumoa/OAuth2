@@ -356,14 +356,6 @@ onBeforeUnmount(reset);
 
     <template #footer>
       <button
-        type="button"
-        class="app-button editor-action"
-        :disabled="isSaving"
-        @click="requestClose(false)"
-      >
-        {{ t('app.accountInformation.profileImage.cancelAction') }}
-      </button>
-      <button
         v-if="hasImage"
         type="button"
         class="app-button editor-action remove"
@@ -371,6 +363,14 @@ onBeforeUnmount(reset);
         @click="emit('remove')"
       >
         {{ t('app.accountInformation.profileImage.removeAction') }}
+      </button>
+      <button
+        type="button"
+        class="app-button editor-action"
+        :disabled="isSaving"
+        @click="requestClose(false)"
+      >
+        {{ t('app.accountInformation.profileImage.cancelAction') }}
       </button>
       <button
         type="button"
@@ -484,21 +484,27 @@ onBeforeUnmount(reset);
 
 .editor-controls {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: max-content minmax(0, 1fr);
   gap: 12px;
   align-items: center;
 }
 
 .select-another-button {
   display: inline-flex;
+  width: max-content;
+  max-width: 100%;
+  height: auto;
+  min-height: 40px;
   gap: 7px;
   align-items: center;
   padding: 8px 12px;
+  box-sizing: border-box;
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .select-another-button .material-symbols-outlined {
@@ -548,13 +554,19 @@ onBeforeUnmount(reset);
 }
 
 .editor-action {
+  width: max-content;
+  min-width: 64px;
+  height: auto;
   min-height: 38px;
+  flex: 0 0 auto;
   padding: 8px 14px;
+  box-sizing: border-box;
   color: var(--text);
   border: 1px solid var(--border);
   border-radius: 9px;
   background: var(--surface);
   cursor: pointer;
+  white-space: nowrap;
 }
 
 .editor-action.remove {
