@@ -73,6 +73,7 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddScoped<IAccounts, MySqlAccounts>();
     s.AddScoped<IAccountClaims, MySqlAccountClaims>();
     s.AddScoped<IApplications, MySqlApplications>();
+    s.AddScoped<IOrganizations, MySqlOrganizations>();
     s.AddScoped<IAuthorizationCodes, RedisAuthorizationCodes>();
     s.AddScoped<IRememberedSessions, RedisRememberedSessions>();
     s.AddScoped<IEmailVerify, SESEmailVerify>();

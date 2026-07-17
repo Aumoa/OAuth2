@@ -1,6 +1,6 @@
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
-using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
 using OAuth2.DataTransfer;
@@ -145,29 +145,37 @@ public sealed class ApplicationsController(
         string? organizationId,
         CancellationToken cancellationToken)
     {
-        if (!TryGetSessionId(out var sessionId))
-        {
-            return new(OwnerResolutionStatus.Unauthorized, null);
-        }
-
-        var session = await sessions.GetAsync(sessionId, cancellationToken);
-        if (session is null)
+        var accountId = await GetCurrentAccountIdAsync(
+            sessions,
+            sessionOptions.Value.CookieName,
+            cancellationToken);
+        if (string.IsNullOrWhiteSpace(accountId))
         {
             return new(OwnerResolutionStatus.Unauthorized, null);
         }
 
         if (organizationId is null)
         {
-            var ownerId = GetStringClaim(session.Claims, "preferred_username");
-            return string.IsNullOrWhiteSpace(ownerId)
-                ? new(OwnerResolutionStatus.Unauthorized, null)
-                : new(OwnerResolutionStatus.Success, ownerId);
+            return new(OwnerResolutionStatus.Success, accountId);
         }
 
-        if (string.IsNullOrWhiteSpace(organizationId)
-            || !HasOrganizationMembership(session.Claims, organizationId))
+        if (string.IsNullOrWhiteSpace(organizationId))
         {
             return new(OwnerResolutionStatus.Forbidden, null);
+        }
+
+        var organization = await backend.GetOrganizationAsync(
+            accountId,
+            organizationId,
+            cancellationToken);
+        if (organization.StatusCode == HttpStatusCode.NotFound)
+        {
+            return new(OwnerResolutionStatus.Forbidden, null);
+        }
+
+        if (organization.StatusCode is < HttpStatusCode.OK or >= HttpStatusCode.MultipleChoices)
+        {
+            return new(OwnerResolutionStatus.BackendFailure, null, organization);
         }
 
         return new(
@@ -180,50 +188,9 @@ public sealed class ApplicationsController(
         OwnerResolutionStatus.Success => null,
         OwnerResolutionStatus.Unauthorized => Unauthorized(),
         OwnerResolutionStatus.Forbidden => Forbid(),
+        OwnerResolutionStatus.BackendFailure => FromBackend(owner.BackendResponse!),
         _ => throw new ArgumentOutOfRangeException(nameof(owner))
     };
-
-    private bool TryGetSessionId(out string sessionId)
-    {
-        if (Request.Cookies.TryGetValue(sessionOptions.Value.CookieName, out var value)
-            && !string.IsNullOrWhiteSpace(value))
-        {
-            sessionId = value;
-            return true;
-        }
-
-        sessionId = string.Empty;
-        return false;
-    }
-
-    private static string? GetStringClaim(
-        IReadOnlyDictionary<string, JsonElement>? claims,
-        string name)
-    {
-        if (claims is null
-            || !claims.TryGetValue(name, out var value)
-            || value.ValueKind != JsonValueKind.String)
-        {
-            return null;
-        }
-
-        return value.GetString();
-    }
-
-    private static bool HasOrganizationMembership(
-        IReadOnlyDictionary<string, JsonElement> claims,
-        string organizationId)
-    {
-        if (!claims.TryGetValue("groups", out var groups)
-            || groups.ValueKind != JsonValueKind.Array)
-        {
-            return false;
-        }
-
-        return groups.EnumerateArray().Any(group =>
-            group.ValueKind == JsonValueKind.String
-            && string.Equals(group.GetString(), organizationId, StringComparison.Ordinal));
-    }
 
     private static string CreateOrganizationOwnerId(string organizationId)
     {
@@ -235,10 +202,12 @@ public sealed class ApplicationsController(
     {
         Success,
         Unauthorized,
-        Forbidden
+        Forbidden,
+        BackendFailure
     }
 
     private readonly record struct OwnerResolution(
         OwnerResolutionStatus Status,
-        string? OwnerId);
+        string? OwnerId,
+        BackendResponse? BackendResponse = null);
 }

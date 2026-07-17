@@ -1,10 +1,12 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
+import { useOrganizationsStore } from '../stores/organizations.ts';
 import SidebarMainButton from './SidebarMainButton.vue';
 
-interface TransientNavigationButton {
+interface NavigationButton {
+  key: string;
   path: string;
   icon: string;
   label: string;
@@ -15,9 +17,11 @@ interface TransientNavigationButton {
 const { t } = useI18n();
 const route = useRoute();
 const router = useRouter();
+const organizationsStore = useOrganizationsStore();
 const mainButtonHeight = 44;
 const navigationGap = 4;
-const focusedButtonIndex = ref<number | null>(null);
+const sectionDividerHeight = 15;
+const focusedButtonKey = ref<string | null>(null);
 const organizationId = computed(() => {
   const value = route.params.organizationId;
   if (value === undefined) {
@@ -26,9 +30,10 @@ const organizationId = computed(() => {
 
   return Array.isArray(value) ? value.join('/') : value;
 });
-const applicationGroupButton = computed<TransientNavigationButton | null>(() => {
+const applicationGroupButton = computed<NavigationButton | null>(() => {
   if (typeof route.name === 'string' && route.name.startsWith('applications-personal')) {
     return {
+      key: 'applications-personal',
       path: router.resolve({ name: 'applications-personal' }).path,
       icon: 'person',
       label: t('app.sidebar.personalApplications'),
@@ -43,13 +48,14 @@ const applicationGroupButton = computed<TransientNavigationButton | null>(() => 
     && organizationId.value !== undefined
   ) {
     return {
+      key: `applications-organization-${organizationId.value}`,
       path: router.resolve({
         name: 'applications-organization',
         params: { organizationId: organizationId.value },
       }).path,
       icon: 'domain',
       label: t('app.sidebar.organizationApplications', {
-        organization: organizationId.value,
+        organization: organizationsStore.find(organizationId.value)?.name ?? organizationId.value,
       }),
       indentLevel: 1,
       tone: 'organization',
@@ -58,12 +64,13 @@ const applicationGroupButton = computed<TransientNavigationButton | null>(() => 
 
   return null;
 });
-const applicationLeafButton = computed<TransientNavigationButton | null>(() => {
+const applicationLeafButton = computed<NavigationButton | null>(() => {
   if (
     route.name === 'applications-personal-new'
     || route.name === 'applications-organization-new'
   ) {
     return {
+      key: `application-new-${route.path}`,
       path: route.path,
       icon: 'add_circle',
       label: t('app.sidebar.newApplication'),
@@ -79,6 +86,7 @@ const applicationLeafButton = computed<TransientNavigationButton | null>(() => {
     const clientIdParam = route.params.clientId;
     const clientId = Array.isArray(clientIdParam) ? clientIdParam.join('/') : clientIdParam;
     return {
+      key: `application-edit-${route.path}`,
       path: route.path,
       icon: 'edit',
       label: t('app.sidebar.editApplication', { clientId }),
@@ -92,12 +100,56 @@ const applicationLeafButton = computed<TransientNavigationButton | null>(() => {
 const transientApplicationButtons = computed(() => [
   applicationGroupButton.value,
   applicationLeafButton.value,
-].filter((button): button is TransientNavigationButton => button !== null));
-const navigationPaths = computed(() => [
-  '/',
-  '/applications',
-  ...transientApplicationButtons.value.map(button => button.path),
+].filter((button): button is NavigationButton => button !== null));
+const organizationButtons = computed<NavigationButton[]>(() => {
+  const collator = new Intl.Collator(undefined, { sensitivity: 'base' });
+  return [...organizationsStore.organizations]
+    .sort((left, right) => collator.compare(left.name, right.name))
+    .map(organization => ({
+      key: `organization-${organization.id}`,
+      path: router.resolve({
+        name: 'organization-management',
+        params: { organizationId: organization.id },
+      }).path,
+      icon: 'domain',
+      label: organization.name,
+      indentLevel: 0,
+      tone: 'organization',
+    }));
+});
+const primaryNavigationButtons = computed<NavigationButton[]>(() => [
+  {
+    key: 'account',
+    path: '/',
+    icon: 'account_circle',
+    label: t('app.sidebar.accountInformation'),
+    indentLevel: 0,
+    tone: 'default',
+  },
+  {
+    key: 'applications',
+    path: '/applications',
+    icon: 'apps',
+    label: t('app.sidebar.applicationManagement'),
+    indentLevel: 0,
+    tone: 'default',
+  },
+  ...transientApplicationButtons.value,
+  ...organizationButtons.value,
 ]);
+const createOrganizationButton = computed<NavigationButton>(() => ({
+  key: 'organization-new',
+  path: router.resolve({ name: 'organization-new' }).path,
+  icon: 'add_business',
+  label: t('app.sidebar.addOrganization'),
+  indentLevel: 0,
+  tone: 'organization',
+}));
+const navigationButtons = computed(() => [
+  ...primaryNavigationButtons.value,
+  createOrganizationButton.value,
+]);
+const navigationPaths = computed(() => navigationButtons.value.map(button => button.path));
 const activeButtonIndex = computed(() => {
   const exactIndex = navigationPaths.value.indexOf(route.path);
   if (exactIndex >= 0) {
@@ -109,25 +161,28 @@ const activeButtonIndex = computed(() => {
   ));
 });
 const highlightedButtonIndex = computed(() => {
-  const focusedIndex = focusedButtonIndex.value;
-  return focusedIndex !== null
-    && focusedIndex >= 0
-    && focusedIndex < navigationPaths.value.length
-    ? focusedIndex
-    : activeButtonIndex.value;
+  if (focusedButtonKey.value !== null) {
+    const focusedIndex = navigationButtons.value.findIndex(
+      button => button.key === focusedButtonKey.value,
+    );
+    if (focusedIndex >= 0) {
+      return focusedIndex;
+    }
+  }
+
+  return activeButtonIndex.value;
 });
-const highlightedButton = computed(() => (
-  highlightedButtonIndex.value >= 2
-    ? transientApplicationButtons.value[highlightedButtonIndex.value - 2]
-    : undefined
-));
+const highlightedButton = computed(() => navigationButtons.value[highlightedButtonIndex.value]);
 const highlightedButtonIndentLevel = computed(() => highlightedButton.value?.indentLevel ?? 0);
 const navigationStyle = computed(() => ({
   '--sidebar-main-button-height': `${mainButtonHeight}px`,
   '--sidebar-navigation-gap': `${navigationGap}px`,
   '--sidebar-active-button-indent': `${highlightedButtonIndentLevel.value * 20}px`,
   '--sidebar-active-button-offset': `${Math.max(highlightedButtonIndex.value, 0)
-    * (mainButtonHeight + navigationGap)}px`,
+    * (mainButtonHeight + navigationGap)
+    + (highlightedButton.value?.key === createOrganizationButton.value.key
+      ? sectionDividerHeight + navigationGap
+      : 0)}px`,
   '--sidebar-highlight-border': highlightedButton.value?.tone === 'organization'
     ? 'color-mix(in srgb, #a78bfa 52%, var(--border))'
     : 'var(--accent-border)',
@@ -139,15 +194,19 @@ const navigationStyle = computed(() => ({
     : 'var(--accent)',
 }));
 
-function focusButton(index: number): void {
-  focusedButtonIndex.value = index;
+function focusButton(key: string): void {
+  focusedButtonKey.value = key;
 }
 
-function blurButton(index: number): void {
-  if (focusedButtonIndex.value === index) {
-    focusedButtonIndex.value = null;
+function blurButton(key: string): void {
+  if (focusedButtonKey.value === key) {
+    focusedButtonKey.value = null;
   }
 }
+
+onMounted(() => {
+  void organizationsStore.loadAsync().catch(() => undefined);
+});
 </script>
 
 <style lang="css">
@@ -201,6 +260,15 @@ function blurButton(index: number): void {
   opacity: 1;
 }
 
+.sidebar-section-divider {
+  width: calc(100% - 20px);
+  height: 1px;
+  margin: 7px 10px;
+  flex: 0 0 1px;
+  border: 0;
+  background: color-mix(in srgb, #a78bfa 22%, var(--border));
+}
+
 @media (prefers-reduced-motion: reduce) {
   .sidebar-navigation-highlight {
     transition-duration: 0.01ms;
@@ -219,29 +287,26 @@ function blurButton(index: number): void {
       <span class="sidebar-navigation-highlight" aria-hidden="true"></span>
 
       <SidebarMainButton
-        icon="account_circle"
-        :label="t('app.sidebar.accountInformation')"
-        to="/"
-        @focus="focusButton(0)"
-        @blur="blurButton(0)"
-      />
-      <SidebarMainButton
-        icon="apps"
-        :label="t('app.sidebar.applicationManagement')"
-        to="/applications"
-        @focus="focusButton(1)"
-        @blur="blurButton(1)"
-      />
-      <SidebarMainButton
-        v-for="(button, index) in transientApplicationButtons"
-        :key="button.path"
+        v-for="button in primaryNavigationButtons"
+        :key="button.key"
         :icon="button.icon"
         :label="button.label"
         :to="button.path"
         :indent-level="button.indentLevel"
         :tone="button.tone"
-        @focus="focusButton(index + 2)"
-        @blur="blurButton(index + 2)"
+        @focus="focusButton(button.key)"
+        @blur="blurButton(button.key)"
+      />
+
+      <hr class="sidebar-section-divider" aria-hidden="true">
+
+      <SidebarMainButton
+        :icon="createOrganizationButton.icon"
+        :label="createOrganizationButton.label"
+        :to="createOrganizationButton.path"
+        :tone="createOrganizationButton.tone"
+        @focus="focusButton(createOrganizationButton.key)"
+        @blur="blurButton(createOrganizationButton.key)"
       />
     </nav>
   </div>
