@@ -67,7 +67,7 @@ const applicationLeafButton = computed<TransientNavigationButton | null>(() => {
       path: route.path,
       icon: 'add_circle',
       label: t('app.sidebar.newApplication'),
-      indentLevel: 2,
+      indentLevel: 1,
       tone: organizationId.value === undefined ? 'default' : 'organization',
     };
   }
@@ -82,7 +82,7 @@ const applicationLeafButton = computed<TransientNavigationButton | null>(() => {
       path: route.path,
       icon: 'edit',
       label: t('app.sidebar.editApplication', { clientId }),
-      indentLevel: 2,
+      indentLevel: 1,
       tone: organizationId.value === undefined ? 'default' : 'organization',
     };
   }
