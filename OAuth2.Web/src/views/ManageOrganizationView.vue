@@ -418,10 +418,19 @@ onBeforeUnmount(() => {
 }
 
 .add-member-form {
-  display: grid;
-  grid-template-columns: minmax(180px, 1fr) 140px auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   margin-top: 18px;
+}
+
+.add-member-form .member-input {
+  flex: 1 1 220px;
+}
+
+.add-member-form .member-role-select {
+  flex: 1 1 130px;
+  max-width: 180px;
 }
 
 .member-input,
@@ -584,17 +593,31 @@ onBeforeUnmount(() => {
 }
 
 .owner-transfer-form {
-  display: grid;
-  grid-template-columns: minmax(200px, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   margin-top: 15px;
 }
 
 .organization-delete-form {
-  display: grid;
-  grid-template-columns: minmax(200px, 1fr) auto;
+  display: flex;
+  flex-wrap: wrap;
   gap: 9px;
   margin-top: 15px;
+}
+
+.owner-transfer-form .member-input,
+.organization-delete-form .member-input {
+  flex: 1 1 240px;
+}
+
+.add-member-form .app-button,
+.owner-transfer-button,
+.organization-delete-button {
+  width: max-content;
+  min-width: 96px;
+  padding: 0 14px;
+  white-space: nowrap;
 }
 
 .organization-delete-input:focus {
@@ -690,11 +713,12 @@ onBeforeUnmount(() => {
     gap: 4px;
   }
 
-  .add-member-form,
-  .owner-transfer-form,
-  .organization-delete-form,
   .member-row {
     grid-template-columns: 1fr;
+  }
+
+  .add-member-form .member-role-select {
+    max-width: none;
   }
 
   .member-row {
