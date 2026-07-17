@@ -76,7 +76,15 @@ internal static class OidcUserInfoFactory
                 }
             }
 
-            groups.UnionWith(organizationClaims.Select(static claim => claim.Id));
+            foreach (var organization in organizationClaims)
+            {
+                groups.Add(organization.Id);
+                foreach (var groupId in organization.GroupIds)
+                {
+                    groups.Add($"{organization.Id}-{groupId}");
+                }
+            }
+
             claims["groups"] = JsonSerializer.SerializeToElement(groups.ToArray());
         }
 

@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { Applications } from '../api/applications.ts';
+import { OrganizationGroups } from '../api/OrganizationGroups.ts';
 import Expander from '../core/components/Expander.vue';
 import { useOrganizationsStore } from '../stores/organizations.ts';
 import SidebarMainButton from './SidebarMainButton.vue';
@@ -25,7 +26,9 @@ const navigationGap = 4;
 const sectionDividerHeight = 15;
 const focusedButtonKey = ref<string | null>(null);
 const editingApplicationName = ref<string | null>(null);
+const organizationGroupName = ref<string | null>(null);
 let applicationNameRequestId = 0;
+let organizationGroupRequestId = 0;
 const organizationId = computed(() => {
   const value = route.params.organizationId;
   if (value === undefined) {
@@ -43,6 +46,14 @@ const editingApplicationId = computed(() => {
   }
 
   const value = route.params.clientId;
+  return Array.isArray(value) ? value.join('/') : value;
+});
+const currentOrganizationGroupId = computed(() => {
+  if (route.name !== 'organization-group') {
+    return undefined;
+  }
+
+  const value = route.params.groupId;
   return Array.isArray(value) ? value.join('/') : value;
 });
 const applicationGroupButton = computed<NavigationButton | null>(() => {
@@ -116,7 +127,7 @@ const transientApplicationButtons = computed(() => [
   applicationGroupButton.value,
   applicationLeafButton.value,
 ].filter((button): button is NavigationButton => button !== null));
-const organizationButtons = computed<NavigationButton[]>(() => {
+const organizationBaseButtons = computed<NavigationButton[]>(() => {
   const collator = new Intl.Collator(undefined, { sensitivity: 'base' });
   return [...organizationsStore.organizations]
     .sort((left, right) => collator.compare(left.name, right.name))
@@ -132,6 +143,36 @@ const organizationButtons = computed<NavigationButton[]>(() => {
       tone: 'organization',
     }));
 });
+const organizationGroupButton = computed<NavigationButton | null>(() => {
+  if (organizationId.value === undefined || currentOrganizationGroupId.value === undefined) {
+    return null;
+  }
+
+  return {
+    key: `organization-group-${organizationId.value}-${currentOrganizationGroupId.value}`,
+    path: router.resolve({
+      name: 'organization-group',
+      params: {
+        organizationId: organizationId.value,
+        groupId: currentOrganizationGroupId.value,
+      },
+    }).path,
+    icon: 'group',
+    label: organizationGroupName.value ?? currentOrganizationGroupId.value,
+    indentLevel: 1,
+    tone: 'organization',
+  };
+});
+const organizationButtons = computed<NavigationButton[]>(() => (
+  organizationBaseButtons.value.flatMap((button) => {
+    if (organizationGroupButton.value !== null
+      && button.key === `organization-${organizationId.value}`) {
+      return [button, organizationGroupButton.value];
+    }
+
+    return [button];
+  })
+));
 const baseNavigationButtons = computed<NavigationButton[]>(() => [
   {
     key: 'account',
@@ -242,6 +283,27 @@ watch(
       }
     } catch {
       // Keep the client ID as a stable fallback when details cannot be loaded.
+    }
+  },
+  { immediate: true },
+);
+
+watch(
+  [currentOrganizationGroupId, organizationId],
+  async ([groupId, currentOrganizationId]) => {
+    const requestId = ++organizationGroupRequestId;
+    organizationGroupName.value = null;
+    if (groupId === undefined || currentOrganizationId === undefined) {
+      return;
+    }
+
+    try {
+      const group = await OrganizationGroups.getAsync(currentOrganizationId, groupId);
+      if (requestId === organizationGroupRequestId) {
+        organizationGroupName.value = group.name;
+      }
+    } catch {
+      // Keep the group ID as a stable fallback when details cannot be loaded.
     }
   },
   { immediate: true },
@@ -383,17 +445,40 @@ watch(
         </Expander>
       </div>
 
-      <SidebarMainButton
-        v-for="button in organizationButtons"
-        :key="button.key"
-        :icon="button.icon"
-        :label="button.label"
-        :to="button.path"
-        :indent-level="button.indentLevel"
-        :tone="button.tone"
-        @focus="focusButton(button.key)"
-        @blur="blurButton(button.key)"
-      />
+      <template v-for="button in organizationBaseButtons" :key="button.key">
+        <SidebarMainButton
+          :icon="button.icon"
+          :label="button.label"
+          :to="button.path"
+          :indent-level="button.indentLevel"
+          :tone="button.tone"
+          @focus="focusButton(button.key)"
+          @blur="blurButton(button.key)"
+        />
+
+        <div class="sidebar-sub-button-transition">
+          <Expander
+            :expand="organizationGroupButton !== null
+              && button.key === `organization-${organizationId}`"
+          >
+            <div
+              v-if="organizationGroupButton !== null
+                && button.key === `organization-${organizationId}`"
+              class="sidebar-sub-button-content"
+            >
+              <SidebarMainButton
+                :icon="organizationGroupButton.icon"
+                :label="organizationGroupButton.label"
+                :to="organizationGroupButton.path"
+                :indent-level="organizationGroupButton.indentLevel"
+                :tone="organizationGroupButton.tone"
+                @focus="focusButton(organizationGroupButton.key)"
+                @blur="blurButton(organizationGroupButton.key)"
+              />
+            </div>
+          </Expander>
+        </div>
+      </template>
 
       <hr class="sidebar-section-divider" aria-hidden="true">
 

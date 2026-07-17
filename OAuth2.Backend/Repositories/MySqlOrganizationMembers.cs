@@ -106,8 +106,35 @@ internal sealed class MySqlOrganizationMembers(IOptions<MySqlOptions> mysqlOptio
             QUERY,
             new { accountId },
             cancellationToken: cancellationToken);
-        var claims = await connection.QueryAsync<OrganizationClaimValue>(command);
-        return claims.ToArray();
+        var claims = (await connection.QueryAsync<OrganizationClaimValue>(command)).ToArray();
+
+        const string GROUPS_QUERY = """
+            SELECT
+                `organization_id` AS `OrganizationId`,
+                `group_id` AS `GroupId`
+            FROM `organization_group_member`
+            WHERE `account_id` = @accountId
+            ORDER BY `organization_id`, `group_id`
+            """;
+        command = new CommandDefinition(
+            GROUPS_QUERY,
+            new { accountId },
+            cancellationToken: cancellationToken);
+        var groupIds = (await connection.QueryAsync<OrganizationGroupClaimRow>(command))
+            .GroupBy(static row => row.OrganizationId, StringComparer.Ordinal)
+            .ToDictionary(
+                static group => group.Key,
+                static group => (IReadOnlyList<string>)group
+                    .Select(static row => row.GroupId)
+                    .ToArray(),
+                StringComparer.Ordinal);
+
+        return claims
+            .Select(claim => claim with
+            {
+                GroupIds = groupIds.GetValueOrDefault(claim.Id) ?? []
+            })
+            .ToArray();
     }
 
     public async Task<OrganizationMemberMutationStatus> AddAsync(
@@ -291,12 +318,24 @@ internal sealed class MySqlOrganizationMembers(IOptions<MySqlOptions> mysqlOptio
             return OrganizationMemberMutationStatus.Forbidden;
         }
 
+        const string DELETE_GROUP_MEMBERSHIPS_QUERY = """
+            DELETE FROM `organization_group_member`
+            WHERE `organization_id` = @organizationId
+                AND `account_id` = @accountId
+            """;
+        var command = new CommandDefinition(
+            DELETE_GROUP_MEMBERSHIPS_QUERY,
+            new { organizationId, accountId },
+            transaction,
+            cancellationToken: cancellationToken);
+        await connection.ExecuteAsync(command);
+
         const string QUERY = """
             DELETE FROM `organization_member`
             WHERE `organization_id` = @organizationId
                 AND `account_id` = @accountId
             """;
-        var command = new CommandDefinition(
+        command = new CommandDefinition(
             QUERY,
             new { organizationId, accountId },
             transaction,
@@ -467,4 +506,11 @@ internal sealed class MySqlOrganizationMembers(IOptions<MySqlOptions> mysqlOptio
         OrganizationMemberMutationStatus Status,
         string? ActorRole = null,
         string? TargetRole = null);
+
+    private sealed record OrganizationGroupClaimRow
+    {
+        public required string OrganizationId { get; init; }
+
+        public required string GroupId { get; init; }
+    }
 }

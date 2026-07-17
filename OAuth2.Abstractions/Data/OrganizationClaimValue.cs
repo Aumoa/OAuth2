@@ -7,4 +7,6 @@ public sealed record OrganizationClaimValue
     public required string Name { get; init; }
 
     public required string Role { get; init; }
+
+    public IReadOnlyList<string> GroupIds { get; init; } = [];
 }

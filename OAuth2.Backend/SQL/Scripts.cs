@@ -25,6 +25,7 @@ public class Scripts : IScripts
         yield return new AddClientSecret();
         yield return new AddOAuthRefreshToken();
         yield return new AddOrganizationMemberRoles();
+        yield return new AddOrganizationGroups();
     }
 
     private class Init : IScript
@@ -510,6 +511,41 @@ ALTER TABLE `organization_member`
     DROP INDEX `UNQ__organization_member__owner_organization_id`,
     DROP CHECK `CHK__organization_member__role`,
     DROP COLUMN `owner_organization_id`;
+";
+    }
+
+    private class AddOrganizationGroups : IScript
+    {
+        public string Name => "Add_organization_groups";
+
+        public int InstalledRank => 19;
+
+        public string UpSql => @"
+CREATE TABLE `organization_group` (
+    `organization_id` VARCHAR(64) NOT NULL,
+    `id` VARCHAR(64) NOT NULL,
+    `name` VARCHAR(128) NOT NULL,
+    `created_by` VARCHAR(128) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (`organization_id`, `id`),
+    INDEX `IDX__organization_group__organization_id__name__id`
+        (`organization_id`, `name`, `id`)
+);
+
+CREATE TABLE `organization_group_member` (
+    `organization_id` VARCHAR(64) NOT NULL,
+    `group_id` VARCHAR(64) NOT NULL,
+    `account_id` VARCHAR(128) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (`organization_id`, `group_id`, `account_id`),
+    INDEX `IDX__organization_group_member__account_id__organization_id__group_id`
+        (`account_id`, `organization_id`, `group_id`)
+);
+";
+
+        public string DownSql => @"
+DROP TABLE `organization_group_member`;
+DROP TABLE `organization_group`;
 ";
     }
 }

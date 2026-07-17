@@ -24,6 +24,9 @@ public static class OrganizationRoles
     public static bool CanAdd(string? actorRole, string? role) =>
         IsAssignable(role) && CanManage(actorRole, role);
 
+    public static bool CanManageGroups(string? role) =>
+        role is Owner or Admin;
+
     public static bool CanAssign(string? actorRole, string? role) =>
         IsAssignable(role) && Rank(actorRole) >= Rank(role);
 

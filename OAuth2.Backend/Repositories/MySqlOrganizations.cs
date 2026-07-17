@@ -249,6 +249,28 @@ internal sealed class MySqlOrganizations(IOptions<MySqlOptions> mysqlOptions) : 
             }
         }
 
+        const string DELETE_GROUP_MEMBERS_QUERY = """
+            DELETE FROM `organization_group_member`
+            WHERE `organization_id` = @id
+            """;
+        command = new CommandDefinition(
+            DELETE_GROUP_MEMBERS_QUERY,
+            new { id },
+            transaction,
+            cancellationToken: cancellationToken);
+        await connection.ExecuteAsync(command);
+
+        const string DELETE_GROUPS_QUERY = """
+            DELETE FROM `organization_group`
+            WHERE `organization_id` = @id
+            """;
+        command = new CommandDefinition(
+            DELETE_GROUPS_QUERY,
+            new { id },
+            transaction,
+            cancellationToken: cancellationToken);
+        await connection.ExecuteAsync(command);
+
         const string DELETE_MEMBERS_QUERY = """
             DELETE FROM `organization_member`
             WHERE `organization_id` = @id

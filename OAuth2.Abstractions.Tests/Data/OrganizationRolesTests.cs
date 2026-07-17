@@ -48,4 +48,14 @@ public sealed class OrganizationRolesTests
     {
         Assert.Equal(expected, OrganizationRoles.CanAssign(actorRole, role));
     }
+
+    [Theory]
+    [InlineData(OrganizationRoles.Owner, true)]
+    [InlineData(OrganizationRoles.Admin, true)]
+    [InlineData(OrganizationRoles.Member, false)]
+    [InlineData("unknown", false)]
+    public void CanManageGroups_RequiresAdministratorOrOwner(string role, bool expected)
+    {
+        Assert.Equal(expected, OrganizationRoles.CanManageGroups(role));
+    }
 }

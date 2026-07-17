@@ -21,10 +21,23 @@ public interface IBackendClient
         CreateOrganizationForm form,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> CreateOrganizationGroupAsync(
+        string actorAccountId,
+        string organizationId,
+        CreateOrganizationGroupForm form,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> AddOrganizationMemberAsync(
         string actorAccountId,
         string organizationId,
         AddOrganizationMemberForm form,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> AddOrganizationGroupMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
+        AddOrganizationGroupMemberForm form,
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> DeleteApplicationAsync(
@@ -41,6 +54,13 @@ public interface IBackendClient
     Task<BackendResponse> DeleteOrganizationMemberAsync(
         string actorAccountId,
         string organizationId,
+        string accountId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> DeleteOrganizationGroupMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
         string accountId,
         CancellationToken cancellationToken = default);
 
@@ -71,6 +91,25 @@ public interface IBackendClient
 
     Task<BackendResponse> GetOrganizationsAsync(
         string accountId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetOrganizationGroupsAsync(
+        string actorAccountId,
+        string organizationId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetOrganizationGroupAsync(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetOrganizationGroupMembersAsync(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> GetOrganizationMembersAsync(

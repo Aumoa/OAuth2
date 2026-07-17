@@ -83,6 +83,24 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
+    public Task<BackendResponse> CreateOrganizationGroupAsync(
+        string actorAccountId,
+        string organizationId,
+        CreateOrganizationGroupForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        return SendAsync(
+            HttpMethod.Post,
+            OrganizationGroupsUri(actorAccountId, organizationId),
+            form,
+            null,
+            cancellationToken);
+    }
+
     public Task<BackendResponse> AddOrganizationMemberAsync(
         string actorAccountId,
         string organizationId,
@@ -96,6 +114,26 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return SendAsync(
             HttpMethod.Post,
             OrganizationMembersUri(actorAccountId, organizationId),
+            form,
+            null,
+            cancellationToken);
+    }
+
+    public Task<BackendResponse> AddOrganizationGroupMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
+        AddOrganizationGroupMemberForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        return SendAsync(
+            HttpMethod.Post,
+            OrganizationGroupMembersUri(actorAccountId, organizationId, groupId),
             form,
             null,
             cancellationToken);
@@ -143,6 +181,28 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
         using var response = await http.DeleteAsync(
             OrganizationMemberUri(actorAccountId, organizationId, accountId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> DeleteOrganizationGroupMemberAsync(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
+        string accountId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+
+        using var response = await http.DeleteAsync(
+            OrganizationGroupMemberUri(
+                actorAccountId,
+                organizationId,
+                groupId,
+                accountId),
             cancellationToken);
         return await ToBackendResponseAsync(response, cancellationToken);
     }
@@ -227,6 +287,57 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
         using var response = await http.GetAsync(
             $"/api/v1/organizations?accountId={Uri.EscapeDataString(accountId)}",
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetOrganizationGroupsAsync(
+        string actorAccountId,
+        string organizationId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+
+        using var response = await http.GetAsync(
+            OrganizationGroupsUri(actorAccountId, organizationId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetOrganizationGroupAsync(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+
+        using var response = await http.GetAsync(
+            OrganizationGroupUri(actorAccountId, organizationId, groupId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetOrganizationGroupMembersAsync(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(groupId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+
+        using var response = await http.GetAsync(
+            OrganizationGroupMembersUri(actorAccountId, organizationId, groupId)
+                + $"&page={page}&pageSize={pageSize}",
             cancellationToken);
         return await ToBackendResponseAsync(response, cancellationToken);
     }
@@ -549,6 +660,28 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
     private static string OrganizationMembersUri(string actorAccountId, string organizationId) =>
         $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/members?accountId={Uri.EscapeDataString(actorAccountId)}";
+
+    private static string OrganizationGroupsUri(string actorAccountId, string organizationId) =>
+        $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/groups?accountId={Uri.EscapeDataString(actorAccountId)}";
+
+    private static string OrganizationGroupUri(
+        string actorAccountId,
+        string organizationId,
+        string groupId) =>
+        $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/groups/{Uri.EscapeDataString(groupId)}?accountId={Uri.EscapeDataString(actorAccountId)}";
+
+    private static string OrganizationGroupMembersUri(
+        string actorAccountId,
+        string organizationId,
+        string groupId) =>
+        $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/groups/{Uri.EscapeDataString(groupId)}/members?accountId={Uri.EscapeDataString(actorAccountId)}";
+
+    private static string OrganizationGroupMemberUri(
+        string actorAccountId,
+        string organizationId,
+        string groupId,
+        string accountId) =>
+        $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/groups/{Uri.EscapeDataString(groupId)}/members/{Uri.EscapeDataString(accountId)}?accountId={Uri.EscapeDataString(actorAccountId)}";
 
     private static string OrganizationMemberUri(
         string actorAccountId,

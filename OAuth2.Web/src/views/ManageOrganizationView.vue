@@ -11,6 +11,7 @@ import {
 } from '../api/Organizations.ts';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 import { useOrganizationsStore } from '../stores/organizations.ts';
+import OrganizationGroupsPanel from '../components/OrganizationGroupsPanel.vue';
 
 const { locale, t } = useI18n();
 const route = useRoute();
@@ -791,6 +792,12 @@ onBeforeUnmount(() => {
         </div>
       </dl>
     </section>
+
+    <OrganizationGroupsPanel
+      v-if="organization"
+      :organization-id="organization.id"
+      :role="organization.role"
+    />
 
     <section v-if="organization" class="members-panel" aria-labelledby="organization-members-title">
       <div class="section-heading">
