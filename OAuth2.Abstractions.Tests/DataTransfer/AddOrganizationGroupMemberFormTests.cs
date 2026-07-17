@@ -4,12 +4,14 @@ namespace OAuth2.Abstractions.Tests.DataTransfer;
 
 public sealed class AddOrganizationGroupMemberFormTests
 {
-    [Fact]
-    public void Verify_AcceptsAccountId()
+    [Theory]
+    [InlineData("member-account")]
+    [InlineData("member@example.com")]
+    public void Verify_AcceptsAccountIdOrEmail(string accountIdentifier)
     {
         var form = new AddOrganizationGroupMemberForm
         {
-            AccountId = "member-account"
+            AccountId = accountIdentifier
         };
 
         Assert.True(form.Verify(out var error));

@@ -34,7 +34,7 @@ public interface IOrganizationGroups
         string organizationId,
         string groupId,
         string actorAccountId,
-        string accountId,
+        string accountIdentifier,
         CancellationToken cancellationToken = default);
 
     Task<OrganizationGroupMutationStatus> DeleteMemberAsync(

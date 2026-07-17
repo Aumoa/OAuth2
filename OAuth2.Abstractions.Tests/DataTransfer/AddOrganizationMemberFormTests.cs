@@ -5,13 +5,13 @@ namespace OAuth2.Abstractions.Tests.DataTransfer;
 public sealed class AddOrganizationMemberFormTests
 {
     [Theory]
-    [InlineData("admin")]
-    [InlineData("member")]
-    public void Verify_AcceptsAssignableRoles(string role)
+    [InlineData("member-account", "admin")]
+    [InlineData("member@example.com", "member")]
+    public void Verify_AcceptsAccountIdOrEmailWithAssignableRole(string accountIdentifier, string role)
     {
         var form = new AddOrganizationMemberForm
         {
-            AccountId = "member-account",
+            AccountId = accountIdentifier,
             Role = role
         };
 

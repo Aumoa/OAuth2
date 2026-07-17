@@ -140,13 +140,13 @@ internal sealed class MySqlOrganizationMembers(IOptions<MySqlOptions> mysqlOptio
     public async Task<OrganizationMemberMutationStatus> AddAsync(
         string organizationId,
         string actorAccountId,
-        string accountId,
+        string accountIdentifier,
         string role,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(organizationId);
         ArgumentException.ThrowIfNullOrWhiteSpace(actorAccountId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountIdentifier);
         if (!OrganizationRoles.IsAssignable(role))
         {
             throw new ArgumentOutOfRangeException(nameof(role));
@@ -179,15 +179,18 @@ internal sealed class MySqlOrganizationMembers(IOptions<MySqlOptions> mysqlOptio
         const string ACCOUNT_QUERY = """
             SELECT `id`
             FROM `account`
-            WHERE `id` = @accountId
+            WHERE (`id` = @accountIdentifier OR `email` = @accountIdentifier)
                 AND `verify_code` IS NULL
+            ORDER BY CASE WHEN `id` = @accountIdentifier THEN 0 ELSE 1 END
+            LIMIT 1
             """;
         var command = new CommandDefinition(
             ACCOUNT_QUERY,
-            new { accountId },
+            new { accountIdentifier },
             transaction,
             cancellationToken: cancellationToken);
-        if (await connection.QuerySingleOrDefaultAsync<string>(command) is null)
+        var accountId = await connection.QuerySingleOrDefaultAsync<string>(command);
+        if (accountId is null)
         {
             return OrganizationMemberMutationStatus.AccountNotFound;
         }

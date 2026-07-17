@@ -249,13 +249,13 @@ internal sealed class MySqlOrganizationGroups(IOptions<MySqlOptions> mysqlOption
         string organizationId,
         string groupId,
         string actorAccountId,
-        string accountId,
+        string accountIdentifier,
         CancellationToken cancellationToken = default) =>
         MutateMemberAsync(
             organizationId,
             groupId,
             actorAccountId,
-            accountId,
+            accountIdentifier,
             true,
             cancellationToken);
 
@@ -322,6 +322,35 @@ internal sealed class MySqlOrganizationGroups(IOptions<MySqlOptions> mysqlOption
                 cancellationToken) is null)
         {
             return OrganizationGroupMutationStatus.GroupNotFound;
+        }
+
+        if (add)
+        {
+            const string RESOLVE_MEMBER_QUERY = """
+                SELECT `m`.`account_id`
+                FROM `organization_member` `m`
+                INNER JOIN `account` `a`
+                    ON `a`.`id` = `m`.`account_id`
+                WHERE `m`.`organization_id` = @organizationId
+                    AND (`a`.`id` = @accountId OR `a`.`email` = @accountId)
+                ORDER BY
+                    CASE WHEN `a`.`id` = @accountId THEN 0 ELSE 1 END,
+                    `a`.`id`
+                LIMIT 1
+                """;
+            var resolveMemberCommand = new CommandDefinition(
+                RESOLVE_MEMBER_QUERY,
+                new { organizationId, accountId },
+                transaction,
+                cancellationToken: cancellationToken);
+            var resolvedAccountId = await connection.QuerySingleOrDefaultAsync<string>(
+                resolveMemberCommand);
+            if (resolvedAccountId is null)
+            {
+                return OrganizationGroupMutationStatus.MemberNotFound;
+            }
+
+            accountId = resolvedAccountId;
         }
 
         if (await GetRoleAsync(

@@ -18,7 +18,7 @@ public interface IOrganizationMembers
     Task<OrganizationMemberMutationStatus> AddAsync(
         string organizationId,
         string actorAccountId,
-        string accountId,
+        string accountIdentifier,
         string role,
         CancellationToken cancellationToken = default);
 
