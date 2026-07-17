@@ -20,6 +20,7 @@ public class Scripts : IScripts
         yield return new AddOAuthGrant();
         yield return new AddAccountUpdatedAt();
         yield return new AddEmailVerificationExpiration();
+        yield return new AddOrganization();
         yield return new AddClientApplicationType();
     }
 
@@ -371,11 +372,42 @@ ALTER TABLE `account`
 ";
     }
 
+    private class AddOrganization : IScript
+    {
+        public string Name => "Add_organization";
+
+        public int InstalledRank => 14;
+
+        public string UpSql => @"
+CREATE TABLE `organization` (
+    `id` VARCHAR(64) NOT NULL PRIMARY KEY,
+    `name` VARCHAR(128) NOT NULL,
+    `created_by` VARCHAR(128) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT NOW(),
+    INDEX `IDX__organization__created_by__created_at` (`created_by`, `created_at`)
+);
+
+CREATE TABLE `organization_member` (
+    `organization_id` VARCHAR(64) NOT NULL,
+    `account_id` VARCHAR(128) NOT NULL,
+    `role` VARCHAR(32) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (`organization_id`, `account_id`),
+    INDEX `IDX__organization_member__account_id` (`account_id`, `organization_id`)
+);
+";
+
+        public string DownSql => @"
+DROP TABLE `organization_member`;
+DROP TABLE `organization`;
+";
+    }
+
     private class AddClientApplicationType : IScript
     {
         public string Name => "Add_client_application_type";
 
-        public int InstalledRank => 14;
+        public int InstalledRank => 15;
 
         public string UpSql => @"
 ALTER TABLE `client`

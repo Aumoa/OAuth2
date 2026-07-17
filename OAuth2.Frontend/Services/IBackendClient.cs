@@ -11,6 +11,11 @@ public interface IBackendClient
         CreateApplicationForm form,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> CreateOrganizationAsync(
+        string accountId,
+        CreateOrganizationForm form,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> DeleteApplicationAsync(
         string ownerId,
         string id,
@@ -23,6 +28,15 @@ public interface IBackendClient
 
     Task<BackendResponse> GetOwnedApplicationsAsync(
         string ownerId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetOrganizationAsync(
+        string accountId,
+        string id,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetOrganizationsAsync(
+        string accountId,
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> UpdateApplicationAsync(

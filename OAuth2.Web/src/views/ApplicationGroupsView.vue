@@ -1,13 +1,18 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useAuthStore } from '../shared/oauth2/src/auth.ts';
+import { useOrganizationsStore } from '../stores/organizations.ts';
 
-const auth = useAuthStore();
+const organizationsStore = useOrganizationsStore();
 const { locale, t } = useI18n();
 const organizations = computed(() => {
   const collator = new Intl.Collator(locale.value, { sensitivity: 'base' });
-  return [...(auth.user?.groups ?? [])].sort(collator.compare);
+  return [...organizationsStore.organizations]
+    .sort((left, right) => collator.compare(left.name, right.name));
+});
+
+onMounted(() => {
+  void organizationsStore.loadAsync().catch(() => undefined);
 });
 </script>
 
@@ -92,6 +97,7 @@ const organizations = computed(() => {
 }
 
 .application-group-name {
+  display: block;
   margin: 0;
   overflow: hidden;
   color: var(--text-h);
@@ -103,6 +109,7 @@ const organizations = computed(() => {
 }
 
 .application-group-description {
+  display: block;
   margin: 3px 0 0;
   color: var(--text-muted);
   font-size: 12px;
@@ -316,19 +323,21 @@ const organizations = computed(() => {
       </header>
 
       <ul v-if="organizations.length > 0" class="organization-list">
-        <li v-for="organization in organizations" :key="organization">
+        <li v-for="organization in organizations" :key="organization.id">
           <RouterLink
             class="application-group-link organization-link"
             :to="{
               name: 'applications-organization',
-              params: { organizationId: organization },
+              params: { organizationId: organization.id },
             }"
           >
             <span class="application-group-icon" aria-hidden="true">
               <span class="material-symbols-outlined">domain</span>
             </span>
             <span class="application-group-copy">
-              <span class="application-group-name" :title="organization">{{ organization }}</span>
+              <span class="application-group-name" :title="organization.name">
+                {{ organization.name }}
+              </span>
               <span class="application-group-description">
                 {{ t('app.applicationManagement.organizationGroupDescription') }}
               </span>
@@ -344,10 +353,18 @@ const organizations = computed(() => {
         <span class="material-symbols-outlined" aria-hidden="true">domain_disabled</span>
         <div class="organization-empty-copy">
           <p class="organization-empty-title">
-            {{ t('app.applicationManagement.organizationEmptyTitle') }}
+            {{ organizationsStore.isLoading
+              ? t('app.applicationManagement.organizationLoadingTitle')
+              : organizationsStore.hasFailed
+                ? t('app.applicationManagement.organizationLoadFailedTitle')
+                : t('app.applicationManagement.organizationEmptyTitle') }}
           </p>
           <p class="organization-empty-description">
-            {{ t('app.applicationManagement.organizationEmptyDescription') }}
+            {{ organizationsStore.isLoading
+              ? t('app.applicationManagement.organizationLoadingDescription')
+              : organizationsStore.hasFailed
+                ? t('app.applicationManagement.organizationLoadFailedDescription')
+                : t('app.applicationManagement.organizationEmptyDescription') }}
           </p>
         </div>
       </div>

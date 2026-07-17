@@ -83,6 +83,16 @@ export const router = createRouter({
             },
           ],
         },
+        {
+          path: 'organizations/new',
+          name: 'organization-new',
+          component: () => import('../views/CreateOrganizationView.vue'),
+        },
+        {
+          path: 'organizations/:organizationId',
+          name: 'organization-management',
+          component: () => import('../views/ManageOrganizationView.vue'),
+        },
       ],
     },
     {

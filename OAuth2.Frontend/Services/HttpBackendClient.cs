@@ -46,6 +46,27 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
+    public Task<BackendResponse> CreateOrganizationAsync(
+        string accountId,
+        CreateOrganizationForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        if (!form.Verify(out _))
+        {
+            throw new ArgumentException("Form verification failed.", nameof(form));
+        }
+
+        return SendAsync(
+            HttpMethod.Post,
+            $"/api/v1/organizations?accountId={Uri.EscapeDataString(accountId)}",
+            form,
+            null,
+            cancellationToken);
+    }
+
     public async Task<BackendResponse> DeleteApplicationAsync(
         string ownerId,
         string id,
@@ -82,6 +103,32 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
         using var response = await http.GetAsync(
             $"/api/v1/applications?ownerId={Uri.EscapeDataString(ownerId)}",
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetOrganizationAsync(
+        string accountId,
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        using var response = await http.GetAsync(
+            $"/api/v1/organizations/{Uri.EscapeDataString(id)}?accountId={Uri.EscapeDataString(accountId)}",
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetOrganizationsAsync(
+        string accountId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+
+        using var response = await http.GetAsync(
+            $"/api/v1/organizations?accountId={Uri.EscapeDataString(accountId)}",
             cancellationToken);
         return await ToBackendResponseAsync(response, cancellationToken);
     }
