@@ -1,6 +1,6 @@
 <script setup lang="ts">
 const props = defineProps<{
-  expand: boolean
+  expand: boolean;
 }>();
 </script>
 
@@ -17,8 +17,8 @@ const props = defineProps<{
 .expand-enter-active,
 .expand-leave-active {
   transition:
-    grid-template-rows 0.2s ease,
-    opacity 0.2s ease;
+    grid-template-rows var(--expander-duration, 0.2s) var(--expander-easing, ease),
+    opacity var(--expander-duration, 0.2s) var(--expander-easing, ease);
 }
 
 .expand-enter-from,
@@ -31,6 +31,13 @@ const props = defineProps<{
 .expand-leave-from {
   grid-template-rows: 1.0fr;
   opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .expand-enter-active,
+  .expand-leave-active {
+    transition-duration: 0.01ms;
+  }
 }
 </style>
 

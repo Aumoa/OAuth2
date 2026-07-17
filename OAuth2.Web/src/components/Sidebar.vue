@@ -3,6 +3,7 @@ import { computed, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter } from 'vue-router';
 import { Applications } from '../api/applications.ts';
+import Expander from '../core/components/Expander.vue';
 import { useOrganizationsStore } from '../stores/organizations.ts';
 import SidebarMainButton from './SidebarMainButton.vue';
 
@@ -131,7 +132,7 @@ const organizationButtons = computed<NavigationButton[]>(() => {
       tone: 'organization',
     }));
 });
-const primaryNavigationButtons = computed<NavigationButton[]>(() => [
+const baseNavigationButtons = computed<NavigationButton[]>(() => [
   {
     key: 'account',
     path: '/',
@@ -148,6 +149,9 @@ const primaryNavigationButtons = computed<NavigationButton[]>(() => [
     indentLevel: 0,
     tone: 'default',
   },
+]);
+const primaryNavigationButtons = computed<NavigationButton[]>(() => [
+  ...baseNavigationButtons.value,
   ...transientApplicationButtons.value,
   ...organizationButtons.value,
 ]);
@@ -263,7 +267,21 @@ watch(
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: var(--sidebar-navigation-gap);
+  gap: 0;
+}
+
+.sidebar-navigation > .sidebar-main-button {
+  margin-bottom: var(--sidebar-navigation-gap);
+}
+
+.sidebar-sub-button-transition {
+  min-height: 0;
+  --expander-duration: 220ms;
+  --expander-easing: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.sidebar-sub-button-content {
+  padding-bottom: var(--sidebar-navigation-gap);
 }
 
 .sidebar-navigation-highlight {
@@ -298,7 +316,7 @@ watch(
 .sidebar-section-divider {
   width: calc(100% - 20px);
   height: 1px;
-  margin: 7px 10px;
+  margin: 7px 10px 11px;
   flex: 0 0 1px;
   border: 0;
   background: color-mix(in srgb, #a78bfa 22%, var(--border));
@@ -322,7 +340,51 @@ watch(
       <span class="sidebar-navigation-highlight" aria-hidden="true"></span>
 
       <SidebarMainButton
-        v-for="button in primaryNavigationButtons"
+        v-for="button in baseNavigationButtons"
+        :key="button.key"
+        :icon="button.icon"
+        :label="button.label"
+        :to="button.path"
+        :indent-level="button.indentLevel"
+        :tone="button.tone"
+        @focus="focusButton(button.key)"
+        @blur="blurButton(button.key)"
+      />
+
+      <div class="sidebar-sub-button-transition">
+        <Expander :expand="applicationGroupButton !== null">
+          <div v-if="applicationGroupButton" class="sidebar-sub-button-content">
+            <SidebarMainButton
+              :icon="applicationGroupButton.icon"
+              :label="applicationGroupButton.label"
+              :to="applicationGroupButton.path"
+              :indent-level="applicationGroupButton.indentLevel"
+              :tone="applicationGroupButton.tone"
+              @focus="focusButton(applicationGroupButton.key)"
+              @blur="blurButton(applicationGroupButton.key)"
+            />
+          </div>
+        </Expander>
+      </div>
+
+      <div class="sidebar-sub-button-transition">
+        <Expander :expand="applicationLeafButton !== null">
+          <div v-if="applicationLeafButton" class="sidebar-sub-button-content">
+            <SidebarMainButton
+              :icon="applicationLeafButton.icon"
+              :label="applicationLeafButton.label"
+              :to="applicationLeafButton.path"
+              :indent-level="applicationLeafButton.indentLevel"
+              :tone="applicationLeafButton.tone"
+              @focus="focusButton(applicationLeafButton.key)"
+              @blur="blurButton(applicationLeafButton.key)"
+            />
+          </div>
+        </Expander>
+      </div>
+
+      <SidebarMainButton
+        v-for="button in organizationButtons"
         :key="button.key"
         :icon="button.icon"
         :label="button.label"
