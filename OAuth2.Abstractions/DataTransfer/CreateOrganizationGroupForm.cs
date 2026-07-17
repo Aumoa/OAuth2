@@ -34,6 +34,12 @@ public sealed partial record CreateOrganizationGroupForm
             return false;
         }
 
+        if (string.Equals(id, "new", StringComparison.Ordinal))
+        {
+            error = "body.id is reserved";
+            return false;
+        }
+
         var name = Name?.Trim();
         if (string.IsNullOrWhiteSpace(name))
         {

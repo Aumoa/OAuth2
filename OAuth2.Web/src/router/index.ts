@@ -94,6 +94,11 @@ export const router = createRouter({
           component: () => import('../views/ManageOrganizationView.vue'),
         },
         {
+          path: 'organizations/:organizationId/groups/new',
+          name: 'organization-group-new',
+          component: () => import('../views/CreateOrganizationGroupView.vue'),
+        },
+        {
           path: 'organizations/:organizationId/groups/:groupId',
           name: 'organization-group',
           component: () => import('../views/ManageOrganizationGroupView.vue'),

@@ -21,6 +21,7 @@ public sealed class CreateOrganizationGroupFormTests
     [InlineData("", "Platform team", "body.id is missing")]
     [InlineData("Platform-Team", "Platform team", "body.id must contain only lowercase letters, numbers, or single hyphens")]
     [InlineData("platform--team", "Platform team", "body.id must contain only lowercase letters, numbers, or single hyphens")]
+    [InlineData("new", "Platform team", "body.id is reserved")]
     [InlineData("platform-team", "", "body.name is missing")]
     public void Verify_RejectsInvalidValues(string id, string name, string expectedError)
     {

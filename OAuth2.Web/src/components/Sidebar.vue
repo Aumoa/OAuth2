@@ -144,7 +144,25 @@ const organizationBaseButtons = computed<NavigationButton[]>(() => {
     }));
 });
 const organizationGroupButton = computed<NavigationButton | null>(() => {
-  if (organizationId.value === undefined || currentOrganizationGroupId.value === undefined) {
+  if (organizationId.value === undefined) {
+    return null;
+  }
+
+  if (route.name === 'organization-group-new') {
+    return {
+      key: `organization-group-new-${organizationId.value}`,
+      path: router.resolve({
+        name: 'organization-group-new',
+        params: { organizationId: organizationId.value },
+      }).path,
+      icon: 'add_circle',
+      label: t('app.sidebar.newGroup'),
+      indentLevel: 1,
+      tone: 'organization',
+    };
+  }
+
+  if (currentOrganizationGroupId.value === undefined) {
     return null;
   }
 
