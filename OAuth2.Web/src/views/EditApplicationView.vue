@@ -11,6 +11,7 @@ type ViewState = 'loading' | 'ready' | 'error' | 'notFound';
 type RedirectUriEntry = {
   id: number;
   value: string;
+  initialValue: string | null;
 };
 
 const requiredScope = 'openid';
@@ -70,10 +71,11 @@ let isMounted = true;
 let loadRequestId = 0;
 let nextRedirectUriId = 0;
 
-function createRedirectUriEntry(value = ''): RedirectUriEntry {
+function createRedirectUriEntry(value = '', initialValue: string | null = null): RedirectUriEntry {
   return {
     id: nextRedirectUriId++,
     value,
+    initialValue,
   };
 }
 
@@ -96,6 +98,17 @@ function areStringArraysEqual(left: string[], right: string[]): boolean {
 
 function isScopeChanged(scope: string): boolean {
   return allowedScopes.value.includes(scope) !== initialAllowedScopes.value.includes(scope);
+}
+
+function isRedirectUriChanged(entry: RedirectUriEntry): boolean {
+  if (!hasRedirectUriChanges.value) {
+    return false;
+  }
+
+  const value = entry.value.trim();
+  return entry.initialValue === null
+    ? value.length > 0
+    : value !== entry.initialValue;
 }
 
 function clearSaveFeedback(): void {
@@ -199,7 +212,7 @@ async function loadApplicationAsync(): Promise<void> {
       scope === requiredScope || details.allowedScopes.includes(scope)
     ));
     application.value = details;
-    redirectUris.value = details.redirectUris.map(createRedirectUriEntry);
+    redirectUris.value = details.redirectUris.map(value => createRedirectUriEntry(value, value));
     allowedScopes.value = [...loadedScopes];
     initialRedirectUris.value = [...details.redirectUris];
     initialAllowedScopes.value = [...loadedScopes];
@@ -238,7 +251,7 @@ async function saveApplicationAsync(): Promise<void> {
       organizationId.value,
     );
     if (isMounted) {
-      redirectUris.value = redirectUriValues.map(createRedirectUriEntry);
+      redirectUris.value = redirectUriValues.map(value => createRedirectUriEntry(value, value));
       allowedScopes.value = [...scopes];
       initialRedirectUris.value = [...redirectUriValues];
       initialAllowedScopes.value = [...scopes];
@@ -316,6 +329,8 @@ onBeforeUnmount(() => {
 
 <style scoped lang="css">
 .edit-application-page {
+  --change-accent: #f59e0b;
+
   width: min(100%, 960px);
   margin: 0;
   padding: 16px 0 40px;
@@ -475,6 +490,19 @@ onBeforeUnmount(() => {
   box-shadow: var(--shadow-sm);
 }
 
+.redirect-uri-settings {
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.edit-application-page .redirect-uri-settings.changed {
+  border-color: color-mix(in srgb, var(--change-accent) 48%, var(--border));
+  background: color-mix(in srgb, var(--change-accent) 6%, var(--surface));
+  box-shadow: var(--shadow-sm), inset 3px 0 0 var(--change-accent);
+}
+
 .settings-title,
 .danger-zone-title {
   margin: 0;
@@ -527,7 +555,11 @@ onBeforeUnmount(() => {
   border-radius: 7px;
   outline: none;
   font: 13px/1.55 var(--mono);
-  transition: border-color 160ms ease, box-shadow 160ms ease;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
 }
 
 .redirect-uri-input:hover:not(:disabled) {
@@ -541,6 +573,19 @@ onBeforeUnmount(() => {
 
 .redirect-uri-input.has-error {
   border-color: var(--danger);
+}
+
+.redirect-uri-row.changed .redirect-uri-input:not(.has-error) {
+  color: color-mix(in srgb, var(--change-accent) 78%, var(--text-h));
+  border-color: color-mix(in srgb, var(--change-accent) 68%, var(--border));
+  background-color: color-mix(in srgb, var(--change-accent) 12%, var(--surface));
+  box-shadow: inset 3px 0 0 var(--change-accent);
+}
+
+.redirect-uri-row.changed .redirect-uri-input:focus:not(.has-error) {
+  box-shadow:
+    inset 3px 0 0 var(--change-accent),
+    0 0 0 3px color-mix(in srgb, var(--change-accent) 28%, transparent);
 }
 
 .redirect-uri-input:disabled {
@@ -569,6 +614,12 @@ onBeforeUnmount(() => {
   color: var(--danger);
   border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
   background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.redirect-uri-row.changed .redirect-uri-remove:not(:hover) {
+  color: color-mix(in srgb, var(--change-accent) 78%, var(--text-h));
+  border-color: color-mix(in srgb, var(--change-accent) 58%, var(--border));
+  background: color-mix(in srgb, var(--change-accent) 10%, transparent);
 }
 
 .redirect-uri-add {
@@ -644,10 +695,10 @@ onBeforeUnmount(() => {
 }
 
 .scope-option.changed {
-  color: color-mix(in srgb, #f59e0b 78%, var(--text-h));
-  border-color: color-mix(in srgb, #f59e0b 68%, var(--border));
-  background: color-mix(in srgb, #f59e0b 12%, var(--surface));
-  box-shadow: inset 3px 0 0 #f59e0b;
+  color: color-mix(in srgb, var(--change-accent) 78%, var(--text-h));
+  border-color: color-mix(in srgb, var(--change-accent) 68%, var(--border));
+  background: color-mix(in srgb, var(--change-accent) 12%, var(--surface));
+  box-shadow: inset 3px 0 0 var(--change-accent);
 }
 
 .scope-option input {
@@ -658,7 +709,7 @@ onBeforeUnmount(() => {
 }
 
 .scope-option.changed input {
-  accent-color: #f59e0b;
+  accent-color: var(--change-accent);
 }
 
 .scope-name {
@@ -819,6 +870,7 @@ onBeforeUnmount(() => {
   .redirect-uri-input,
   .redirect-uri-remove,
   .redirect-uri-add,
+  .redirect-uri-settings,
   .scope-option {
     transition-duration: 0.01ms;
   }
@@ -882,7 +934,11 @@ onBeforeUnmount(() => {
       </section>
 
       <form class="configuration-form" :aria-busy="isSaving" @submit.prevent="saveApplicationAsync">
-        <section class="settings-card" aria-labelledby="redirect-uris-title">
+        <section
+          class="settings-card redirect-uri-settings"
+          :class="{ changed: hasRedirectUriChanges }"
+          aria-labelledby="redirect-uris-title"
+        >
           <h2 id="redirect-uris-title" class="settings-title">
             {{ t('app.applicationManagement.redirectUrisTitle') }}
           </h2>
@@ -893,7 +949,12 @@ onBeforeUnmount(() => {
             {{ t('app.applicationManagement.redirectUrisLabel') }}
           </div>
           <ul class="redirect-uri-list" aria-labelledby="redirect-uri-list-label">
-            <li v-for="(entry, index) in redirectUris" :key="entry.id" class="redirect-uri-row">
+            <li
+              v-for="(entry, index) in redirectUris"
+              :key="entry.id"
+              class="redirect-uri-row"
+              :class="{ changed: isRedirectUriChanged(entry) }"
+            >
               <input
                 ref="redirectUriInputs"
                 v-model="entry.value"
