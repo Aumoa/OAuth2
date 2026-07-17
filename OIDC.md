@@ -1,9 +1,9 @@
 # OpenID Connect provider
 
 This service acts as an OpenID Provider for applications registered in the
-application management screen. Registered applications are public clients and
-use the Authorization Code flow with mandatory PKCE (`S256`). Client secrets and
-refresh tokens are not currently issued.
+application management screen. Web, Android, iOS, and macOS applications are
+public clients and use the Authorization Code flow with mandatory PKCE
+(`S256`). Client secrets and refresh tokens are not currently issued.
 
 ## Public endpoints
 
@@ -61,6 +61,19 @@ requests to `OAuth2.Backend`.
 4. Configure the client as a public/no-secret OIDC client with Authorization
    Code flow and PKCE `S256`.
 5. Set the authority/issuer to the configured `OpenId:Issuer`.
+
+Redirect URI rules depend on the immutable application type:
+
+- Web: exact HTTPS redirects; exact HTTP loopback redirects are accepted for
+  local development.
+- Android and iOS: exact claimed HTTPS redirects or reverse-domain private URI
+  schemes such as `com.example.app:/oauth/callback`.
+- macOS: the Android/iOS options plus dynamic loopback redirects. Register a
+  port-free base such as `http://127.0.0.1/oauth/callback`; an authorization
+  request may use any ephemeral port while retaining the exact IP, path, and
+  query. The token request must repeat that actual redirect URI exactly.
+
+Prefer `127.0.0.1` and `[::1]` over `localhost` for macOS loopback redirects.
 
 Authorization requests must include `client_id`, `redirect_uri`,
 `response_type=code`, an `openid` scope, `state`, `code_challenge`, and

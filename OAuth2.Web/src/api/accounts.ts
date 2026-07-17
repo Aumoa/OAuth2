@@ -34,7 +34,10 @@ export function resolveAuthorizationRedirect(
   const actual = new URL(login.redirectUri, window.location.origin);
   const expected = new URL(authorization.redirectUri, window.location.origin);
   if (
-    actual.origin !== expected.origin
+    actual.protocol !== expected.protocol
+    || actual.username !== expected.username
+    || actual.password !== expected.password
+    || actual.host !== expected.host
     || actual.pathname !== expected.pathname
     || actual.hash !== expected.hash
   ) {

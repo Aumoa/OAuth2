@@ -43,13 +43,7 @@ public sealed record UpdateApplicationForm
                 return false;
             }
 
-            if (!Uri.TryCreate(redirectUri, UriKind.Absolute, out var uri)
-                || string.IsNullOrWhiteSpace(uri.Host)
-                || !string.IsNullOrEmpty(uri.UserInfo)
-                || !string.IsNullOrEmpty(uri.Fragment)
-                || (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
-                    && (!string.Equals(uri.Scheme, Uri.UriSchemeHttp, StringComparison.OrdinalIgnoreCase)
-                        || !uri.IsLoopback)))
+            if (!OidcRedirectUriPolicy.IsValidForAnyApplicationType(redirectUri))
             {
                 error = "body.redirectUris contains an invalid redirect URI";
                 return false;

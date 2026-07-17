@@ -254,15 +254,24 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         await connection.OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        const string LOCK_QUERY = "SELECT `id` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL FOR UPDATE";
+        const string LOCK_QUERY = "SELECT `application_type` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL FOR UPDATE";
         var command = new CommandDefinition(
             LOCK_QUERY,
             new { id, ownerId },
             transaction,
             cancellationToken: cancellationToken);
-        if (await connection.QuerySingleOrDefaultAsync<string>(command) is null)
+        var applicationType = await connection.QuerySingleOrDefaultAsync<string>(command);
+        if (applicationType is null)
         {
             return false;
+        }
+
+        if (redirectUris.Any(value =>
+            !OidcRedirectUriPolicy.IsValidRegistration(value, applicationType)))
+        {
+            throw new ArgumentException(
+                "A redirect URI is not valid for the application type.",
+                nameof(redirectUris));
         }
 
         const string REMOVE_CLAIMS_QUERY = "UPDATE `client_claim` SET `removed_at` = @removedAt WHERE `client_id` = @id AND `name` IN @names AND `removed_at` IS NULL";

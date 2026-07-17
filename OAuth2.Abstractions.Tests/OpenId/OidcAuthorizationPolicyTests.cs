@@ -74,6 +74,29 @@ public sealed class OidcAuthorizationPolicyTests
         Assert.Equal("invalid_request", error);
     }
 
+    [Fact]
+    public void TryValidateRegisteredApplication_AcceptsDynamicMacOsLoopbackPort()
+    {
+        var request = CreateRequest() with
+        {
+            RedirectUri = "http://127.0.0.1:52147/signin-oidc"
+        };
+        var application = CreateApplication(
+            OAuthApplicationTypes.MacOs,
+            "http://127.0.0.1/signin-oidc");
+
+        var result = OidcAuthorizationPolicy.TryValidateRegisteredApplication(
+            request,
+            application,
+            out _,
+            out var error,
+            out var canRedirect);
+
+        Assert.True(result);
+        Assert.True(canRedirect);
+        Assert.Null(error);
+    }
+
     private static OidcAuthorizationRequest CreateRequest()
     {
         var verifier = Pkce.CreateCodeVerifier();
@@ -90,7 +113,9 @@ public sealed class OidcAuthorizationPolicyTests
         };
     }
 
-    private static OAuthApplicationConfiguration CreateApplication() =>
+    private static OAuthApplicationConfiguration CreateApplication(
+        string applicationType = OAuthApplicationTypes.Web,
+        string redirectUri = "https://service.example/signin-oidc") =>
         new()
         {
             Application = new OAuthApplication
@@ -98,10 +123,10 @@ public sealed class OidcAuthorizationPolicyTests
                 Id = "service-client",
                 OwnerId = "owner",
                 Name = "Service",
-                ApplicationType = OAuthApplicationTypes.Web,
+                ApplicationType = applicationType,
                 CreatedAt = DateTime.UtcNow
             },
-            RedirectUris = ["https://service.example/signin-oidc"],
+            RedirectUris = [redirectUri],
             AllowedScopes = ["openid", "profile", "email"]
         };
 }

@@ -34,7 +34,11 @@ public static class OidcAuthorizationPolicy
         }
 
         if (string.IsNullOrWhiteSpace(request.RedirectUri)
-            || !configuration.RedirectUris.Contains(request.RedirectUri, StringComparer.Ordinal))
+            || !configuration.RedirectUris.Any(registeredRedirectUri =>
+                OidcRedirectUriPolicy.Matches(
+                    request.RedirectUri,
+                    registeredRedirectUri,
+                    configuration.Application.ApplicationType)))
         {
             error = "invalid_redirect_uri";
             return false;
