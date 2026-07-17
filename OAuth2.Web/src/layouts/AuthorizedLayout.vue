@@ -35,7 +35,7 @@ import Topbar from '../components/Topbar.vue';
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  padding: 16px 24px;
+  padding: 16px 24px 16px 40px;
 }
 </style>
 

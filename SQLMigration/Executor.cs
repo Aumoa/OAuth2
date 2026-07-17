@@ -6,8 +6,20 @@ namespace SQLMigration;
 
 public static class Executor
 {
-    public static async ValueTask RunAsync(string connectionString, string databaseName, IScript[] scripts, TextWriter logger, CancellationToken cancellationToken = default)
+    public static async ValueTask RunAsync(
+        string connectionString,
+        string databaseName,
+        IScript[] scripts,
+        TextWriter logger,
+        AppliedMigrationMismatchBehavior mismatchBehavior,
+        CancellationToken cancellationToken = default)
     {
+        if (mismatchBehavior is not AppliedMigrationMismatchBehavior.Fail
+            and not AppliedMigrationMismatchBehavior.RevertAndApply)
+        {
+            throw new ArgumentOutOfRangeException(nameof(mismatchBehavior));
+        }
+
         var builder = new MySqlConnectionStringBuilder(connectionString)
         {
             Database = string.Empty
@@ -24,7 +36,7 @@ USE `{escapedDatabaseName}`;
         var commandDef = new CommandDefinition(QUERY1, cancellationToken: cancellationToken);
         await connection.ExecuteAsync(commandDef);
 
-        await MigrationLockScript.EnterAsync(connection, logger, cancellationToken);
+        var lockName = await MigrationLockScript.EnterAsync(connection, databaseName, logger, cancellationToken);
         try
         {
             var installedItems = await MigrationTableScript.ReadAsync(connection, cancellationToken);
@@ -44,38 +56,47 @@ USE `{escapedDatabaseName}`;
             }
 
             scripts = [.. scripts.OrderBy(s => s.InstalledRank)];
-            if (scripts.Length == 0)
+            var scriptsByRank = scripts.ToDictionary(static script => script.InstalledRank);
+            var installedByRank = installedItems.ToDictionary(static installed => installed.InstalledRank);
+            var divergenceRank = int.MaxValue;
+            foreach (var script in scripts)
             {
-                logger.WriteLine("No migrations to apply.");
-                return;
-            }
-
-            int startIndex = scripts.Length;
-            for (int i = 0; i < scripts.Length; ++i)
-            {
-                var s = scripts[i];
-                var f = Array.FindIndex(installedItems, i => i.InstalledRank == s.InstalledRank);
-                if (f == -1)
+                if (!installedByRank.TryGetValue(script.InstalledRank, out var installed)
+                    || installed.UpSql != script.UpSql
+                    || installed.DownSql != script.DownSql)
                 {
-                    startIndex = i;
-                    break;
-                }
-
-                var installed = installedItems[f];
-                if (installed.UpSql != s.UpSql || installed.DownSql != s.DownSql)
-                {
-                    startIndex = i;
-                    break;
+                    divergenceRank = Math.Min(divergenceRank, script.InstalledRank);
                 }
             }
 
-            if (startIndex >= scripts.Length)
+            foreach (var installed in installedItems)
+            {
+                if (!scriptsByRank.ContainsKey(installed.InstalledRank))
+                {
+                    divergenceRank = Math.Min(divergenceRank, installed.InstalledRank);
+                }
+            }
+
+            if (divergenceRank == int.MaxValue)
             {
                 logger.WriteLine("No new migrations to apply.");
                 return;
             }
 
-            foreach (var installed in installedItems.Where(i => i.InstalledRank >= scripts[startIndex].InstalledRank))
+            var migrationsToRevert = installedItems
+                .Where(installed => installed.InstalledRank >= divergenceRank)
+                .OrderByDescending(static installed => installed.InstalledRank)
+                .ToArray();
+            if (migrationsToRevert.Length > 0
+                && mismatchBehavior == AppliedMigrationMismatchBehavior.Fail)
+            {
+                throw new InvalidOperationException(
+                    $"Applied migration history diverges at rank {divergenceRank}. "
+                    + "Automatic rollback is disabled in this environment. "
+                    + "Restore the applied migration scripts or add a new forward-only migration.");
+            }
+
+            foreach (var installed in migrationsToRevert)
             {
                 logger.WriteLine("Reverting migration with rank {0} - {1} to the previous state.", installed.InstalledRank, installed.Name);
 
@@ -94,11 +115,10 @@ USE `{escapedDatabaseName}`;
                 }
             }
 
-            foreach (var script in scripts.Skip(startIndex))
+            foreach (var script in scripts.Where(script => script.InstalledRank >= divergenceRank))
             {
                 logger.WriteLine("Applying migration with rank {0} - {1}.", script.InstalledRank, script.Name);
 
-                var installed = Array.Find(installedItems, p => p.InstalledRank == script.InstalledRank);
                 try
                 {
                     await using var tx = await connection.BeginTransactionAsync(cancellationToken);
@@ -118,7 +138,7 @@ USE `{escapedDatabaseName}`;
         }
         finally
         {
-            await MigrationLockScript.LeaveAsync(connection, cancellationToken);
+            await MigrationLockScript.LeaveAsync(connection, lockName, logger, CancellationToken.None);
         }
     }
 }

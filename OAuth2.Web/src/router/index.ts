@@ -38,17 +38,48 @@ export const router = createRouter({
             {
               path: '',
               name: 'applications',
+              component: () => import('../views/ApplicationGroupsView.vue'),
+            },
+            {
+              path: 'personal',
+              name: 'applications-personal',
               component: () => import('../views/ManageApplicationsView.vue'),
             },
             {
-              path: 'new',
-              name: 'applications-new',
+              path: 'personal/new',
+              name: 'applications-personal-new',
               component: () => import('../views/CreateApplicationView.vue'),
             },
             {
-              path: 'edit/:clientId(.+)',
-              name: 'applications-edit',
+              path: 'personal/edit/:clientId(.+)',
+              name: 'applications-personal-edit',
               component: () => import('../views/EditApplicationView.vue'),
+            },
+            {
+              path: 'organizations/:organizationId',
+              name: 'applications-organization',
+              component: () => import('../views/ManageApplicationsView.vue'),
+            },
+            {
+              path: 'organizations/:organizationId/new',
+              name: 'applications-organization-new',
+              component: () => import('../views/CreateApplicationView.vue'),
+            },
+            {
+              path: 'organizations/:organizationId/edit/:clientId(.+)',
+              name: 'applications-organization-edit',
+              component: () => import('../views/EditApplicationView.vue'),
+            },
+            {
+              path: 'new',
+              redirect: { name: 'applications-personal-new' },
+            },
+            {
+              path: 'edit/:clientId(.+)',
+              redirect: route => ({
+                name: 'applications-personal-edit',
+                params: { clientId: route.params.clientId },
+              }),
             },
           ],
         },

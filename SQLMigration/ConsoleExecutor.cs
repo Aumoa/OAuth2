@@ -49,9 +49,15 @@ internal static class ConsoleExecutor
 
         try
         {
-            await Executor.RunAsync(connectionString, databaseName, [.. scripts.GetScripts()], Console.Out, cts.Token);
+            await Executor.RunAsync(
+                connectionString,
+                databaseName,
+                [.. scripts.GetScripts()],
+                Console.Out,
+                AppliedMigrationMismatchBehavior.Fail,
+                cts.Token);
         }
-        catch (InvalidOperationException e)
+        catch (Exception e) when (e is InvalidOperationException or TimeoutException)
         {
             Console.Error.WriteLine(e);
             return -1;

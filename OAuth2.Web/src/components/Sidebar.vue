@@ -1,39 +1,103 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { useRoute } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import SidebarMainButton from './SidebarMainButton.vue';
+
+interface TransientNavigationButton {
+  path: string;
+  icon: string;
+  label: string;
+  indentLevel: number;
+  tone: 'default' | 'organization';
+}
 
 const { t } = useI18n();
 const route = useRoute();
-const createApplicationPath = '/applications/new';
+const router = useRouter();
 const mainButtonHeight = 44;
 const navigationGap = 4;
 const focusedButtonIndex = ref<number | null>(null);
-const transientApplicationButton = computed(() => {
-  if (route.name === 'applications-new') {
+const organizationId = computed(() => {
+  const value = route.params.organizationId;
+  if (value === undefined) {
+    return undefined;
+  }
+
+  return Array.isArray(value) ? value.join('/') : value;
+});
+const applicationGroupButton = computed<TransientNavigationButton | null>(() => {
+  if (typeof route.name === 'string' && route.name.startsWith('applications-personal')) {
     return {
-      path: createApplicationPath,
-      icon: 'add_circle',
-      label: t('app.sidebar.newApplication'),
+      path: router.resolve({ name: 'applications-personal' }).path,
+      icon: 'person',
+      label: t('app.sidebar.personalApplications'),
+      indentLevel: 1,
+      tone: 'default',
     };
   }
 
-  if (route.name === 'applications-edit') {
+  if (
+    typeof route.name === 'string'
+    && route.name.startsWith('applications-organization')
+    && organizationId.value !== undefined
+  ) {
+    return {
+      path: router.resolve({
+        name: 'applications-organization',
+        params: { organizationId: organizationId.value },
+      }).path,
+      icon: 'domain',
+      label: t('app.sidebar.organizationApplications', {
+        organization: organizationId.value,
+      }),
+      indentLevel: 1,
+      tone: 'organization',
+    };
+  }
+
+  return null;
+});
+const applicationLeafButton = computed<TransientNavigationButton | null>(() => {
+  if (
+    route.name === 'applications-personal-new'
+    || route.name === 'applications-organization-new'
+  ) {
+    return {
+      path: route.path,
+      icon: 'add_circle',
+      label: t('app.sidebar.newApplication'),
+      indentLevel: 1,
+      tone: organizationId.value === undefined ? 'default' : 'organization',
+    };
+  }
+
+  if (
+    route.name === 'applications-personal-edit'
+    || route.name === 'applications-organization-edit'
+  ) {
     const clientIdParam = route.params.clientId;
     const clientId = Array.isArray(clientIdParam) ? clientIdParam.join('/') : clientIdParam;
     return {
       path: route.path,
       icon: 'edit',
       label: t('app.sidebar.editApplication', { clientId }),
+      indentLevel: 1,
+      tone: organizationId.value === undefined ? 'default' : 'organization',
     };
   }
 
   return null;
 });
-const navigationPaths = computed(() => transientApplicationButton.value
-  ? ['/', '/applications', transientApplicationButton.value.path]
-  : ['/', '/applications']);
+const transientApplicationButtons = computed(() => [
+  applicationGroupButton.value,
+  applicationLeafButton.value,
+].filter((button): button is TransientNavigationButton => button !== null));
+const navigationPaths = computed(() => [
+  '/',
+  '/applications',
+  ...transientApplicationButtons.value.map(button => button.path),
+]);
 const activeButtonIndex = computed(() => {
   const exactIndex = navigationPaths.value.indexOf(route.path);
   if (exactIndex >= 0) {
@@ -52,15 +116,27 @@ const highlightedButtonIndex = computed(() => {
     ? focusedIndex
     : activeButtonIndex.value;
 });
-const highlightedButtonIndentLevel = computed(() => (
-  transientApplicationButton.value && highlightedButtonIndex.value === 2 ? 1 : 0
+const highlightedButton = computed(() => (
+  highlightedButtonIndex.value >= 2
+    ? transientApplicationButtons.value[highlightedButtonIndex.value - 2]
+    : undefined
 ));
+const highlightedButtonIndentLevel = computed(() => highlightedButton.value?.indentLevel ?? 0);
 const navigationStyle = computed(() => ({
   '--sidebar-main-button-height': `${mainButtonHeight}px`,
   '--sidebar-navigation-gap': `${navigationGap}px`,
   '--sidebar-active-button-indent': `${highlightedButtonIndentLevel.value * 20}px`,
   '--sidebar-active-button-offset': `${Math.max(highlightedButtonIndex.value, 0)
     * (mainButtonHeight + navigationGap)}px`,
+  '--sidebar-highlight-border': highlightedButton.value?.tone === 'organization'
+    ? 'color-mix(in srgb, #a78bfa 52%, var(--border))'
+    : 'var(--accent-border)',
+  '--sidebar-highlight-background': highlightedButton.value?.tone === 'organization'
+    ? 'color-mix(in srgb, #8b5cf6 13%, transparent)'
+    : 'var(--accent-bg)',
+  '--sidebar-highlight-accent': highlightedButton.value?.tone === 'organization'
+    ? '#8b5cf6'
+    : 'var(--accent)',
 }));
 
 function focusButton(index: number): void {
@@ -103,15 +179,18 @@ function blurButton(index: number): void {
   width: calc(100% - var(--sidebar-active-button-indent, 0px));
   height: var(--sidebar-main-button-height);
   box-sizing: border-box;
-  border: 1px solid var(--accent-border);
+  border: 1px solid var(--sidebar-highlight-border, var(--accent-border));
   border-radius: 9px;
-  background: var(--accent-bg);
-  box-shadow: inset 3px 0 0 var(--accent);
+  background: var(--sidebar-highlight-background, var(--accent-bg));
+  box-shadow: inset 3px 0 0 var(--sidebar-highlight-accent, var(--accent));
   opacity: 0;
   pointer-events: none;
   transform: translateY(var(--sidebar-active-button-offset, 0));
   transition:
     opacity 120ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease,
     left 220ms cubic-bezier(0.22, 1, 0.36, 1),
     width 220ms cubic-bezier(0.22, 1, 0.36, 1),
     transform 220ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -154,13 +233,15 @@ function blurButton(index: number): void {
         @blur="blurButton(1)"
       />
       <SidebarMainButton
-        v-if="transientApplicationButton"
-        :icon="transientApplicationButton.icon"
-        :label="transientApplicationButton.label"
-        :to="transientApplicationButton.path"
-        :indent-level="1"
-        @focus="focusButton(2)"
-        @blur="blurButton(2)"
+        v-for="(button, index) in transientApplicationButtons"
+        :key="button.path"
+        :icon="button.icon"
+        :label="button.label"
+        :to="button.path"
+        :indent-level="button.indentLevel"
+        :tone="button.tone"
+        @focus="focusButton(index + 2)"
+        @blur="blurButton(index + 2)"
       />
     </nav>
   </div>

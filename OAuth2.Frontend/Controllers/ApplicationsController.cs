@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using System.Text;
 using System.Text.Json;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -18,6 +20,7 @@ public sealed class ApplicationsController(
     [HttpPost]
     public async Task<IActionResult> CreateAsync(
         [FromBody] CreateApplicationForm form,
+        [FromQuery] string? organizationId,
         CancellationToken cancellationToken)
     {
         if (!BrowserActionRequest.IsValid(Request))
@@ -30,32 +33,35 @@ public sealed class ApplicationsController(
             return BadRequest(error);
         }
 
-        var ownerId = await GetOwnerIdAsync(cancellationToken);
-        if (ownerId is null)
+        var owner = await ResolveOwnerAsync(organizationId, cancellationToken);
+        if (OwnerResolutionError(owner) is { } ownerError)
         {
-            return Unauthorized();
+            return ownerError;
         }
 
-        var response = await backend.CreateApplicationAsync(ownerId, form, cancellationToken);
+        var response = await backend.CreateApplicationAsync(owner.OwnerId!, form, cancellationToken);
         return FromBackend(response);
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetAsync(CancellationToken cancellationToken)
+    public async Task<IActionResult> GetAsync(
+        [FromQuery] string? organizationId,
+        CancellationToken cancellationToken)
     {
-        var ownerId = await GetOwnerIdAsync(cancellationToken);
-        if (ownerId is null)
+        var owner = await ResolveOwnerAsync(organizationId, cancellationToken);
+        if (OwnerResolutionError(owner) is { } ownerError)
         {
-            return Unauthorized();
+            return ownerError;
         }
 
-        var response = await backend.GetOwnedApplicationsAsync(ownerId, cancellationToken);
+        var response = await backend.GetOwnedApplicationsAsync(owner.OwnerId!, cancellationToken);
         return FromBackend(response);
     }
 
     [HttpGet("{**id}")]
     public async Task<IActionResult> GetAsync(
         [FromRoute] string id,
+        [FromQuery] string? organizationId,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(id))
@@ -63,13 +69,13 @@ public sealed class ApplicationsController(
             return BadRequest();
         }
 
-        var ownerId = await GetOwnerIdAsync(cancellationToken);
-        if (ownerId is null)
+        var owner = await ResolveOwnerAsync(organizationId, cancellationToken);
+        if (OwnerResolutionError(owner) is { } ownerError)
         {
-            return Unauthorized();
+            return ownerError;
         }
 
-        var response = await backend.GetOwnedApplicationAsync(ownerId, id, cancellationToken);
+        var response = await backend.GetOwnedApplicationAsync(owner.OwnerId!, id, cancellationToken);
         return FromBackend(response);
     }
 
@@ -77,6 +83,7 @@ public sealed class ApplicationsController(
     public async Task<IActionResult> UpdateAsync(
         [FromRoute] string id,
         [FromBody] UpdateApplicationForm form,
+        [FromQuery] string? organizationId,
         CancellationToken cancellationToken)
     {
         if (!BrowserActionRequest.IsValid(Request))
@@ -94,14 +101,14 @@ public sealed class ApplicationsController(
             return BadRequest(error);
         }
 
-        var ownerId = await GetOwnerIdAsync(cancellationToken);
-        if (ownerId is null)
+        var owner = await ResolveOwnerAsync(organizationId, cancellationToken);
+        if (OwnerResolutionError(owner) is { } ownerError)
         {
-            return Unauthorized();
+            return ownerError;
         }
 
         var response = await backend.UpdateApplicationAsync(
-            ownerId,
+            owner.OwnerId!,
             id,
             form,
             cancellationToken);
@@ -111,6 +118,7 @@ public sealed class ApplicationsController(
     [HttpDelete("{**id}")]
     public async Task<IActionResult> DeleteAsync(
         [FromRoute] string id,
+        [FromQuery] string? organizationId,
         CancellationToken cancellationToken)
     {
         if (!BrowserActionRequest.IsValid(Request))
@@ -123,27 +131,57 @@ public sealed class ApplicationsController(
             return BadRequest();
         }
 
-        var ownerId = await GetOwnerIdAsync(cancellationToken);
-        if (ownerId is null)
+        var owner = await ResolveOwnerAsync(organizationId, cancellationToken);
+        if (OwnerResolutionError(owner) is { } ownerError)
         {
-            return Unauthorized();
+            return ownerError;
         }
 
-        var response = await backend.DeleteApplicationAsync(ownerId, id, cancellationToken);
+        var response = await backend.DeleteApplicationAsync(owner.OwnerId!, id, cancellationToken);
         return FromBackend(response);
     }
 
-    private async Task<string?> GetOwnerIdAsync(CancellationToken cancellationToken)
+    private async Task<OwnerResolution> ResolveOwnerAsync(
+        string? organizationId,
+        CancellationToken cancellationToken)
     {
         if (!TryGetSessionId(out var sessionId))
         {
-            return null;
+            return new(OwnerResolutionStatus.Unauthorized, null);
         }
 
         var session = await sessions.GetAsync(sessionId, cancellationToken);
-        var ownerId = GetStringClaim(session?.Claims, "preferred_username");
-        return string.IsNullOrWhiteSpace(ownerId) ? null : ownerId;
+        if (session is null)
+        {
+            return new(OwnerResolutionStatus.Unauthorized, null);
+        }
+
+        if (organizationId is null)
+        {
+            var ownerId = GetStringClaim(session.Claims, "preferred_username");
+            return string.IsNullOrWhiteSpace(ownerId)
+                ? new(OwnerResolutionStatus.Unauthorized, null)
+                : new(OwnerResolutionStatus.Success, ownerId);
+        }
+
+        if (string.IsNullOrWhiteSpace(organizationId)
+            || !HasOrganizationMembership(session.Claims, organizationId))
+        {
+            return new(OwnerResolutionStatus.Forbidden, null);
+        }
+
+        return new(
+            OwnerResolutionStatus.Success,
+            CreateOrganizationOwnerId(organizationId));
     }
+
+    private IActionResult? OwnerResolutionError(OwnerResolution owner) => owner.Status switch
+    {
+        OwnerResolutionStatus.Success => null,
+        OwnerResolutionStatus.Unauthorized => Unauthorized(),
+        OwnerResolutionStatus.Forbidden => Forbid(),
+        _ => throw new ArgumentOutOfRangeException(nameof(owner))
+    };
 
     private bool TryGetSessionId(out string sessionId)
     {
@@ -171,4 +209,36 @@ public sealed class ApplicationsController(
 
         return value.GetString();
     }
+
+    private static bool HasOrganizationMembership(
+        IReadOnlyDictionary<string, JsonElement> claims,
+        string organizationId)
+    {
+        if (!claims.TryGetValue("groups", out var groups)
+            || groups.ValueKind != JsonValueKind.Array)
+        {
+            return false;
+        }
+
+        return groups.EnumerateArray().Any(group =>
+            group.ValueKind == JsonValueKind.String
+            && string.Equals(group.GetString(), organizationId, StringComparison.Ordinal));
+    }
+
+    private static string CreateOrganizationOwnerId(string organizationId)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes(organizationId));
+        return $"organization:{Convert.ToHexStringLower(hash)}";
+    }
+
+    private enum OwnerResolutionStatus
+    {
+        Success,
+        Unauthorized,
+        Forbidden
+    }
+
+    private readonly record struct OwnerResolution(
+        OwnerResolutionStatus Status,
+        string? OwnerId);
 }

@@ -28,10 +28,7 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-if (app.Environment.IsDevelopment())
-{
-    await StartMigrationAsync(app.Lifetime.ApplicationStopping);
-}
+await StartMigrationAsync(app.Lifetime.ApplicationStopping);
 
 app.Run();
 
@@ -103,7 +100,16 @@ async ValueTask StartMigrationAsync(CancellationToken cancellationToken)
     var options = app.Services.GetRequiredService<IOptions<MySqlOptions>>();
     var scripts = new Scripts();
     var logger = new LoggerTextWriter(app.Logger);
-    await Executor.RunAsync(options.Value.ConnectionString, options.Value.Database, [.. scripts.GetScripts()], logger, cancellationToken);
+    var mismatchBehavior = app.Environment.IsDevelopment()
+        ? AppliedMigrationMismatchBehavior.RevertAndApply
+        : AppliedMigrationMismatchBehavior.Fail;
+    await Executor.RunAsync(
+        options.Value.ConnectionString,
+        options.Value.Database,
+        [.. scripts.GetScripts()],
+        logger,
+        mismatchBehavior,
+        cancellationToken);
 }
 
 static void ValidateEmailLocalization(IServiceProvider services)

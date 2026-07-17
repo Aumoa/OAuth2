@@ -19,8 +19,9 @@ export class Applications {
     clientId: string,
     name: string,
     applicationType: OAuthApplicationType,
+    organizationId?: string,
   ): Promise<ApplicationSummary> {
-    const response = await fetch('/api/v1/applications', {
+    const response = await fetch(Applications.collectionUri(organizationId), {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -37,8 +38,8 @@ export class Applications {
     return await response.json() as ApplicationSummary;
   }
 
-  static async deleteAsync(clientId: string): Promise<void> {
-    const response = await fetch(Applications.applicationUri(clientId), {
+  static async deleteAsync(clientId: string, organizationId?: string): Promise<void> {
+    const response = await fetch(Applications.applicationUri(clientId, organizationId), {
       method: 'DELETE',
       credentials: 'include',
       headers: {
@@ -50,8 +51,8 @@ export class Applications {
     }
   }
 
-  static async getAsync(clientId: string): Promise<ApplicationDetails> {
-    const response = await fetch(Applications.applicationUri(clientId), {
+  static async getAsync(clientId: string, organizationId?: string): Promise<ApplicationDetails> {
+    const response = await fetch(Applications.applicationUri(clientId, organizationId), {
       credentials: 'include',
       headers: {
         Accept: 'application/json',
@@ -64,8 +65,8 @@ export class Applications {
     return await response.json() as ApplicationDetails;
   }
 
-  static async listAsync(): Promise<ApplicationSummary[]> {
-    const response = await fetch('/api/v1/applications', {
+  static async listAsync(organizationId?: string): Promise<ApplicationSummary[]> {
+    const response = await fetch(Applications.collectionUri(organizationId), {
       credentials: 'include',
       headers: {
         Accept: 'application/json',
@@ -82,8 +83,9 @@ export class Applications {
     clientId: string,
     redirectUris: string[],
     allowedScopes: string[],
+    organizationId?: string,
   ): Promise<void> {
-    const response = await fetch(Applications.applicationUri(clientId), {
+    const response = await fetch(Applications.applicationUri(clientId, organizationId), {
       method: 'PUT',
       credentials: 'include',
       headers: {
@@ -98,7 +100,17 @@ export class Applications {
     }
   }
 
-  private static applicationUri(clientId: string): string {
-    return `/api/v1/applications/${encodeURIComponent(clientId)}`;
+  private static collectionUri(organizationId?: string): string {
+    const baseUri = '/api/v1/applications';
+    return organizationId === undefined
+      ? baseUri
+      : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;
+  }
+
+  private static applicationUri(clientId: string, organizationId?: string): string {
+    const baseUri = `/api/v1/applications/${encodeURIComponent(clientId)}`;
+    return organizationId === undefined
+      ? baseUri
+      : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;
   }
 }
