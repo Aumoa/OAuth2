@@ -97,6 +97,7 @@ onMounted(() => {
 }
 
 .application-group-name {
+  display: block;
   margin: 0;
   overflow: hidden;
   color: var(--text-h);
@@ -108,6 +109,7 @@ onMounted(() => {
 }
 
 .application-group-description {
+  display: block;
   margin: 3px 0 0;
   color: var(--text-muted);
   font-size: 12px;
