@@ -538,14 +538,14 @@ CREATE TABLE `organization_group_member` (
     `account_id` VARCHAR(128) NOT NULL,
     `created_at` DATETIME NOT NULL DEFAULT NOW(),
     PRIMARY KEY (`organization_id`, `group_id`, `account_id`),
-    INDEX `IDX__organization_group_member__account_id__organization_id__group_id`
+    INDEX `IDX__org_group_member__account_org_group`
         (`account_id`, `organization_id`, `group_id`)
 );
 ";
 
         public string DownSql => @"
-DROP TABLE `organization_group_member`;
-DROP TABLE `organization_group`;
+DROP TABLE IF EXISTS `organization_group_member`;
+DROP TABLE IF EXISTS `organization_group`;
 ";
     }
 }
