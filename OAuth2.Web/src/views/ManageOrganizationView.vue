@@ -382,8 +382,7 @@ onBeforeUnmount(() => {
 }
 
 .members-panel,
-.owner-transfer-panel,
-.organization-delete-panel {
+.organization-danger-zone {
   width: 100%;
   margin-top: 20px;
   padding: 22px;
@@ -555,21 +554,33 @@ onBeforeUnmount(() => {
   font-size: 12px;
 }
 
-.owner-transfer-panel {
-  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
-  background: color-mix(in srgb, var(--danger-bg) 22%, var(--surface));
-}
-
-.organization-delete-panel {
+.organization-danger-zone {
   border-color: color-mix(in srgb, var(--danger) 52%, var(--border));
-  background: color-mix(in srgb, var(--danger-bg) 34%, var(--surface));
+  background: color-mix(in srgb, var(--danger-bg) 26%, var(--surface));
 }
 
-.danger-title {
+.danger-zone-title {
   margin: 0;
   color: var(--danger);
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 800;
+}
+
+.danger-action {
+  margin-top: 18px;
+}
+
+.danger-action + .danger-action {
+  margin-top: 22px;
+  padding-top: 22px;
+  border-top: 1px solid color-mix(in srgb, var(--danger) 24%, var(--border));
+}
+
+.danger-action-title {
+  margin: 0;
+  color: var(--text-h);
+  font-size: 14px;
+  font-weight: 750;
 }
 
 .owner-transfer-form {
@@ -873,71 +884,77 @@ onBeforeUnmount(() => {
       </nav>
     </section>
 
-    <section v-if="organization && isOwner" class="owner-transfer-panel" aria-labelledby="owner-transfer-title">
-      <h2 id="owner-transfer-title" class="danger-title">
-        {{ t('app.organizationManagement.ownerTransfer.title') }}
-      </h2>
-      <p class="section-description">
-        {{ t('app.organizationManagement.ownerTransfer.description') }}
-      </p>
-      <form class="owner-transfer-form" @submit.prevent="transferOwnershipAsync">
-        <input
-          v-model="transferAccountId"
-          class="member-input"
-          type="text"
-          maxlength="128"
-          autocomplete="off"
-          :placeholder="t('app.organizationManagement.ownerTransfer.placeholder')"
-          :disabled="isTransferringOwnership"
-        />
-        <button
-          type="submit"
-          class="app-button owner-transfer-button"
-          :disabled="isTransferringOwnership || !transferAccountId.trim()"
-        >
-          {{ t('app.organizationManagement.ownerTransfer.submit') }}
-        </button>
-      </form>
-      <p v-if="transferError" class="member-feedback" role="alert">
-        {{ transferError }}
-      </p>
-    </section>
-
     <section
       v-if="organization && isOwner"
-      class="organization-delete-panel"
-      aria-labelledby="organization-delete-title"
+      class="organization-danger-zone"
+      aria-labelledby="organization-danger-zone-title"
     >
-      <h2 id="organization-delete-title" class="danger-title">
-        {{ t('app.organizationManagement.organizationDelete.title') }}
+      <h2 id="organization-danger-zone-title" class="danger-zone-title">
+        {{ t('app.organizationManagement.dangerZone') }}
       </h2>
-      <p class="section-description">
-        {{ t('app.organizationManagement.organizationDelete.description') }}
-      </p>
-      <form class="organization-delete-form" @submit.prevent="deleteOrganizationAsync">
-        <input
-          v-model="deleteConfirmation"
-          class="member-input organization-delete-input"
-          type="text"
-          maxlength="128"
-          autocomplete="off"
-          :placeholder="t('app.organizationManagement.organizationDelete.placeholder', {
-            name: organization.name,
-          })"
-          :aria-label="t('app.organizationManagement.organizationDelete.confirmationLabel')"
-          :disabled="isDeletingOrganization"
-        />
-        <button
-          type="submit"
-          class="app-button organization-delete-button"
-          :disabled="isDeletingOrganization || !deleteConfirmationMatches"
-        >
-          {{ t('app.organizationManagement.organizationDelete.submit') }}
-        </button>
-      </form>
-      <p v-if="deleteOrganizationError" class="member-feedback" role="alert">
-        {{ deleteOrganizationError }}
-      </p>
+
+      <div class="danger-action">
+        <h3 class="danger-action-title">
+          {{ t('app.organizationManagement.ownerTransfer.title') }}
+        </h3>
+        <p class="section-description">
+          {{ t('app.organizationManagement.ownerTransfer.description') }}
+        </p>
+        <form class="owner-transfer-form" @submit.prevent="transferOwnershipAsync">
+          <input
+            v-model="transferAccountId"
+            class="member-input"
+            type="text"
+            maxlength="128"
+            autocomplete="off"
+            :placeholder="t('app.organizationManagement.ownerTransfer.placeholder')"
+            :disabled="isTransferringOwnership"
+          />
+          <button
+            type="submit"
+            class="app-button owner-transfer-button"
+            :disabled="isTransferringOwnership || !transferAccountId.trim()"
+          >
+            {{ t('app.organizationManagement.ownerTransfer.submit') }}
+          </button>
+        </form>
+        <p v-if="transferError" class="member-feedback" role="alert">
+          {{ transferError }}
+        </p>
+      </div>
+
+      <div class="danger-action">
+        <h3 class="danger-action-title">
+          {{ t('app.organizationManagement.organizationDelete.title') }}
+        </h3>
+        <p class="section-description">
+          {{ t('app.organizationManagement.organizationDelete.description') }}
+        </p>
+        <form class="organization-delete-form" @submit.prevent="deleteOrganizationAsync">
+          <input
+            v-model="deleteConfirmation"
+            class="member-input organization-delete-input"
+            type="text"
+            maxlength="128"
+            autocomplete="off"
+            :placeholder="t('app.organizationManagement.organizationDelete.placeholder', {
+              name: organization.name,
+            })"
+            :aria-label="t('app.organizationManagement.organizationDelete.confirmationLabel')"
+            :disabled="isDeletingOrganization"
+          />
+          <button
+            type="submit"
+            class="app-button organization-delete-button"
+            :disabled="isDeletingOrganization || !deleteConfirmationMatches"
+          >
+            {{ t('app.organizationManagement.organizationDelete.submit') }}
+          </button>
+        </form>
+        <p v-if="deleteOrganizationError" class="member-feedback" role="alert">
+          {{ deleteOrganizationError }}
+        </p>
+      </div>
     </section>
   </section>
 </template>

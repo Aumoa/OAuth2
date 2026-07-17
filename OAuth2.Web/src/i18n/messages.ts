@@ -168,6 +168,7 @@ export const appMessages = {
         createdAt: '생성일',
         basicInformation: '기본 정보',
         manageApplications: '애플리케이션 관리',
+        dangerZone: '위험 영역',
         roles: {
           owner: '소유자',
           admin: '관리자',
@@ -197,7 +198,7 @@ export const appMessages = {
           },
         },
         ownerTransfer: {
-          title: '위험 영역 · 소유권 이전',
+          title: '소유권 이전',
           description: '조직 소유권을 다른 멤버에게 이전합니다. 이전 후 현재 소유자는 관리자가 됩니다.',
           placeholder: '새 소유자의 정확한 계정 ID',
           submit: '소유권 이전',
@@ -206,7 +207,7 @@ export const appMessages = {
           failed: '조직 소유권을 이전하지 못했습니다.',
         },
         organizationDelete: {
-          title: '위험 영역 · 조직 삭제',
+          title: '조직 삭제',
           description: '조직과 조직이 소유한 애플리케이션, 시크릿 및 권한 정보를 영구적으로 삭제합니다.',
           confirmationLabel: '조직 이름 확인',
           placeholder: '계속하려면 {name}을 정확히 입력하세요.',
@@ -489,6 +490,7 @@ export const appMessages = {
         createdAt: 'Created',
         basicInformation: 'Basic information',
         manageApplications: 'Manage applications',
+        dangerZone: 'Danger zone',
         roles: {
           owner: 'Owner',
           admin: 'Admin',
@@ -518,7 +520,7 @@ export const appMessages = {
           },
         },
         ownerTransfer: {
-          title: 'Danger zone · Transfer ownership',
+          title: 'Transfer ownership',
           description: 'Transfer the organization to another member. You will become an administrator afterward.',
           placeholder: 'Exact account ID of the new owner',
           submit: 'Transfer ownership',
@@ -527,7 +529,7 @@ export const appMessages = {
           failed: 'Organization ownership could not be transferred.',
         },
         organizationDelete: {
-          title: 'Danger zone · Delete organization',
+          title: 'Delete organization',
           description: 'Permanently delete the organization, its applications, secrets, and authorization data.',
           confirmationLabel: 'Confirm organization name',
           placeholder: 'Enter {name} exactly to continue.',
@@ -791,6 +793,7 @@ export const appMessages = {
         createdAt: '作成日',
         basicInformation: '基本情報',
         manageApplications: 'アプリケーション管理',
+        dangerZone: '危険な操作',
         roles: {
           owner: '所有者',
           admin: '管理者',
@@ -820,7 +823,7 @@ export const appMessages = {
           },
         },
         ownerTransfer: {
-          title: '危険な操作 · 所有権の移譲',
+          title: '所有権の移譲',
           description: '組織の所有権を別のメンバーに移譲します。移譲後、現在の所有者は管理者になります。',
           placeholder: '新しい所有者の正確なアカウントID',
           submit: '所有権を移譲',
@@ -829,7 +832,7 @@ export const appMessages = {
           failed: '組織の所有権を移譲できませんでした。',
         },
         organizationDelete: {
-          title: '危険な操作 · 組織を削除',
+          title: '組織を削除',
           description: '組織と、組織が所有するアプリケーション、シークレット、認可情報を完全に削除します。',
           confirmationLabel: '組織名の確認',
           placeholder: '続行するには{name}を正確に入力してください。',
