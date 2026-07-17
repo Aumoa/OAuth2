@@ -143,11 +143,31 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
 
+        return await GetApplicationAsync(id, ownerId, cancellationToken);
+    }
+
+    public async Task<OAuthApplicationConfiguration?> GetApplicationAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        return await GetApplicationAsync(id, null, cancellationToken);
+    }
+
+    private async Task<OAuthApplicationConfiguration?> GetApplicationAsync(
+        string id,
+        string? ownerId,
+        CancellationToken cancellationToken)
+    {
+
         using var connection = new MySqlConnection(mysqlOptions.Value.ConnectionString);
 
-        const string APPLICATION_QUERY = "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL";
+        var applicationQuery = ownerId is null
+            ? "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `removed_at` IS NULL"
+            : "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL";
         var command = new CommandDefinition(
-            APPLICATION_QUERY,
+            applicationQuery,
             new { id, ownerId },
             cancellationToken: cancellationToken);
         var application = await connection.QuerySingleOrDefaultAsync<OAuthApplication>(command);

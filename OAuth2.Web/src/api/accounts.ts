@@ -23,6 +23,47 @@ export interface LoginResponse {
   redirectUri?: string | null;
 }
 
+export function resolveAuthorizationRedirect(
+  login: LoginResponse,
+  authorization: AuthorizationRequest,
+): URL {
+  if (!login.redirectUri) {
+    throw new Error('Authorization redirect URI is missing.');
+  }
+
+  const actual = new URL(login.redirectUri, window.location.origin);
+  const expected = new URL(authorization.redirectUri, window.location.origin);
+  if (
+    actual.origin !== expected.origin
+    || actual.pathname !== expected.pathname
+    || actual.hash !== expected.hash
+  ) {
+    throw new Error('Authorization redirect URI is invalid.');
+  }
+
+  const remainingParameters = [...actual.searchParams.entries()];
+  for (const expectedParameter of expected.searchParams.entries()) {
+    const index = remainingParameters.findIndex(
+      ([name, value]) => name === expectedParameter[0] && value === expectedParameter[1],
+    );
+    if (index < 0) {
+      throw new Error('Authorization redirect URI is invalid.');
+    }
+
+    remainingParameters.splice(index, 1);
+  }
+
+  const code = remainingParameters.filter(([name, value]) => name === 'code' && value);
+  const state = remainingParameters.filter(
+    ([name, value]) => name === 'state' && value === authorization.state,
+  );
+  if (remainingParameters.length !== 2 || code.length !== 1 || state.length !== 1) {
+    throw new Error('Authorization redirect URI is invalid.');
+  }
+
+  return actual;
+}
+
 interface EmailVerificationChallenge {
   sub: string;
 }
@@ -121,19 +162,7 @@ export class Accounts {
       Accounts.setPendingEmailVerificationSub(login.sub);
       await router.replace('/verifyEmail');
     } else if (login.state === 'authenticated') {
-      if (!login.redirectUri) {
-        throw new Error('Authorization redirect URI is missing.');
-      }
-
-      const redirectUri = new URL(login.redirectUri, window.location.origin);
-      if (
-        redirectUri.origin !== window.location.origin
-        || redirectUri.pathname !== '/'
-        || !redirectUri.searchParams.get('code')
-        || !redirectUri.searchParams.get('state')
-      ) {
-        throw new Error('Authorization redirect URI is invalid.');
-      }
+      const redirectUri = resolveAuthorizationRedirect(login, authorization);
 
       Accounts.clearPendingEmailVerificationSub();
       window.location.assign(redirectUri.href);

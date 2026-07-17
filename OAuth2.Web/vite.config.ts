@@ -25,6 +25,31 @@ export default defineConfig(({ command }) => {
           changeOrigin: true,
           secure: false,
         },
+        '/.well-known': {
+          target: 'https://localhost:7140',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/authorize': {
+          target: 'https://localhost:7140',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/token': {
+          target: 'https://localhost:7140',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/userinfo': {
+          target: 'https://localhost:7140',
+          changeOrigin: true,
+          secure: false,
+        },
+        '/jwks': {
+          target: 'https://localhost:7140',
+          changeOrigin: true,
+          secure: false,
+        },
       },
     },
   };

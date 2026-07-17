@@ -36,8 +36,23 @@ public interface IBackendClient
         string? acceptLanguage,
         CancellationToken cancellationToken = default);
 
-    Task<BackendResponse> CreateAuthorizationCodeAsync(
+    Task<BackendResponse<LoginResponse>> CreateAuthorizationCodeAsync(
         LoginForm form,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse<OidcAuthorizationValidation>> ValidateOidcAuthorizationAsync(
+        OpenId.OidcAuthorizationRequest authorization,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse<OidcTokenResponse>> ExchangeOidcAuthorizationCodeAsync(
+        OidcTokenExchange exchange,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse<Dictionary<string, System.Text.Json.JsonElement>>> GetOidcUserInfoAsync(
+        string accessToken,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse<OidcJsonWebKeySet>> GetOidcJsonWebKeysAsync(
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> CreateAuthorizationCodeFromRememberedSessionAsync(

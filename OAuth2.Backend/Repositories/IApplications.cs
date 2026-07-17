@@ -15,6 +15,10 @@ public interface IApplications
         string ownerId,
         CancellationToken cancellationToken = default);
 
+    Task<OAuthApplicationConfiguration?> GetApplicationAsync(
+        string id,
+        CancellationToken cancellationToken = default);
+
     Task<OAuthApplicationConfiguration?> GetOwnedApplicationAsync(
         string id,
         string ownerId,

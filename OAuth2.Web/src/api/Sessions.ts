@@ -1,4 +1,8 @@
-import type { AuthorizationRequest, LoginResponse } from './accounts.ts';
+import {
+  resolveAuthorizationRedirect,
+  type AuthorizationRequest,
+  type LoginResponse,
+} from './accounts.ts';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
 const actionHeaders = {
@@ -51,19 +55,11 @@ export class Sessions {
     }
 
     const login = await response.json() as LoginResponse;
-    if (login.state !== 'authenticated' || !login.redirectUri) {
+    if (login.state !== 'authenticated') {
       throw new Error('Remembered sign-in response is invalid.');
     }
 
-    const redirectUri = new URL(login.redirectUri, window.location.origin);
-    if (
-      redirectUri.origin !== window.location.origin
-      || redirectUri.pathname !== '/'
-      || !redirectUri.searchParams.get('code')
-      || !redirectUri.searchParams.get('state')
-    ) {
-      throw new Error('Authorization redirect URI is invalid.');
-    }
+    const redirectUri = resolveAuthorizationRedirect(login, authorization);
 
     window.location.assign(redirectUri.href);
     return login;

@@ -127,7 +127,7 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
-    public Task<BackendResponse> CreateAuthorizationCodeAsync(
+    public Task<BackendResponse<LoginResponse>> CreateAuthorizationCodeAsync(
         LoginForm form,
         CancellationToken cancellationToken = default)
     {
@@ -136,12 +136,54 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             throw new ArgumentException("Form verification failed.", nameof(form));
         }
 
-        return SendAsync(
+        return SendForValueAsync<LoginForm, LoginResponse>(
             HttpMethod.Post,
             "/api/v1/authorization-codes",
             form,
-            null,
             cancellationToken);
+    }
+
+    public Task<BackendResponse<OidcAuthorizationValidation>> ValidateOidcAuthorizationAsync(
+        OpenId.OidcAuthorizationRequest authorization,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(authorization);
+        return SendForValueAsync<OpenId.OidcAuthorizationRequest, OidcAuthorizationValidation>(
+            HttpMethod.Post,
+            "/api/v1/oidc/authorization-requests/validation",
+            authorization,
+            cancellationToken);
+    }
+
+    public Task<BackendResponse<OidcTokenResponse>> ExchangeOidcAuthorizationCodeAsync(
+        OidcTokenExchange exchange,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(exchange);
+        return SendForValueAsync<OidcTokenExchange, OidcTokenResponse>(
+            HttpMethod.Post,
+            "/api/v1/oidc/token",
+            exchange,
+            cancellationToken);
+    }
+
+    public Task<BackendResponse<Dictionary<string, JsonElement>>> GetOidcUserInfoAsync(
+        string accessToken,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(accessToken);
+        return SendForValueAsync<OidcAccessTokenRequest, Dictionary<string, JsonElement>>(
+            HttpMethod.Post,
+            "/api/v1/oidc/userinfo",
+            new OidcAccessTokenRequest { Token = accessToken },
+            cancellationToken);
+    }
+
+    public async Task<BackendResponse<OidcJsonWebKeySet>> GetOidcJsonWebKeysAsync(
+        CancellationToken cancellationToken = default)
+    {
+        using var response = await http.GetAsync("/api/v1/oidc/jwks", cancellationToken);
+        return await ToBackendResponseAsync<OidcJsonWebKeySet>(response, cancellationToken);
     }
 
     public Task<BackendResponse> CreateAuthorizationCodeFromRememberedSessionAsync(
@@ -255,6 +297,20 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return await ToBackendResponseAsync(response, cancellationToken);
     }
 
+    private async Task<BackendResponse<TResponse>> SendForValueAsync<TRequest, TResponse>(
+        HttpMethod method,
+        string requestUri,
+        TRequest body,
+        CancellationToken cancellationToken)
+    {
+        using var request = new HttpRequestMessage(method, requestUri)
+        {
+            Content = JsonContent.Create(body)
+        };
+        using var response = await http.SendAsync(request, cancellationToken);
+        return await ToBackendResponseAsync<TResponse>(response, cancellationToken);
+    }
+
     private static string ApplicationUri(string ownerId, string id) =>
         $"/api/v1/applications/{Uri.EscapeDataString(id)}?ownerId={Uri.EscapeDataString(ownerId)}";
 
@@ -268,6 +324,23 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
         return new BackendResponse(
             response.StatusCode,
+            content,
+            response.Content.Headers.ContentType?.ToString());
+    }
+
+    private static async Task<BackendResponse<T>> ToBackendResponseAsync<T>(
+        HttpResponseMessage response,
+        CancellationToken cancellationToken)
+    {
+        var content = response.Content.Headers.ContentLength == 0
+            ? null
+            : await response.Content.ReadAsStringAsync(cancellationToken);
+        var value = response.IsSuccessStatusCode && !string.IsNullOrWhiteSpace(content)
+            ? JsonSerializer.Deserialize<T>(content, s_JsonOptions)
+            : default;
+        return new BackendResponse<T>(
+            response.StatusCode,
+            value,
             content,
             response.Content.Headers.ContentType?.ToString());
     }
