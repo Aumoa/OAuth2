@@ -10,7 +10,7 @@ import { Accounts, type AuthorizationRequest } from '../api/accounts.ts';
 import Expander from '../core/components/Expander.vue';
 import { Sessions, type RememberedAccount } from '../api/Sessions.ts';
 
-type State = 'loading' | 'accounts' | 'id' | 'password';
+type State = 'loading' | 'invalid' | 'accounts' | 'id' | 'password';
 
 const { t } = useI18n({ useScope: 'global' });
 const route = useRoute();
@@ -25,6 +25,7 @@ const failedPictures = ref<Set<string>>(new Set());
 const idInput = ref<InstanceType<typeof FloatingInput> | null>(null);
 const passwordInput = ref<InstanceType<typeof FloatingInput> | null>(null);
 const consentGranted = ref(false);
+const clientName = ref<string | null>(null);
 
 const authorization = computed<AuthorizationRequest | null>(() => {
   const clientId = queryValue('client_id');
@@ -63,6 +64,9 @@ const authorization = computed<AuthorizationRequest | null>(() => {
 const requiresOfflineAccessConsent = computed(() => (
   authorization.value?.scope.split(/\s+/).includes('offline_access') === true
 ));
+const loginTitle = computed(() => clientName.value === null
+  ? t('app.login.loadingTitle')
+  : t('app.login.title', { client: clientName.value }));
 
 const visibility = {
   password: computed(() => state.value === 'password'),
@@ -250,8 +254,24 @@ async function continueAsync() {
 }
 
 onMounted(async () => {
-  if (authorization.value === null) {
+  const currentAuthorization = authorization.value;
+  if (currentAuthorization === null) {
     window.location.replace('/api/v1/auth/login');
+    return;
+  }
+
+  try {
+    const validation = await Accounts.validateAuthorizationAsync(currentAuthorization);
+    if (!validation.isValid
+      || validation.normalizedScope !== currentAuthorization.scope
+      || !validation.clientName?.trim()) {
+      throw new Error(validation.error ?? 'Authorization request is invalid.');
+    }
+
+    clientName.value = validation.clientName;
+  } catch {
+    errorMessage.value = t('app.login.errors.authorizationValidationFailed');
+    state.value = 'invalid';
     return;
   }
 
@@ -470,19 +490,22 @@ button:disabled {
 </style>
 
 <template>
-  <UnauthorizedForm :title="t('app.login.title')">
+  <UnauthorizedForm :title="loginTitle">
     <label
-      v-if="requiresOfflineAccessConsent && state !== 'loading'"
+      v-if="requiresOfflineAccessConsent && state !== 'loading' && state !== 'invalid'"
       class="offline-consent"
     >
       <input v-model="consentGranted" type="checkbox" :disabled="requesting" />
       <span>
-        <strong>{{ t('app.login.offlineConsentTitle', { client: authorization?.clientId }) }}</strong>
+        <strong>{{ t('app.login.offlineConsentTitle', { client: clientName }) }}</strong>
         {{ t('app.login.offlineConsentDescription') }}
       </span>
     </label>
     <p v-if="state === 'loading'" class="status-message" role="status">
       {{ t('app.login.loadingAccounts') }}
+    </p>
+    <p v-else-if="state === 'invalid'" class="error-message" role="alert">
+      {{ errorMessage }}
     </p>
     <div v-else-if="state === 'accounts'" class="remembered-container">
       <p v-if="errorMessage" class="error-message" role="alert">

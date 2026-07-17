@@ -200,7 +200,8 @@ export const appMessages = {
         },
       },
       login: {
-        title: 'OAuth2에 로그인',
+        title: '{client}에 로그인',
+        loadingTitle: '로그인',
         loadingAccounts: '저장된 계정을 확인하는 중...',
         continueWithAccount: '{account} 계정으로 계속',
         passwordRequired: '암호 재입력 필요',
@@ -211,6 +212,7 @@ export const appMessages = {
         offlineConsentTitle: '{client}의 오프라인 접근을 허용합니다.',
         offlineConsentDescription: '로그인하지 않은 동안에도 이 애플리케이션이 새 액세스 토큰을 발급받을 수 있습니다. 언제든 애플리케이션에서 권한을 철회할 수 있습니다.',
         errors: {
+          authorizationValidationFailed: '로그인 요청을 확인할 수 없습니다. 요청한 애플리케이션에서 다시 시도해 주세요.',
           idRequired: 'ID를 입력하세요.',
           accountNotFound: '일치하는 계정이 존재하지 않습니다.',
           accountLookupFailed: '계정 확인에 실패했습니다. 잠시 후 다시 시도해 주세요.',
@@ -469,7 +471,8 @@ export const appMessages = {
         },
       },
       login: {
-        title: 'Sign in to OAuth2',
+        title: 'Sign in to {client}',
+        loadingTitle: 'Sign in',
         loadingAccounts: 'Checking saved accounts...',
         continueWithAccount: 'Continue as {account}',
         passwordRequired: 'Password required',
@@ -480,6 +483,7 @@ export const appMessages = {
         offlineConsentTitle: 'Allow offline access for {client}.',
         offlineConsentDescription: 'This application can obtain new access tokens while you are signed out. You can revoke access from the application at any time.',
         errors: {
+          authorizationValidationFailed: 'The sign-in request could not be verified. Try again from the application that requested it.',
           idRequired: 'Enter your ID.',
           accountNotFound: 'No matching account was found.',
           accountLookupFailed: 'Could not check the account. Please try again later.',
@@ -719,7 +723,8 @@ export const appMessages = {
         },
       },
       login: {
-        title: 'OAuth2にログイン',
+        title: '{client}にログイン',
+        loadingTitle: 'ログイン',
         loadingAccounts: '保存済みのアカウントを確認しています...',
         continueWithAccount: '{account}として続行',
         passwordRequired: 'パスワードの再入力が必要です',
@@ -730,6 +735,7 @@ export const appMessages = {
         offlineConsentTitle: '{client}のオフラインアクセスを許可します。',
         offlineConsentDescription: 'ログアウト中でも、このアプリケーションは新しいアクセストークンを取得できます。アクセス権はいつでもアプリケーションから取り消せます。',
         errors: {
+          authorizationValidationFailed: 'ログイン要求を確認できませんでした。要求元のアプリケーションからもう一度お試しください。',
           idRequired: 'IDを入力してください。',
           accountNotFound: '該当するアカウントが見つかりません。',
           accountLookupFailed: 'アカウントを確認できませんでした。しばらくしてからもう一度お試しください。',

@@ -24,6 +24,13 @@ export interface LoginResponse {
   redirectUri?: string | null;
 }
 
+export interface AuthorizationValidation {
+  isValid: boolean;
+  normalizedScope?: string | null;
+  clientName?: string | null;
+  error?: string | null;
+}
+
 export function resolveAuthorizationRedirect(
   login: LoginResponse,
   authorization: AuthorizationRequest,
@@ -106,6 +113,23 @@ export class RegisterForm {
 }
 
 export class Accounts {
+  static async validateAuthorizationAsync(
+    authorization: AuthorizationRequest,
+  ): Promise<AuthorizationValidation> {
+    const response = await fetch('/api/v1/auth/authorization-requests/validation', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(authorization),
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as AuthorizationValidation;
+  }
+
   static async verifyAsync(id: string): Promise<boolean> {
     const response = await fetch(`/api/v1/accounts/${encodeURIComponent(id)}`, {
       method: 'HEAD',

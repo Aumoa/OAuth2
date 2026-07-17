@@ -13,6 +13,23 @@ public sealed class OidcAuthorizationController(
     IOptions<OAuthOptions> oauthOptions,
     IBackendClient backend) : ControllerBase
 {
+    [HttpPost("authorization-requests/validation")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public async Task<IActionResult> ValidateAuthorizationRequestAsync(
+        [FromBody] OidcAuthorizationRequest authorization,
+        CancellationToken cancellationToken)
+    {
+        var response = await backend.ValidateOidcAuthorizationAsync(
+            authorization,
+            cancellationToken);
+        return response.Value is not null
+            ? Ok(response.Value)
+            : StatusCode(StatusCodes.Status502BadGateway, new
+            {
+                error = "temporarily_unavailable"
+            });
+    }
+
     [HttpGet("login")]
     public IActionResult StartLogin()
     {
