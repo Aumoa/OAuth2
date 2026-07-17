@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace OAuth2.DataTransfer;
 
 public static class LoginStates
@@ -14,4 +16,7 @@ public sealed record LoginResponse
     public string? Sub { get; init; }
 
     public string? RedirectUri { get; init; }
+
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public GrantedUserInfo? SessionGrant { get; init; }
 }

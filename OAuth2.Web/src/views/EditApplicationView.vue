@@ -2,7 +2,11 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRoute, useRouter, type RouteLocationRaw } from 'vue-router';
-import { Applications, type ApplicationDetails } from '../api/applications.ts';
+import {
+  Applications,
+  type ApplicationDetails,
+  type OAuthApplicationType,
+} from '../api/applications.ts';
 import Dialog from '../core/components/Dialog.vue';
 import FloatingInput from '../core/components/FloatingInput.vue';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
@@ -50,6 +54,12 @@ const deleteConfirmationMatches = computed(() => (
   application.value !== null
   && deleteConfirmation.value === application.value.name
 ));
+const redirectUrisPlaceholder = computed(() => t(
+  `app.applicationManagement.redirectUrisPlaceholders.${application.value?.applicationType ?? 'web'}`,
+));
+const redirectUrisHint = computed(() => t(
+  `app.applicationManagement.redirectUrisHints.${application.value?.applicationType ?? 'web'}`,
+));
 let isMounted = true;
 let loadRequestId = 0;
 
@@ -66,11 +76,56 @@ function isLoopbackHostname(hostname: string): boolean {
     || hostname === '[::1]';
 }
 
+function isHttpsRedirectUri(redirectUri: URL): boolean {
+  return redirectUri.protocol === 'https:' && redirectUri.hostname.length > 0;
+}
+
+function isPrivateUseScheme(value: string, redirectUri: URL): boolean {
+  const schemeSeparator = value.indexOf(':');
+  const scheme = redirectUri.protocol.slice(0, -1);
+  return redirectUri.protocol !== 'http:'
+    && redirectUri.protocol !== 'https:'
+    && scheme.includes('.')
+    && redirectUri.hostname.length === 0
+    && redirectUri.pathname.startsWith('/')
+    && schemeSeparator > 0
+    && value.slice(schemeSeparator).startsWith(':/')
+    && !value.slice(schemeSeparator).startsWith('://');
+}
+
+function isValidRedirectUriForType(
+  value: string,
+  redirectUri: URL,
+  applicationType: OAuthApplicationType,
+): boolean {
+  if (isHttpsRedirectUri(redirectUri)) {
+    return true;
+  }
+
+  if (applicationType === 'web') {
+    return redirectUri.protocol === 'http:' && isLoopbackHostname(redirectUri.hostname);
+  }
+
+  if (isPrivateUseScheme(value, redirectUri)) {
+    return true;
+  }
+
+  return applicationType === 'macos'
+    && redirectUri.protocol === 'http:'
+    && (redirectUri.hostname === '127.0.0.1' || redirectUri.hostname === '[::1]')
+    && redirectUri.port.length === 0;
+}
+
 function validateRedirectUris(redirectUris: string[]): boolean {
   redirectUrisError.value = null;
 
   if (redirectUris.length > 20) {
     redirectUrisError.value = t('app.applicationManagement.errors.tooManyRedirectUris');
+    return false;
+  }
+
+  const applicationType = application.value?.applicationType;
+  if (applicationType === undefined) {
     return false;
   }
 
@@ -89,15 +144,11 @@ function validateRedirectUris(redirectUris: string[]): boolean {
       return false;
     }
 
-    const isSecure = redirectUri.protocol === 'https:';
-    const isLoopbackHttp = redirectUri.protocol === 'http:'
-      && isLoopbackHostname(redirectUri.hostname);
     if (
-      redirectUri.hostname.length === 0
-      || redirectUri.username.length > 0
+      redirectUri.username.length > 0
       || redirectUri.password.length > 0
       || redirectUri.hash.length > 0
-      || (!isSecure && !isLoopbackHttp)
+      || !isValidRedirectUriForType(value, redirectUri, applicationType)
     ) {
       redirectUrisError.value = t('app.applicationManagement.errors.invalidRedirectUri');
       return false;
@@ -367,16 +418,20 @@ onBeforeUnmount(() => {
 }
 
 .application-id-label,
-.application-id {
+.application-id,
+.application-type-label,
+.application-type-value {
   font-size: 12px;
   line-height: 1.4;
 }
 
-.application-id-label {
+.application-id-label,
+.application-type-label {
   color: var(--text-muted);
 }
 
-.application-id {
+.application-id,
+.application-type-value {
   color: var(--text);
   font-family: var(--mono);
   text-align: right;
@@ -721,6 +776,12 @@ onBeforeUnmount(() => {
         <h2 class="application-name">{{ application.name }}</h2>
         <span class="application-id-label">{{ t('app.applicationManagement.clientId') }}</span>
         <span class="application-id">{{ application.id }}</span>
+        <span class="application-type-label">
+          {{ t('app.applicationManagement.applicationType') }}
+        </span>
+        <span class="application-type-value">
+          {{ t(`app.applicationManagement.applicationTypes.${application.applicationType}`) }}
+        </span>
       </section>
 
       <form class="configuration-form" :aria-busy="isSaving" @submit.prevent="saveApplicationAsync">
@@ -739,7 +800,7 @@ onBeforeUnmount(() => {
             v-model="redirectUrisText"
             class="redirect-uri-input"
             :class="{ 'has-error': redirectUrisError }"
-            :placeholder="t('app.applicationManagement.redirectUrisPlaceholder')"
+            :placeholder="redirectUrisPlaceholder"
             :disabled="isSaving || isDeleting"
             :aria-invalid="redirectUrisError ? 'true' : undefined"
             :aria-describedby="redirectUrisError ? 'redirect-uris-error' : 'redirect-uris-hint'"
@@ -750,7 +811,7 @@ onBeforeUnmount(() => {
             {{ redirectUrisError }}
           </p>
           <p v-else id="redirect-uris-hint" class="field-hint">
-            {{ t('app.applicationManagement.redirectUrisHint') }}
+            {{ redirectUrisHint }}
           </p>
         </section>
 

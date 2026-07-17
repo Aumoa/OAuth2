@@ -3,6 +3,7 @@ using Amazon.SimpleEmail;
 using Microsoft.Extensions.Options;
 using OAuth2;
 using OAuth2.Localizational;
+using OAuth2.OpenId;
 using OAuth2.Options;
 using OAuth2.Repositories;
 using OAuth2.Services;
@@ -18,6 +19,7 @@ builder.Services.AddControllers();
 var app = builder.Build();
 
 ValidateEmailLocalization(app.Services);
+_ = app.Services.GetRequiredService<OidcSigningKey>();
 
 app.UseRequestLocalization();
 app.UseHttpsRedirection();
@@ -39,6 +41,15 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddOptions<OAuthOptions>()
         .Bind(config.GetRequiredSection("OAuth2"))
         .Validate(static options => !string.IsNullOrWhiteSpace(options.ClientId), "OAuth2:ClientId is required.")
+        .ValidateOnStart();
+    s.AddOptions<OidcProviderOptions>()
+        .Bind(config.GetRequiredSection("OpenId"))
+        .Validate(
+            static options => OidcEndpointUris.TryNormalizeIssuer(options.Issuer, out _),
+            "OpenId:Issuer must be an HTTPS origin (HTTP is allowed only for loopback).")
+        .Validate(
+            static options => options.AccessTokenLifetimeMinutes > 0,
+            "OpenId:AccessTokenLifetimeMinutes must be positive.")
         .ValidateOnStart();
     s.AddOptions<SESOptions>()
         .Bind(config.GetRequiredSection(nameof(SESOptions)))
@@ -70,6 +81,8 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     });
 
     s.AddScoped<PasswordHasher>();
+    s.AddScoped<OidcAuthorizationRequestValidator>();
+    s.AddScoped<OidcTokenIssuer>();
     s.AddScoped<IAccounts, MySqlAccounts>();
     s.AddScoped<IAccountClaims, MySqlAccountClaims>();
     s.AddScoped<IApplications, MySqlApplications>();
@@ -78,6 +91,7 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddScoped<IRememberedSessions, RedisRememberedSessions>();
     s.AddScoped<IEmailVerify, SESEmailVerify>();
     s.AddSingleton<RedisConnection>();
+    s.AddSingleton<OidcSigningKey>();
     s.AddHostedService(services => services.GetRequiredService<RedisConnection>());
     return s;
 }

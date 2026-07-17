@@ -1,10 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.WebUtilities;
-using Microsoft.Extensions.Options;
 using OAuth2.DataTransfer;
 using OAuth2.OpenId;
-using OAuth2.Options;
 using OAuth2.Repositories;
+using OAuth2.Services;
 
 namespace OAuth2.Controllers;
 
@@ -13,9 +12,10 @@ namespace OAuth2.Controllers;
 [Route("api/v1/authorization-codes")]
 public sealed class AuthorizationCodesController(
     IAccounts accounts,
+    IAccountClaims accountClaims,
     IAuthorizationCodes authorizationCodes,
     IRememberedSessions rememberedSessions,
-    IOptions<OAuthOptions> oauthOptions) : ControllerBase
+    OidcAuthorizationRequestValidator authorizationValidator) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> CreateAsync(
@@ -27,13 +27,12 @@ public sealed class AuthorizationCodesController(
             return BadRequest(error);
         }
 
-        if (!InternalOidcAuthorization.TryValidate(
+        var validation = await authorizationValidator.ValidateAsync(
             form.Authorization,
-            oauthOptions.Value.ClientId,
-            out var normalizedScope,
-            out error))
+            cancellationToken);
+        if (!validation.IsValid || validation.NormalizedScope is null)
         {
-            return BadRequest(error);
+            return BadRequest(validation.Error);
         }
 
         var login = await accounts.LoginAsync(form.Id, form.Password, cancellationToken);
@@ -54,7 +53,7 @@ public sealed class AuthorizationCodesController(
         return await CreateAuthenticatedResponseAsync(
             login.Id,
             form.Authorization!,
-            normalizedScope,
+            validation.NormalizedScope,
             DateTimeOffset.UtcNow.ToUnixTimeSeconds(),
             true,
             cancellationToken);
@@ -70,13 +69,12 @@ public sealed class AuthorizationCodesController(
             return BadRequest(error);
         }
 
-        if (!InternalOidcAuthorization.TryValidate(
+        var validation = await authorizationValidator.ValidateAsync(
             form.Authorization,
-            oauthOptions.Value.ClientId,
-            out var normalizedScope,
-            out error))
+            cancellationToken);
+        if (!validation.IsValid || validation.NormalizedScope is null)
         {
-            return BadRequest(error);
+            return BadRequest(validation.Error);
         }
 
         var rememberedSession = await rememberedSessions.GetAsync(
@@ -101,7 +99,7 @@ public sealed class AuthorizationCodesController(
         return await CreateAuthenticatedResponseAsync(
             account.Id,
             form.Authorization!,
-            normalizedScope,
+            validation.NormalizedScope,
             rememberedSession.AuthTime,
             false,
             cancellationToken);
@@ -112,7 +110,7 @@ public sealed class AuthorizationCodesController(
         OidcAuthorizationRequest authorization,
         string normalizedScope,
         long authTime,
-        bool createRememberedSession,
+        bool createBrowserSession,
         CancellationToken cancellationToken)
     {
         var code = await authorizationCodes.PushAsync(
@@ -125,7 +123,7 @@ public sealed class AuthorizationCodesController(
                 authorization.CodeChallenge,
                 authorization.CodeChallengeMethod,
                 authTime,
-                createRememberedSession),
+                false),
             cancellationToken);
         var redirectUri = QueryHelpers.AddQueryString(
             authorization.RedirectUri!,
@@ -135,10 +133,41 @@ public sealed class AuthorizationCodesController(
                 ["state"] = authorization.State
             });
 
+        GrantedUserInfo? sessionGrant = null;
+        if (createBrowserSession)
+        {
+            var account = await accounts.GetAccountAsync(accountId, cancellationToken);
+            if (account is null)
+            {
+                return Unauthorized();
+            }
+
+            var claims = await accountClaims.GetClaimsAsync(accountId, cancellationToken);
+            var rememberedSession = await rememberedSessions.CreateAsync(
+                accountId,
+                authTime,
+                cancellationToken);
+            sessionGrant = new GrantedUserInfo
+            {
+                Scope = InternalOidcAuthorization.Scope,
+                Claims = OidcUserInfoFactory.Create(
+                    account,
+                    claims,
+                    InternalOidcAuthorization.Scope),
+                RememberedSession = new RememberedSessionGrant
+                {
+                    Token = rememberedSession.Token,
+                    AuthenticatedAt = DateTimeOffset.FromUnixTimeSeconds(authTime),
+                    ExpiresAt = rememberedSession.ExpiresAt
+                }
+            };
+        }
+
         return Ok(new LoginResponse
         {
             State = LoginStates.Authenticated,
-            RedirectUri = redirectUri
+            RedirectUri = redirectUri,
+            SessionGrant = sessionGrant
         });
     }
 }

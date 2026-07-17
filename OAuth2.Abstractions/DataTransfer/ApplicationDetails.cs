@@ -6,6 +6,8 @@ public sealed record ApplicationDetails
 
     public required string Name { get; init; }
 
+    public required string ApplicationType { get; init; }
+
     public DateTime CreatedAt { get; init; }
 
     public required IReadOnlyList<string> RedirectUris { get; init; }

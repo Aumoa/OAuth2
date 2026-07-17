@@ -31,6 +31,12 @@ public static class OidcClaimPolicy
             ["groups"] = ["groups"]
         };
 
+    public static IReadOnlyList<string> ClaimNames { get; } =
+        s_ClaimsByScope.Values
+            .SelectMany(static claims => claims)
+            .Distinct(StringComparer.Ordinal)
+            .ToArray();
+
     public static HashSet<string> GetAllowedClaimNames(string scope)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(scope);

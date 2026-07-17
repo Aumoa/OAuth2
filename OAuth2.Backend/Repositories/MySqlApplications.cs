@@ -18,17 +18,26 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         string id,
         string ownerId,
         string name,
+        string applicationType,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
         ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        if (!OAuthApplicationTypes.IsSupported(applicationType))
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(applicationType),
+                applicationType,
+                "Unsupported OAuth application type.");
+        }
 
         var application = new OAuthApplication
         {
             Id = id,
             OwnerId = ownerId,
             Name = name,
+            ApplicationType = applicationType,
             CreatedAt = DateTime.UtcNow
         };
 
@@ -36,7 +45,7 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         await connection.OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        const string QUERY = "INSERT INTO `client` (`id`, `owner_id`, `name`, `created_at`) VALUES (@Id, @OwnerId, @Name, @CreatedAt)";
+        const string QUERY = "INSERT INTO `client` (`id`, `owner_id`, `name`, `application_type`, `created_at`) VALUES (@Id, @OwnerId, @Name, @ApplicationType, @CreatedAt)";
         var command = new CommandDefinition(
             QUERY,
             application,
@@ -143,11 +152,31 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         ArgumentException.ThrowIfNullOrWhiteSpace(id);
         ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
 
+        return await GetApplicationAsync(id, ownerId, cancellationToken);
+    }
+
+    public async Task<OAuthApplicationConfiguration?> GetApplicationAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        return await GetApplicationAsync(id, null, cancellationToken);
+    }
+
+    private async Task<OAuthApplicationConfiguration?> GetApplicationAsync(
+        string id,
+        string? ownerId,
+        CancellationToken cancellationToken)
+    {
+
         using var connection = new MySqlConnection(mysqlOptions.Value.ConnectionString);
 
-        const string APPLICATION_QUERY = "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL";
+        var applicationQuery = ownerId is null
+            ? "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `application_type` AS `ApplicationType`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `removed_at` IS NULL"
+            : "SELECT `id`, `owner_id` AS `OwnerId`, `name`, `application_type` AS `ApplicationType`, `created_at` AS `CreatedAt` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL";
         var command = new CommandDefinition(
-            APPLICATION_QUERY,
+            applicationQuery,
             new { id, ownerId },
             cancellationToken: cancellationToken);
         var application = await connection.QuerySingleOrDefaultAsync<OAuthApplication>(command);
@@ -190,6 +219,7 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
                 `id`,
                 `owner_id` AS `OwnerId`,
                 `name`,
+                `application_type` AS `ApplicationType`,
                 `created_at` AS `CreatedAt`
             FROM `client`
             WHERE `owner_id` = @ownerId
@@ -224,15 +254,24 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         await connection.OpenAsync(cancellationToken);
         await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
 
-        const string LOCK_QUERY = "SELECT `id` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL FOR UPDATE";
+        const string LOCK_QUERY = "SELECT `application_type` FROM `client` WHERE `id` = @id AND `owner_id` = @ownerId AND `removed_at` IS NULL FOR UPDATE";
         var command = new CommandDefinition(
             LOCK_QUERY,
             new { id, ownerId },
             transaction,
             cancellationToken: cancellationToken);
-        if (await connection.QuerySingleOrDefaultAsync<string>(command) is null)
+        var applicationType = await connection.QuerySingleOrDefaultAsync<string>(command);
+        if (applicationType is null)
         {
             return false;
+        }
+
+        if (redirectUris.Any(value =>
+            !OidcRedirectUriPolicy.IsValidRegistration(value, applicationType)))
+        {
+            throw new ArgumentException(
+                "A redirect URI is not valid for the application type.",
+                nameof(redirectUris));
         }
 
         const string REMOVE_CLAIMS_QUERY = "UPDATE `client_claim` SET `removed_at` = @removedAt WHERE `client_id` = @id AND `name` IN @names AND `removed_at` IS NULL";

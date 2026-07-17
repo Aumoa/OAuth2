@@ -8,11 +8,16 @@ public interface IApplications
         string id,
         string ownerId,
         string name,
+        string applicationType,
         CancellationToken cancellationToken = default);
 
     Task<bool> DeleteApplicationAsync(
         string id,
         string ownerId,
+        CancellationToken cancellationToken = default);
+
+    Task<OAuthApplicationConfiguration?> GetApplicationAsync(
+        string id,
         CancellationToken cancellationToken = default);
 
     Task<OAuthApplicationConfiguration?> GetOwnedApplicationAsync(
