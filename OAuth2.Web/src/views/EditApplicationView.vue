@@ -8,6 +8,10 @@ import FloatingInput from '../core/components/FloatingInput.vue';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
 type ViewState = 'loading' | 'ready' | 'error' | 'notFound';
+type RedirectUriEntry = {
+  id: number;
+  value: string;
+};
 
 const requiredScope = 'openid';
 const availableScopes = ['openid', 'profile', 'email', 'address', 'phone', 'groups'] as const;
@@ -16,7 +20,8 @@ const route = useRoute();
 const router = useRouter();
 const state = ref<ViewState>('loading');
 const application = ref<ApplicationDetails | null>(null);
-const redirectUrisText = ref('');
+const redirectUris = ref<RedirectUriEntry[]>([]);
+const redirectUriInputs = ref<HTMLInputElement[]>([]);
 const allowedScopes = ref<string[]>([]);
 const redirectUrisError = ref<string | null>(null);
 const saveError = ref<string | null>(null);
@@ -52,12 +57,35 @@ const deleteConfirmationMatches = computed(() => (
 ));
 let isMounted = true;
 let loadRequestId = 0;
+let nextRedirectUriId = 0;
 
-function parseRedirectUris(): string[] {
-  return redirectUrisText.value
-    .split(/\r?\n/u)
-    .map(value => value.trim())
+function createRedirectUriEntry(value = ''): RedirectUriEntry {
+  return {
+    id: nextRedirectUriId++,
+    value,
+  };
+}
+
+function normalizedRedirectUris(): string[] {
+  return redirectUris.value
+    .map(entry => entry.value.trim())
     .filter(value => value.length > 0);
+}
+
+async function addRedirectUriAsync(): Promise<void> {
+  if (redirectUris.value.length >= 20 || isSaving.value || isDeleting.value) {
+    return;
+  }
+
+  redirectUris.value.push(createRedirectUriEntry());
+  redirectUrisError.value = null;
+  await nextTick();
+  redirectUriInputs.value[redirectUriInputs.value.length - 1]?.focus();
+}
+
+function removeRedirectUri(id: number): void {
+  redirectUris.value = redirectUris.value.filter(entry => entry.id !== id);
+  redirectUrisError.value = null;
 }
 
 function isLoopbackHostname(hostname: string): boolean {
@@ -126,7 +154,7 @@ async function loadApplicationAsync(): Promise<void> {
     }
 
     application.value = details;
-    redirectUrisText.value = details.redirectUris.join('\n');
+    redirectUris.value = details.redirectUris.map(createRedirectUriEntry);
     allowedScopes.value = availableScopes.filter(scope => (
       scope === requiredScope || details.allowedScopes.includes(scope)
     ));
@@ -147,10 +175,10 @@ async function saveApplicationAsync(): Promise<void> {
     return;
   }
 
-  const redirectUris = parseRedirectUris();
+  const redirectUriValues = normalizedRedirectUris();
   saveError.value = null;
   savedMessage.value = null;
-  if (!validateRedirectUris(redirectUris)) {
+  if (!validateRedirectUris(redirectUriValues)) {
     return;
   }
 
@@ -159,7 +187,7 @@ async function saveApplicationAsync(): Promise<void> {
     const scopes = [...new Set([requiredScope, ...allowedScopes.value])];
     await Applications.updateAsync(
       clientId.value,
-      redirectUris,
+      redirectUriValues,
       scopes,
       organizationId.value,
     );
@@ -422,12 +450,27 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
+.redirect-uri-list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.redirect-uri-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .redirect-uri-input {
-  width: 100%;
-  min-height: 132px;
-  padding: 12px;
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
   box-sizing: border-box;
-  resize: vertical;
+  flex: 1;
   color: var(--text-h);
   background: var(--surface);
   border: 1.5px solid var(--border-strong);
@@ -451,6 +494,48 @@ onBeforeUnmount(() => {
 }
 
 .redirect-uri-input:disabled {
+  cursor: wait;
+  opacity: 0.64;
+}
+
+.redirect-uri-remove,
+.redirect-uri-add {
+  width: auto;
+  padding: 0 11px;
+  grid-auto-flow: column;
+  gap: 5px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.redirect-uri-remove {
+  min-width: 40px;
+  padding: 0;
+  color: var(--text-muted);
+}
+
+.redirect-uri-remove:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.redirect-uri-add {
+  margin-top: 10px;
+  color: var(--accent-hover);
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.redirect-uri-add:hover:not(:disabled) {
+  color: var(--on-accent);
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.redirect-uri-remove:disabled,
+.redirect-uri-add:disabled {
   cursor: wait;
   opacity: 0.64;
 }
@@ -661,7 +746,9 @@ onBeforeUnmount(() => {
     animation: none;
   }
 
-  .redirect-uri-input {
+  .redirect-uri-input,
+  .redirect-uri-remove,
+  .redirect-uri-add {
     transition-duration: 0.01ms;
   }
 }
@@ -731,21 +818,45 @@ onBeforeUnmount(() => {
           <p class="settings-description">
             {{ t('app.applicationManagement.redirectUrisDescription') }}
           </p>
-          <label class="redirect-uri-label" for="application-redirect-uris">
+          <div id="redirect-uri-list-label" class="redirect-uri-label">
             {{ t('app.applicationManagement.redirectUrisLabel') }}
-          </label>
-          <textarea
-            id="application-redirect-uris"
-            v-model="redirectUrisText"
-            class="redirect-uri-input"
-            :class="{ 'has-error': redirectUrisError }"
-            :placeholder="t('app.applicationManagement.redirectUrisPlaceholder')"
-            :disabled="isSaving || isDeleting"
-            :aria-invalid="redirectUrisError ? 'true' : undefined"
-            :aria-describedby="redirectUrisError ? 'redirect-uris-error' : 'redirect-uris-hint'"
-            spellcheck="false"
-            @input="redirectUrisError = null"
-          ></textarea>
+          </div>
+          <ul class="redirect-uri-list" aria-labelledby="redirect-uri-list-label">
+            <li v-for="(entry, index) in redirectUris" :key="entry.id" class="redirect-uri-row">
+              <input
+                ref="redirectUriInputs"
+                v-model="entry.value"
+                class="redirect-uri-input"
+                :class="{ 'has-error': redirectUrisError }"
+                :placeholder="t('app.applicationManagement.redirectUrisPlaceholder')"
+                :disabled="isSaving || isDeleting"
+                :aria-label="t('app.applicationManagement.redirectUriItemLabel', { number: index + 1 })"
+                :aria-invalid="redirectUrisError ? 'true' : undefined"
+                :aria-describedby="redirectUrisError ? 'redirect-uris-error' : 'redirect-uris-hint'"
+                inputmode="url"
+                spellcheck="false"
+                @input="redirectUrisError = null"
+              />
+              <button
+                type="button"
+                class="app-button redirect-uri-remove"
+                :disabled="isSaving || isDeleting"
+                :aria-label="t('app.applicationManagement.removeRedirectUriLabel', { number: index + 1 })"
+                @click="removeRedirectUri(entry.id)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+              </button>
+            </li>
+          </ul>
+          <button
+            type="button"
+            class="app-button redirect-uri-add"
+            :disabled="redirectUris.length >= 20 || isSaving || isDeleting"
+            @click="addRedirectUriAsync"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            <span>{{ t('app.applicationManagement.addRedirectUri') }}</span>
+          </button>
           <p v-if="redirectUrisError" id="redirect-uris-error" class="field-error" role="alert">
             {{ redirectUrisError }}
           </p>
