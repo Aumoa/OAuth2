@@ -37,6 +37,7 @@ return;
 static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
 {
     s.Configure<MySqlOptions>(config.GetRequiredSection(nameof(MySqlOptions)));
+    s.Configure<MigrationOptions>(config.GetRequiredSection(nameof(MigrationOptions)));
     s.Configure<RedisOptions>(config.GetRequiredSection(nameof(RedisOptions)));
     s.AddOptions<OAuthOptions>()
         .Bind(config.GetRequiredSection("OAuth2"))
@@ -107,6 +108,13 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
 
 async ValueTask StartMigrationAsync(CancellationToken cancellationToken)
 {
+    var migrationOptions = app.Services.GetRequiredService<IOptions<MigrationOptions>>().Value;
+    if (!migrationOptions.RunOnStartup)
+    {
+        app.Logger.LogInformation("Database migration on startup is disabled.");
+        return;
+    }
+
     var options = app.Services.GetRequiredService<IOptions<MySqlOptions>>();
     var scripts = new Scripts();
     var logger = new LoggerTextWriter(app.Logger);
