@@ -2,6 +2,13 @@ import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
 export type OAuthApplicationType = 'web' | 'android' | 'ios' | 'desktop';
 
+export type GroupClaimFormat = 'dash' | 'path' | 'colon';
+
+export interface GroupClaimMapping {
+  format: GroupClaimFormat;
+  selectors: string[];
+}
+
 export interface ApplicationSummary {
   id: string;
   name: string;
@@ -13,6 +20,7 @@ export interface ApplicationDetails extends ApplicationSummary {
   requiresSecret: boolean;
   redirectUris: string[];
   allowedScopes: string[];
+  groupClaimMapping: GroupClaimMapping | null;
 }
 
 export interface ApplicationSecretSummary {
@@ -152,6 +160,7 @@ export class Applications {
     clientId: string,
     redirectUris: string[],
     allowedScopes: string[],
+    groupClaimMapping: GroupClaimMapping | null,
     organizationId?: string,
   ): Promise<void> {
     const response = await fetch(Applications.applicationUri(clientId, organizationId), {
@@ -162,7 +171,7 @@ export class Applications {
         'Content-Type': 'application/json',
         'X-OAuth2-Action': '1',
       },
-      body: JSON.stringify({ redirectUris, allowedScopes }),
+      body: JSON.stringify({ redirectUris, allowedScopes, groupClaimMapping }),
     });
     if (!response.ok) {
       throw new HttpStatusCodeError(response.status, response.statusText);

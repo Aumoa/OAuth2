@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using OAuth2.Data;
 using OAuth2.OpenId;
 
 namespace OAuth2.DataTransfer;
@@ -12,6 +13,8 @@ public sealed record UpdateApplicationForm
     public required IReadOnlyList<string> RedirectUris { get; init; }
 
     public required IReadOnlyList<string> AllowedScopes { get; init; }
+
+    public GroupClaimMapping? GroupClaimMapping { get; init; }
 
     public bool Verify([NotNullWhen(false)] out string? error)
     {
@@ -84,6 +87,26 @@ public sealed record UpdateApplicationForm
         {
             error = $"body.allowedScopes must contain {OidcScopePolicy.OpenIdScope}";
             return false;
+        }
+
+        var hasOrganizationClaimScope = allowedScopes.Contains(OidcScopePolicy.GroupsScope)
+            || allowedScopes.Contains(OidcScopePolicy.OrganizationScope);
+        if (GroupClaimMapping is not null)
+        {
+            if (!hasOrganizationClaimScope)
+            {
+                error = "body.groupClaimMapping requires the groups or organization scope";
+                return false;
+            }
+
+            if (!GroupClaimMappingPolicy.TryNormalize(
+                    GroupClaimMapping,
+                    out _,
+                    out var mappingError))
+            {
+                error = $"body.groupClaimMapping {mappingError}";
+                return false;
+            }
         }
 
         error = null;

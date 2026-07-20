@@ -13,6 +13,8 @@ import {
   type ApplicationDetails,
   type ApplicationSecretSummary,
   type CreatedApplicationSecret,
+  type GroupClaimFormat,
+  type GroupClaimMapping,
   type OAuthApplicationType,
 } from '../api/applications.ts';
 import Dialog from '../core/components/Dialog.vue';
@@ -24,6 +26,10 @@ type RedirectUriEntry = {
   id: number;
   value: string;
   initialValue: string | null;
+};
+type GroupClaimSelectorEntry = {
+  id: number;
+  value: string;
 };
 
 const requiredScope = 'openid';
@@ -37,6 +43,7 @@ const availableScopes = [
   'organization',
   'offline_access',
 ] as const;
+const groupClaimFormats = ['dash', 'path', 'colon'] as const;
 const { locale, t } = useI18n();
 const route = useRoute();
 const router = useRouter();
@@ -47,6 +54,10 @@ const redirectUriInputs = ref<HTMLInputElement[]>([]);
 const allowedScopes = ref<string[]>([]);
 const initialRedirectUris = ref<string[]>([]);
 const initialAllowedScopes = ref<string[]>([]);
+const groupClaimFormat = ref<GroupClaimFormat>('dash');
+const groupClaimSelectors = ref<GroupClaimSelectorEntry[]>([]);
+const initialGroupClaimMapping = ref<GroupClaimMapping | null>(null);
+const groupClaimMappingError = ref<string | null>(null);
 const redirectUrisError = ref<string | null>(null);
 const saveError = ref<string | null>(null);
 const savedMessage = ref<string | null>(null);
@@ -98,9 +109,31 @@ const hasRedirectUriChanges = computed(() => (
 const hasAllowedScopeChanges = computed(() => (
   availableScopes.some(isScopeChanged)
 ));
-const hasChanges = computed(() => (
-  hasRedirectUriChanges.value || hasAllowedScopeChanges.value
+const hasOrganizationClaimScope = computed(() => (
+  allowedScopes.value.includes('groups') || allowedScopes.value.includes('organization')
 ));
+const hasGroupClaimMappingChanges = computed(() => (
+  !areGroupClaimMappingsEqual(
+    normalizedGroupClaimMapping(),
+    initialGroupClaimMapping.value,
+  )
+));
+const hasChanges = computed(() => (
+  hasRedirectUriChanges.value
+  || hasAllowedScopeChanges.value
+  || hasGroupClaimMappingChanges.value
+));
+const groupClaimFormatPreview = computed(() => {
+  if (groupClaimFormat.value === 'path') {
+    return '["/organization", "/organization/group"]';
+  }
+
+  if (groupClaimFormat.value === 'colon') {
+    return '["organization", "organization:group"]';
+  }
+
+  return '["organization", "organization-group"]';
+});
 const redirectUrisPlaceholder = computed(() => t(
   `app.applicationManagement.redirectUrisPlaceholders.${application.value?.applicationType ?? 'web'}`,
 ));
@@ -111,6 +144,7 @@ let isMounted = true;
 let loadRequestId = 0;
 let secretsLoadRequestId = 0;
 let nextRedirectUriId = 0;
+let nextGroupClaimSelectorId = 0;
 
 function formatSecretCreatedAt(value: string): string {
   return new Intl.DateTimeFormat(locale.value, {
@@ -139,6 +173,41 @@ function normalizedAllowedScopes(): string[] {
   ));
 }
 
+function createGroupClaimSelectorEntry(value = ''): GroupClaimSelectorEntry {
+  return { id: nextGroupClaimSelectorId++, value };
+}
+
+function cloneGroupClaimMapping(mapping: GroupClaimMapping | null): GroupClaimMapping | null {
+  return mapping === null
+    ? null
+    : { format: mapping.format, selectors: [...mapping.selectors] };
+}
+
+function normalizedGroupClaimMapping(): GroupClaimMapping | null {
+  if (!hasOrganizationClaimScope.value) {
+    return null;
+  }
+
+  return {
+    format: groupClaimFormat.value,
+    selectors: groupClaimSelectors.value
+      .map(entry => entry.value.trim())
+      .filter(value => value.length > 0),
+  };
+}
+
+function areGroupClaimMappingsEqual(
+  left: GroupClaimMapping | null,
+  right: GroupClaimMapping | null,
+): boolean {
+  if (left === null || right === null) {
+    return left === right;
+  }
+
+  return left.format === right.format
+    && areStringArraysEqual(left.selectors, right.selectors);
+}
+
 function areStringArraysEqual(left: string[], right: string[]): boolean {
   return left.length === right.length
     && left.every((value, index) => value === right[index]);
@@ -162,6 +231,66 @@ function isRedirectUriChanged(entry: RedirectUriEntry): boolean {
 function clearSaveFeedback(): void {
   saveError.value = null;
   savedMessage.value = null;
+}
+
+function handleScopeChange(): void {
+  groupClaimMappingError.value = null;
+  clearSaveFeedback();
+}
+
+function handleGroupClaimMappingInput(): void {
+  groupClaimMappingError.value = null;
+  clearSaveFeedback();
+}
+
+function addGroupClaimSelector(): void {
+  if (groupClaimSelectors.value.length >= 100 || isSaving.value || isDeleting.value) {
+    return;
+  }
+
+  groupClaimSelectors.value.push(createGroupClaimSelectorEntry());
+  handleGroupClaimMappingInput();
+}
+
+function removeGroupClaimSelector(id: number): void {
+  groupClaimSelectors.value = groupClaimSelectors.value.filter(entry => entry.id !== id);
+  handleGroupClaimMappingInput();
+}
+
+function validateGroupClaimMapping(mapping: GroupClaimMapping | null): boolean {
+  groupClaimMappingError.value = null;
+  if (mapping === null) {
+    return true;
+  }
+
+  if (mapping.selectors.length > 100) {
+    groupClaimMappingError.value = t('app.applicationManagement.groupClaims.errors.tooMany');
+    return false;
+  }
+
+  const selectorPattern = /^\/[a-z0-9]+(?:-[a-z0-9]+)*(?:\/(?:\*|[a-z0-9]+(?:-[a-z0-9]+)*))?$/;
+  const uniqueSelectors = new Set<string>();
+  for (const selector of mapping.selectors) {
+    const segments = selector.split('/').slice(1);
+    if (
+      selector.length > 130
+      || !selectorPattern.test(selector)
+      || segments[0]!.length > 64
+      || (segments[1] !== undefined && segments[1] !== '*' && segments[1].length > 64)
+    ) {
+      groupClaimMappingError.value = t('app.applicationManagement.groupClaims.errors.invalid');
+      return false;
+    }
+
+    if (uniqueSelectors.has(selector)) {
+      groupClaimMappingError.value = t('app.applicationManagement.groupClaims.errors.duplicate');
+      return false;
+    }
+
+    uniqueSelectors.add(selector);
+  }
+
+  return true;
 }
 
 function handleRedirectUriInput(): void {
@@ -291,6 +420,10 @@ async function loadApplicationAsync(): Promise<void> {
   allowedScopes.value = [];
   initialRedirectUris.value = [];
   initialAllowedScopes.value = [];
+  groupClaimFormat.value = 'dash';
+  groupClaimSelectors.value = [];
+  initialGroupClaimMapping.value = null;
+  groupClaimMappingError.value = null;
   applicationSecrets.value = [];
   secretsLoadError.value = null;
   secretCreateError.value = null;
@@ -313,6 +446,14 @@ async function loadApplicationAsync(): Promise<void> {
     allowedScopes.value = [...loadedScopes];
     initialRedirectUris.value = [...details.redirectUris];
     initialAllowedScopes.value = [...loadedScopes];
+    const fallbackMapping: GroupClaimMapping = {
+      format: 'dash',
+      selectors: organizationId.value === undefined ? [] : [`/${organizationId.value}/*`],
+    };
+    const loadedMapping = details.groupClaimMapping ?? fallbackMapping;
+    groupClaimFormat.value = loadedMapping.format;
+    groupClaimSelectors.value = loadedMapping.selectors.map(createGroupClaimSelectorEntry);
+    initialGroupClaimMapping.value = cloneGroupClaimMapping(details.groupClaimMapping);
     clearSaveFeedback();
     state.value = 'ready';
     if (details.applicationType === 'web') {
@@ -475,6 +616,11 @@ async function saveApplicationAsync(): Promise<void> {
     return;
   }
 
+  const groupClaimMapping = normalizedGroupClaimMapping();
+  if (!validateGroupClaimMapping(groupClaimMapping)) {
+    return;
+  }
+
   isSaving.value = true;
   try {
     const scopes = normalizedAllowedScopes();
@@ -482,13 +628,16 @@ async function saveApplicationAsync(): Promise<void> {
       clientId.value,
       redirectUriValues,
       scopes,
+      groupClaimMapping,
       organizationId.value,
     );
-    if (isMounted) {
+    if (isMounted && application.value !== null) {
       redirectUris.value = redirectUriValues.map(value => createRedirectUriEntry(value, value));
       allowedScopes.value = [...scopes];
       initialRedirectUris.value = [...redirectUriValues];
       initialAllowedScopes.value = [...scopes];
+      initialGroupClaimMapping.value = cloneGroupClaimMapping(groupClaimMapping);
+      application.value.groupClaimMapping = cloneGroupClaimMapping(groupClaimMapping);
       savedMessage.value = t('app.applicationManagement.saved');
     }
   } catch (error) {
@@ -746,6 +895,19 @@ onBeforeUnmount(() => {
 }
 
 .edit-application-page .redirect-uri-settings.changed {
+  border-color: color-mix(in srgb, var(--change-accent) 48%, var(--border));
+  background: color-mix(in srgb, var(--change-accent) 6%, var(--surface));
+  box-shadow: var(--shadow-sm), inset 3px 0 0 var(--change-accent);
+}
+
+.group-claim-settings {
+  transition:
+    border-color 180ms ease,
+    background-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.edit-application-page .group-claim-settings.changed {
   border-color: color-mix(in srgb, var(--change-accent) 48%, var(--border));
   background: color-mix(in srgb, var(--change-accent) 6%, var(--surface));
   box-shadow: var(--shadow-sm), inset 3px 0 0 var(--change-accent);
@@ -1146,6 +1308,186 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
+.group-claim-format-fieldset {
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.group-claim-label {
+  display: block;
+  margin: 0 0 8px;
+  padding: 0;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.group-claim-format-list {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.group-claim-format-option {
+  display: flex;
+  min-height: 42px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  align-items: center;
+  gap: 9px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text);
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  transition:
+    color 180ms ease,
+    border-color 180ms ease,
+    background-color 180ms ease;
+}
+
+.group-claim-format-option:has(input:checked) {
+  color: var(--accent-hover);
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.group-claim-format-option input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.group-claim-preview {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  margin: 9px 0 18px;
+  padding: 6px 9px;
+  box-sizing: border-box;
+  overflow-x: auto;
+  color: var(--text-muted);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.selector-label {
+  margin-top: 2px;
+}
+
+.group-claim-selector-list {
+  display: flex;
+  margin: 0;
+  padding: 0;
+  flex-direction: column;
+  gap: 8px;
+  list-style: none;
+}
+
+.group-claim-selector-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.group-claim-selector-input {
+  min-width: 0;
+  height: 40px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  flex: 1;
+  border: 1.5px solid var(--border-strong);
+  border-radius: 7px;
+  outline: none;
+  color: var(--text-h);
+  background: var(--surface);
+  font: 13px/1.55 var(--mono);
+  transition:
+    border-color 180ms ease,
+    box-shadow 180ms ease;
+}
+
+.group-claim-selector-input:hover:not(:disabled) {
+  border-color: var(--text);
+}
+
+.group-claim-selector-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--focus-ring);
+}
+
+.group-claim-selector-input.has-error {
+  border-color: var(--danger);
+}
+
+.group-claim-selector-remove,
+.group-claim-selector-add {
+  width: auto;
+  padding: 0 11px;
+  grid-auto-flow: column;
+  gap: 5px;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.group-claim-selector-remove {
+  min-width: 40px;
+  padding: 0;
+  color: var(--text-muted);
+}
+
+.group-claim-selector-remove:hover:not(:disabled) {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border));
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.group-claim-selector-add {
+  margin-top: 10px;
+  color: var(--accent-hover);
+  border-color: var(--accent-border);
+  background: var(--accent-bg);
+}
+
+.group-claim-selector-add:hover:not(:disabled) {
+  color: var(--on-accent);
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.group-claim-selector-remove:disabled,
+.group-claim-selector-add:disabled,
+.group-claim-selector-input:disabled,
+.group-claim-format-option:has(input:disabled) {
+  cursor: wait;
+  opacity: 0.64;
+}
+
+.group-claim-selector-help {
+  display: grid;
+  margin-top: 12px;
+  grid-template-columns: max-content minmax(0, 1fr);
+  align-items: start;
+  gap: 6px 12px;
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 1.5;
+}
+
+.group-claim-selector-help code {
+  padding: 1px 5px;
+  color: var(--text);
+  font-size: 11px;
+  white-space: nowrap;
+}
+
 .configuration-actions {
   display: flex;
   min-height: 40px;
@@ -1277,6 +1619,11 @@ onBeforeUnmount(() => {
     grid-template-columns: 1fr;
   }
 
+  .group-claim-format-list,
+  .group-claim-selector-help {
+    grid-template-columns: 1fr;
+  }
+
   .configuration-actions,
   .danger-zone-content,
   .client-secrets-header {
@@ -1309,7 +1656,12 @@ onBeforeUnmount(() => {
   .redirect-uri-remove,
   .redirect-uri-add,
   .redirect-uri-settings,
-  .scope-option {
+  .scope-option,
+  .group-claim-settings,
+  .group-claim-format-option,
+  .group-claim-selector-input,
+  .group-claim-selector-remove,
+  .group-claim-selector-add {
     transition-duration: 0.01ms;
   }
 }
@@ -1456,12 +1808,106 @@ onBeforeUnmount(() => {
                   type="checkbox"
                   :value="scope"
                   :disabled="scope === requiredScope || isSaving || isDeleting"
-                  @change="clearSaveFeedback"
+                  @change="handleScopeChange"
                 />
                 <span class="scope-name">{{ scope }}</span>
               </label>
             </li>
           </ul>
+        </section>
+
+        <section
+          v-if="hasOrganizationClaimScope"
+          class="settings-card group-claim-settings"
+          :class="{ changed: hasGroupClaimMappingChanges }"
+          aria-labelledby="group-claims-title"
+        >
+          <h2 id="group-claims-title" class="settings-title">
+            {{ t('app.applicationManagement.groupClaims.title') }}
+          </h2>
+          <p class="settings-description">
+            {{ t('app.applicationManagement.groupClaims.description') }}
+          </p>
+
+          <fieldset class="group-claim-format-fieldset">
+            <legend class="group-claim-label">
+              {{ t('app.applicationManagement.groupClaims.formatLabel') }}
+            </legend>
+            <div class="group-claim-format-list">
+              <label
+                v-for="format in groupClaimFormats"
+                :key="format"
+                class="group-claim-format-option"
+              >
+                <input
+                  v-model="groupClaimFormat"
+                  type="radio"
+                  name="group-claim-format"
+                  :value="format"
+                  :disabled="isSaving || isDeleting"
+                  @change="handleGroupClaimMappingInput"
+                />
+                <span>{{ t(`app.applicationManagement.groupClaims.formats.${format}`) }}</span>
+              </label>
+            </div>
+          </fieldset>
+          <code class="group-claim-preview">{{ groupClaimFormatPreview }}</code>
+
+          <div id="group-claim-selector-label" class="group-claim-label selector-label">
+            {{ t('app.applicationManagement.groupClaims.selectorsLabel') }}
+          </div>
+          <ul class="group-claim-selector-list" aria-labelledby="group-claim-selector-label">
+            <li
+              v-for="(entry, index) in groupClaimSelectors"
+              :key="entry.id"
+              class="group-claim-selector-row"
+            >
+              <input
+                v-model="entry.value"
+                class="group-claim-selector-input"
+                :class="{ 'has-error': groupClaimMappingError }"
+                :placeholder="t('app.applicationManagement.groupClaims.selectorPlaceholder')"
+                :disabled="isSaving || isDeleting"
+                :aria-label="t('app.applicationManagement.groupClaims.selectorItemLabel', {
+                  number: index + 1,
+                })"
+                spellcheck="false"
+                autocomplete="off"
+                @input="handleGroupClaimMappingInput"
+              />
+              <button
+                type="button"
+                class="app-button group-claim-selector-remove"
+                :disabled="isSaving || isDeleting"
+                :aria-label="t('app.applicationManagement.groupClaims.removeSelectorLabel', {
+                  number: index + 1,
+                })"
+                @click="removeGroupClaimSelector(entry.id)"
+              >
+                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
+              </button>
+            </li>
+          </ul>
+          <button
+            type="button"
+            class="app-button group-claim-selector-add"
+            :disabled="groupClaimSelectors.length >= 100 || isSaving || isDeleting"
+            @click="addGroupClaimSelector"
+          >
+            <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            <span>{{ t('app.applicationManagement.groupClaims.addSelector') }}</span>
+          </button>
+          <p v-if="groupClaimMappingError" class="field-error" role="alert">
+            {{ groupClaimMappingError }}
+          </p>
+          <div v-else class="group-claim-selector-help">
+            <code>/organization-id</code>
+            <span>{{ t('app.applicationManagement.groupClaims.organizationOnlyHint') }}</span>
+            <code>/organization-id/group-id</code>
+            <span>{{ t('app.applicationManagement.groupClaims.exactGroupHint') }}</span>
+            <code>/organization-id/*</code>
+            <span>{{ t('app.applicationManagement.groupClaims.allGroupsHint') }}</span>
+          </div>
         </section>
 
         <div class="configuration-actions">

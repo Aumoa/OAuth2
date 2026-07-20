@@ -16,6 +16,7 @@ public sealed class OidcTokenIssuer(
         Account account,
         IReadOnlyList<AccountClaim> accountClaims,
         IReadOnlyList<OrganizationClaimValue> organizationClaims,
+        GroupClaimMapping groupClaimMapping,
         string clientId,
         string scope,
         long authTime,
@@ -29,7 +30,8 @@ public sealed class OidcTokenIssuer(
             accountClaims,
             organizationClaims,
             scope,
-            options.Value.Issuer);
+            options.Value.Issuer,
+            groupClaimMapping);
 
         var accessTokenClaims = CreateTokenClaims(
             userClaims,

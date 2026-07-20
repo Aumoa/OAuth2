@@ -1,3 +1,5 @@
+using OAuth2.Data;
+
 namespace OAuth2.DataTransfer;
 
 public sealed record ApplicationDetails
@@ -15,4 +17,6 @@ public sealed record ApplicationDetails
     public required IReadOnlyList<string> RedirectUris { get; init; }
 
     public required IReadOnlyList<string> AllowedScopes { get; init; }
+
+    public GroupClaimMapping? GroupClaimMapping { get; init; }
 }

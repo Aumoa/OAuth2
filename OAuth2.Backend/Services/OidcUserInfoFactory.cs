@@ -13,7 +13,8 @@ internal static class OidcUserInfoFactory
         IReadOnlyList<AccountClaim> accountClaims,
         IReadOnlyList<OrganizationClaimValue> organizationClaims,
         string scope,
-        string issuer)
+        string issuer,
+        GroupClaimMapping? groupClaimMapping = null)
     {
         ArgumentNullException.ThrowIfNull(account);
         ArgumentNullException.ThrowIfNull(accountClaims);
@@ -62,7 +63,11 @@ internal static class OidcUserInfoFactory
                 new DateTimeOffset(utcUpdatedAt).ToUnixTimeSeconds());
         }
 
-        AddOrganizationClaims(claims, allowedClaimNames, organizationClaims);
+        AddOrganizationClaims(
+            claims,
+            allowedClaimNames,
+            organizationClaims,
+            groupClaimMapping);
 
         return claims;
     }
@@ -70,7 +75,8 @@ internal static class OidcUserInfoFactory
     private static void AddOrganizationClaims(
         IDictionary<string, JsonElement> claims,
         IReadOnlySet<string> allowedClaimNames,
-        IReadOnlyList<OrganizationClaimValue> organizationClaims)
+        IReadOnlyList<OrganizationClaimValue> organizationClaims,
+        GroupClaimMapping? groupClaimMapping)
     {
         if (allowedClaimNames.Contains("groups"))
         {
@@ -88,13 +94,22 @@ internal static class OidcUserInfoFactory
                 }
             }
 
-            foreach (var organization in organizationClaims)
+            if (groupClaimMapping is null)
             {
-                groups.Add(organization.Id);
-                foreach (var groupId in organization.GroupIds)
+                foreach (var organization in organizationClaims)
                 {
-                    groups.Add($"{organization.Id}-{groupId}");
+                    groups.Add(organization.Id);
+                    foreach (var groupId in organization.GroupIds)
+                    {
+                        groups.Add($"{organization.Id}-{groupId}");
+                    }
                 }
+            }
+            else
+            {
+                groups.UnionWith(GroupClaimMappingPolicy.MapGroups(
+                    organizationClaims,
+                    groupClaimMapping));
             }
 
             claims["groups"] = JsonSerializer.SerializeToElement(groups.ToArray());
@@ -102,8 +117,13 @@ internal static class OidcUserInfoFactory
 
         if (allowedClaimNames.Contains("organization"))
         {
+            var selectedOrganizations = groupClaimMapping is null
+                ? organizationClaims
+                : GroupClaimMappingPolicy.FilterOrganizations(
+                    organizationClaims,
+                    groupClaimMapping);
             claims["organization"] = JsonSerializer.SerializeToElement(
-                organizationClaims.Select(static claim => new
+                selectedOrganizations.Select(static claim => new
                 {
                     id = claim.Id,
                     name = claim.Name,

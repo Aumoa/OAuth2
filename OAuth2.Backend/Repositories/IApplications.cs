@@ -34,5 +34,6 @@ public interface IApplications
         string ownerId,
         IReadOnlyCollection<string> redirectUris,
         IReadOnlyCollection<string> allowedScopes,
+        GroupClaimMapping? groupClaimMapping,
         CancellationToken cancellationToken = default);
 }

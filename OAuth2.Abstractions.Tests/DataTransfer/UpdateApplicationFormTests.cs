@@ -1,4 +1,5 @@
 using OAuth2.DataTransfer;
+using OAuth2.Data;
 
 namespace OAuth2.Abstractions.Tests.DataTransfer;
 
@@ -129,5 +130,43 @@ public sealed class UpdateApplicationFormTests
 
         Assert.False(form.Verify(out var error));
         Assert.Equal("body.allowedScopes must contain openid", error);
+    }
+
+    [Fact]
+    public void Verify_AcceptsGroupClaimMappingWithGroupsScope()
+    {
+        var form = new UpdateApplicationForm
+        {
+            RedirectUris = [],
+            AllowedScopes = ["openid", "groups"],
+            GroupClaimMapping = new GroupClaimMapping
+            {
+                Format = GroupClaimFormats.Path,
+                Selectors = ["/project-ayla", "/project-ayla/*"]
+            }
+        };
+
+        Assert.True(form.Verify(out var error));
+        Assert.Null(error);
+    }
+
+    [Fact]
+    public void Verify_RejectsGroupClaimMappingWithoutRelatedScope()
+    {
+        var form = new UpdateApplicationForm
+        {
+            RedirectUris = [],
+            AllowedScopes = ["openid"],
+            GroupClaimMapping = new GroupClaimMapping
+            {
+                Format = GroupClaimFormats.Dash,
+                Selectors = []
+            }
+        };
+
+        Assert.False(form.Verify(out var error));
+        Assert.Equal(
+            "body.groupClaimMapping requires the groups or organization scope",
+            error);
     }
 }

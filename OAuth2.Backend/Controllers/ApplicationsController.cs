@@ -118,6 +118,7 @@ public sealed class ApplicationsController(IApplications applications) : Control
             ownerId,
             form.RedirectUris.Select(static value => value.Trim()).ToArray(),
             form.AllowedScopes.Select(static value => value.Trim()).ToArray(),
+            form.GroupClaimMapping,
             cancellationToken);
         return updated ? NoContent() : NotFound();
     }
@@ -156,6 +157,14 @@ public sealed class ApplicationsController(IApplications applications) : Control
             RequiresSecret = configuration.Application.RequiresSecret,
             CreatedAt = configuration.Application.CreatedAt,
             RedirectUris = configuration.RedirectUris,
-            AllowedScopes = configuration.AllowedScopes
+            AllowedScopes = configuration.AllowedScopes,
+            GroupClaimMapping = configuration.AllowedScopes.Contains(
+                    OidcScopePolicy.GroupsScope,
+                    StringComparer.Ordinal)
+                || configuration.AllowedScopes.Contains(
+                    OidcScopePolicy.OrganizationScope,
+                    StringComparer.Ordinal)
+                ? configuration.GroupClaimMapping
+                : null
         };
 }

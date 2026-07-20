@@ -10,6 +10,8 @@ public static class OidcScopePolicy
 
     public const string OfflineAccessScope = "offline_access";
 
+    public const string GroupsScope = "groups";
+
     public const string OrganizationScope = "organization";
 
     public static readonly string[] DefaultApplicationScopes =
@@ -19,7 +21,7 @@ public static class OidcScopePolicy
         "email",
         "address",
         "phone",
-        "groups"
+        GroupsScope
     ];
 
     public static readonly string[] ClaimScopes =
