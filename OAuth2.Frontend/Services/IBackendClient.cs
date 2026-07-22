@@ -6,6 +6,15 @@ public interface IBackendClient
 {
     Task<bool> AccountExistsAsync(string id, CancellationToken cancellationToken = default);
 
+    Task<BackendResponse<AccountProfile>> GetAccountProfileAsync(
+        string id,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse<AccountProfile>> UpdateAccountProfileAsync(
+        string id,
+        UpdateAccountProfileForm form,
+        CancellationToken cancellationToken = default);
+
     Task<BackendBinaryResponse> GetProfileImageAsync(
         string id,
         string? version,

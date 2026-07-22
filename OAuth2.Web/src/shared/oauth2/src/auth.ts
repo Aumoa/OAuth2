@@ -15,6 +15,7 @@ export interface User {
   email?: string;
   emailVerified?: boolean;
   name?: string;
+  nickname?: string;
   groups?: string[];
 }
 
@@ -28,6 +29,7 @@ interface SessionClaims {
   emailVerified?: boolean;
   email_verified?: boolean;
   name?: string;
+  nickname?: string;
   groups?: unknown;
 }
 
@@ -67,6 +69,18 @@ export const useAuthStore = defineStore('auth', () => {
     };
   }
 
+  function setProfile(name: string, nickname?: string): void {
+    if (!user.value) {
+      return;
+    }
+
+    user.value = {
+      ...user.value,
+      name,
+      nickname,
+    };
+  }
+
   async function loadSessionAsync(): Promise<void> {
     try {
       const response = await fetch('/api/v1/session', {
@@ -94,6 +108,7 @@ export const useAuthStore = defineStore('auth', () => {
         email: claims.email,
         emailVerified: claims.emailVerified ?? claims.email_verified,
         name: claims.name,
+        nickname: claims.nickname,
         groups: readGroups(claims.groups),
       };
       status.value = 'authenticated';
@@ -128,5 +143,6 @@ export const useAuthStore = defineStore('auth', () => {
     isAuthenticated,
     initializeAsync,
     setPicture,
+    setProfile,
   };
 });

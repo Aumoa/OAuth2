@@ -89,6 +89,7 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddScoped<OidcAuthorizationRequestValidator>();
     s.AddScoped<OidcTokenIssuer>();
     s.AddScoped<IAccounts, MySqlAccounts>();
+    s.AddScoped<IAccountProfiles, MySqlAccountProfiles>();
     s.AddScoped<IAccountProfileImages, MySqlAccountProfileImages>();
     s.AddScoped<IAccountClaims, MySqlAccountClaims>();
     s.AddScoped<IApplications, MySqlApplications>();

@@ -26,6 +26,37 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return true;
     }
 
+    public async Task<BackendResponse<AccountProfile>> GetAccountProfileAsync(
+        string id,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+
+        using var response = await http.GetAsync(
+            $"/api/v1/accounts/profile?id={Uri.EscapeDataString(id)}",
+            cancellationToken);
+        return await ToBackendResponseAsync<AccountProfile>(response, cancellationToken);
+    }
+
+    public Task<BackendResponse<AccountProfile>> UpdateAccountProfileAsync(
+        string id,
+        UpdateAccountProfileForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(id);
+        ArgumentNullException.ThrowIfNull(form);
+        if (!form.Verify(out _))
+        {
+            throw new ArgumentException("Form verification failed.", nameof(form));
+        }
+
+        return SendForValueAsync<UpdateAccountProfileForm, AccountProfile>(
+            HttpMethod.Put,
+            $"/api/v1/accounts/profile?id={Uri.EscapeDataString(id)}",
+            form,
+            cancellationToken);
+    }
+
     public async Task<BackendBinaryResponse> GetProfileImageAsync(
         string id,
         string? version,
