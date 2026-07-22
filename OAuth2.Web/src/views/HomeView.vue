@@ -7,6 +7,7 @@ import {
   type AccountProfileClaim,
 } from '../api/accounts.ts';
 import ProfileImageEditor from '../components/ProfileImageEditor.vue';
+import Dialog from '../core/components/Dialog.vue';
 import Avatar from '../shared/oauth2/components/Avatar.vue';
 import { useAuthStore } from '../shared/oauth2/src/auth.ts';
 
@@ -27,15 +28,16 @@ const claimTypes = [
 ] as const;
 
 type ClaimType = typeof claimTypes[number];
+type ProfileDialogMode = 'fullName' | 'nickname' | 'claim' | 'add';
 
 const profile = ref<AccountProfile | null>(null);
 const isLoadingProfile = ref(false);
-const isEditingProfile = ref(false);
 const isSavingProfile = ref(false);
 const profileError = ref<string | null>(null);
-const editFullName = ref('');
-const editNickname = ref('');
-const editClaims = ref<AccountProfileClaim[]>([]);
+const profileDialogMode = ref<ProfileDialogMode | null>(null);
+const profileDialogClaimName = ref<ClaimType>('family_name');
+const profileDialogValue = ref('');
+const profileDialogError = ref<string | null>(null);
 
 const displayName = computed(() => (
   profile.value?.nickname
@@ -68,58 +70,79 @@ const shownNickname = computed(() => (
   ?? auth.user?.nickname
   ?? t('app.accountInformation.notProvided')
 ));
-const canAddClaim = computed(() => editClaims.value.length < claimTypes.length);
-const isProfileFormValid = computed(() => (
-  editFullName.value.trim().length > 0
-  && editFullName.value.trim().length <= 128
-  && editNickname.value.trim().length <= 128
-  && editClaims.value.every((claim) => (
-    claimTypes.includes(claim.name as ClaimType)
-    && claim.value.trim().length > 0
-    && claim.value.trim().length <= 2048
-  ))
-  && new Set(editClaims.value.map((claim) => claim.name)).size === editClaims.value.length
+const availableClaimTypes = computed(() => {
+  const savedTypes = new Set(profile.value?.claims.map((claim) => claim.name) ?? []);
+  return claimTypes.filter((name) => !savedTypes.has(name));
+});
+const isProfileDialogOpen = computed(() => profileDialogMode.value !== null);
+const profileDialogTitle = computed(() => {
+  if (profileDialogMode.value === 'add') {
+    return t('app.accountInformation.profile.addDialogTitle');
+  }
+
+  const label = profileDialogMode.value === 'fullName'
+    ? t('app.accountInformation.fields.fullName')
+    : profileDialogMode.value === 'nickname'
+      ? t('app.accountInformation.fields.nickname')
+      : claimLabel(profileDialogClaimName.value);
+  return t('app.accountInformation.profile.editDialogTitle', { type: label });
+});
+const profileDialogFieldLabel = computed(() => (
+  profileDialogMode.value === 'fullName'
+    ? t('app.accountInformation.fields.fullName')
+    : profileDialogMode.value === 'nickname'
+      ? t('app.accountInformation.fields.nickname')
+      : claimLabel(profileDialogClaimName.value)
 ));
+const profileDialogMaxLength = computed(() => (
+  profileDialogMode.value === 'fullName' || profileDialogMode.value === 'nickname'
+    ? 128
+    : 2048
+));
+const canSaveProfileDialog = computed(() => {
+  const valueLength = profileDialogValue.value.trim().length;
+  if (profileDialogMode.value === 'nickname') {
+    return valueLength <= profileDialogMaxLength.value;
+  }
+
+  return valueLength > 0 && valueLength <= profileDialogMaxLength.value;
+});
 
 function claimLabel(name: string): string {
   return t(`app.accountInformation.claimTypes.${name}`);
 }
 
-function availableClaimTypes(index: number): readonly ClaimType[] {
-  const selected = new Set(editClaims.value
-    .filter((_, claimIndex) => claimIndex !== index)
-    .map((claim) => claim.name));
-  return claimTypes.filter((name) => !selected.has(name));
-}
-
-function beginProfileEdit(): void {
+function openProfileDialog(mode: ProfileDialogMode, claim?: AccountProfileClaim): void {
   if (!profile.value || isLoadingProfile.value) {
     return;
   }
 
-  editFullName.value = profile.value.fullName;
-  editNickname.value = profile.value.nickname ?? '';
-  editClaims.value = profile.value.claims.map((claim) => ({ ...claim }));
-  profileError.value = null;
-  isEditingProfile.value = true;
-}
+  if (mode === 'add') {
+    const firstAvailableType = availableClaimTypes.value[0];
+    if (!firstAvailableType) {
+      return;
+    }
 
-function cancelProfileEdit(): void {
-  if (!isSavingProfile.value) {
-    isEditingProfile.value = false;
-    profileError.value = null;
+    profileDialogClaimName.value = firstAvailableType;
+    profileDialogValue.value = '';
+  } else if (mode === 'claim' && claim) {
+    profileDialogClaimName.value = claim.name as ClaimType;
+    profileDialogValue.value = claim.value;
+  } else if (mode === 'fullName') {
+    profileDialogValue.value = profile.value.fullName;
+  } else if (mode === 'nickname') {
+    profileDialogValue.value = profile.value.nickname ?? '';
   }
+
+  profileDialogError.value = null;
+  profileDialogMode.value = mode;
 }
 
-function addClaim(): void {
-  const nextType = availableClaimTypes(-1)[0];
-  if (nextType) {
-    editClaims.value.push({ name: nextType, value: '' });
+function updateProfileDialogOpen(value: boolean): void {
+  if (!value && !isSavingProfile.value) {
+    profileDialogMode.value = null;
+    profileDialogError.value = null;
   }
-}
-
-function removeClaim(index: number): void {
-  editClaims.value.splice(index, 1);
 }
 
 async function loadProfileAsync(): Promise<void> {
@@ -139,30 +162,73 @@ async function loadProfileAsync(): Promise<void> {
   }
 }
 
-async function saveProfileAsync(): Promise<void> {
-  if (isSavingProfile.value || !isProfileFormValid.value) {
-    return;
+async function updateProfileAsync(
+  fullName: string,
+  nickname: string | null,
+  claims: AccountProfileClaim[],
+): Promise<boolean> {
+  if (isSavingProfile.value) {
+    return false;
   }
 
   isSavingProfile.value = true;
-  profileError.value = null;
+  profileDialogError.value = null;
   try {
-    const saved = await Accounts.updateProfileAsync({
-      fullName: editFullName.value.trim(),
-      nickname: editNickname.value.trim() || null,
-      claims: editClaims.value.map((claim) => ({
-        name: claim.name,
-        value: claim.value.trim(),
-      })),
-    });
+    const saved = await Accounts.updateProfileAsync({ fullName, nickname, claims });
     profile.value = saved;
     auth.setProfile(saved.fullName, saved.nickname ?? undefined);
-    isEditingProfile.value = false;
+    profileDialogMode.value = null;
+    return true;
   } catch {
-    profileError.value = t('app.accountInformation.profile.saveFailed');
+    profileDialogError.value = t('app.accountInformation.profile.saveFailed');
+    return false;
   } finally {
     isSavingProfile.value = false;
   }
+}
+
+async function saveProfileDialogAsync(): Promise<void> {
+  if (!profile.value || !profileDialogMode.value || !canSaveProfileDialog.value) {
+    return;
+  }
+
+  const fullName = profileDialogMode.value === 'fullName'
+    ? profileDialogValue.value.trim()
+    : profile.value.fullName;
+  const nickname = profileDialogMode.value === 'nickname'
+    ? profileDialogValue.value.trim() || null
+    : profile.value.nickname ?? null;
+  const claims = profile.value.claims.map((claim) => ({ ...claim }));
+  if (profileDialogMode.value === 'claim') {
+    const claim = claims.find((item) => item.name === profileDialogClaimName.value);
+    if (!claim) {
+      return;
+    }
+
+    claim.value = profileDialogValue.value.trim();
+  } else if (profileDialogMode.value === 'add') {
+    claims.push({
+      name: profileDialogClaimName.value,
+      value: profileDialogValue.value.trim(),
+    });
+  }
+
+  await updateProfileAsync(fullName, nickname, claims);
+}
+
+async function removeProfileClaimAsync(): Promise<void> {
+  if (!profile.value || profileDialogMode.value !== 'claim') {
+    return;
+  }
+
+  const claims = profile.value.claims
+    .filter((claim) => claim.name !== profileDialogClaimName.value)
+    .map((claim) => ({ ...claim }));
+  await updateProfileAsync(
+    profile.value.fullName,
+    profile.value.nickname ?? null,
+    claims,
+  );
 }
 
 function openProfileImageEditor(): void {
@@ -259,7 +325,6 @@ onMounted(loadProfileAsync);
 }
 
 .profile-summary {
-  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   gap: 16px;
@@ -271,37 +336,6 @@ onMounted(loadProfileAsync);
 
 .profile-heading {
   min-width: 0;
-  padding-right: 150px;
-}
-
-.profile-edit-button {
-  position: absolute;
-  top: 22px;
-  right: 24px;
-  display: inline-flex;
-  gap: 6px;
-  align-items: center;
-  padding: 7px 11px;
-  color: var(--accent);
-  border: 1px solid var(--accent-border);
-  border-radius: 8px;
-  background: var(--surface);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.profile-edit-button:hover:not(:disabled) {
-  background: var(--accent-bg);
-}
-
-.profile-edit-button:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.profile-edit-button .material-symbols-outlined {
-  font-size: 17px;
 }
 
 .profile-avatar-editor {
@@ -383,147 +417,6 @@ onMounted(loadProfileAsync);
   font-size: 13px;
 }
 
-.profile-editor {
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border);
-  background: color-mix(in srgb, var(--surface-muted) 45%, transparent);
-}
-
-.profile-editor-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
-}
-
-.profile-editor-field {
-  display: grid;
-  gap: 6px;
-  color: var(--text-muted);
-  font-size: 12px;
-  font-weight: 700;
-}
-
-.profile-editor-input,
-.profile-claim-select,
-.profile-claim-input {
-  width: 100%;
-  min-width: 0;
-  height: 40px;
-  padding: 0 11px;
-  box-sizing: border-box;
-  color: var(--text-h);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  outline: none;
-  background: var(--surface);
-  font: inherit;
-  font-weight: 500;
-}
-
-.profile-editor-input:focus,
-.profile-claim-select:focus,
-.profile-claim-input:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-bg);
-}
-
-.profile-claims-editor {
-  margin-top: 18px;
-}
-
-.profile-claims-heading {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 9px;
-}
-
-.profile-claims-title {
-  margin: 0;
-  color: var(--text-h);
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.profile-add-claim,
-.profile-remove-claim,
-.profile-editor-action {
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.profile-add-claim {
-  padding: 6px 9px;
-  color: var(--accent);
-  border: 1px solid var(--accent-border);
-  background: var(--surface);
-  font-size: 12px;
-}
-
-.profile-add-claim:disabled,
-.profile-remove-claim:disabled,
-.profile-editor-action:disabled {
-  cursor: default;
-  opacity: 0.55;
-}
-
-.profile-claim-list {
-  display: grid;
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.profile-claim-row {
-  display: grid;
-  grid-template-columns: minmax(150px, 0.42fr) minmax(0, 1fr) auto;
-  gap: 8px;
-  align-items: center;
-}
-
-.profile-remove-claim {
-  display: grid;
-  width: 40px;
-  height: 40px;
-  padding: 0;
-  place-items: center;
-  color: var(--danger);
-  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
-  background: var(--surface);
-}
-
-.profile-remove-claim .material-symbols-outlined {
-  font-size: 19px;
-}
-
-.profile-empty-claims {
-  margin: 8px 0 0;
-  color: var(--text-muted);
-  font-size: 12px;
-}
-
-.profile-editor-actions {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-  margin-top: 18px;
-}
-
-.profile-editor-action {
-  padding: 8px 14px;
-  border: 1px solid var(--border);
-  background: var(--surface);
-}
-
-.profile-editor-action.primary {
-  color: var(--on-accent);
-  border-color: var(--accent);
-  background: var(--accent);
-}
-
 .profile-claim-value {
   white-space: pre-wrap;
 }
@@ -562,6 +455,142 @@ onMounted(loadProfileAsync);
   font-size: 14px;
   line-height: 1.45;
   overflow-wrap: anywhere;
+}
+
+.profile-row-content {
+  display: flex;
+  min-width: 0;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-row-value {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.profile-row-edit-button {
+  display: inline-flex;
+  height: 34px;
+  flex: 0 0 auto;
+  gap: 5px;
+  align-items: center;
+  padding: 0 10px;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.profile-row-edit-button:hover:not(:disabled),
+.profile-add-row-button:hover:not(:disabled) {
+  background: var(--accent-bg);
+}
+
+.profile-row-edit-button:disabled,
+.profile-add-row-button:disabled,
+.profile-dialog-action:disabled {
+  cursor: default;
+  opacity: 0.55;
+}
+
+.profile-row-edit-button .material-symbols-outlined {
+  font-size: 17px;
+}
+
+.profile-add-row-button {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  padding: 7px 11px;
+  color: var(--accent);
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.profile-add-row-button .material-symbols-outlined {
+  font-size: 18px;
+}
+
+.profile-dialog-description {
+  margin: 0 0 18px;
+  color: var(--text-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.profile-dialog-form {
+  display: grid;
+  gap: 14px;
+}
+
+.profile-dialog-field {
+  display: grid;
+  gap: 7px;
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.profile-dialog-input,
+.profile-dialog-select {
+  width: 100%;
+  min-width: 0;
+  height: 42px;
+  padding: 0 12px;
+  box-sizing: border-box;
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+  background: var(--surface);
+  font: inherit;
+  font-weight: 500;
+}
+
+.profile-dialog-input:focus,
+.profile-dialog-select:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-bg);
+}
+
+.profile-dialog-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: 12px;
+}
+
+.profile-dialog-action {
+  padding: 8px 14px;
+  color: var(--text-h);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  cursor: pointer;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.profile-dialog-action.primary {
+  color: var(--on-accent);
+  border-color: var(--accent);
+  background: var(--accent);
+}
+
+.profile-dialog-action.remove {
+  margin-right: auto;
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border));
 }
 
 .email-value {
@@ -646,28 +675,6 @@ onMounted(loadProfileAsync);
     padding: 18px;
   }
 
-  .profile-heading {
-    padding-right: 0;
-  }
-
-  .profile-edit-button {
-    position: static;
-    margin-top: 10px;
-  }
-
-  .profile-editor {
-    padding: 18px;
-  }
-
-  .profile-editor-grid,
-  .profile-claim-row {
-    grid-template-columns: 1fr;
-  }
-
-  .profile-remove-claim {
-    width: 100%;
-  }
-
   .profile-field {
     grid-template-columns: 1fr;
     gap: 5px;
@@ -692,7 +699,6 @@ onMounted(loadProfileAsync);
         <div class="profile-avatar-editor">
           <Avatar size="large" :alt="displayName" />
           <button
-            v-if="!isEditingProfile"
             type="button"
             class="app-button profile-image-edit-button"
             :aria-label="t('app.accountInformation.profileImage.editAction')"
@@ -709,15 +715,6 @@ onMounted(loadProfileAsync);
           </p>
           <h2 class="profile-name" :title="displayName">{{ displayName }}</h2>
           <p class="profile-summary-text" :title="profileSummary">{{ profileSummary }}</p>
-          <button
-            type="button"
-            class="app-button profile-edit-button"
-            :disabled="!profile || isLoadingProfile || isSavingProfile"
-            @click="beginProfileEdit"
-          >
-            <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-            {{ t('app.accountInformation.profile.editAction') }}
-          </button>
         </div>
       </div>
 
@@ -725,133 +722,51 @@ onMounted(loadProfileAsync);
         {{ profileError }}
       </p>
 
-      <form v-if="isEditingProfile" class="profile-editor" @submit.prevent="saveProfileAsync">
-        <div class="profile-editor-grid">
-          <label class="profile-editor-field">
-            <span>{{ t('app.accountInformation.fields.fullName') }}</span>
-            <input
-              v-model="editFullName"
-              class="profile-editor-input"
-              type="text"
-              maxlength="128"
-              autocomplete="name"
-              required
-              :disabled="isSavingProfile"
-            />
-          </label>
-          <label class="profile-editor-field">
-            <span>{{ t('app.accountInformation.fields.nickname') }}</span>
-            <input
-              v-model="editNickname"
-              class="profile-editor-input"
-              type="text"
-              maxlength="128"
-              autocomplete="nickname"
-              :placeholder="t('app.accountInformation.profile.optionalPlaceholder')"
-              :disabled="isSavingProfile"
-            />
-          </label>
-        </div>
-
-        <section class="profile-claims-editor" aria-labelledby="additional-profile-information">
-          <div class="profile-claims-heading">
-            <h3 id="additional-profile-information" class="profile-claims-title">
-              {{ t('app.accountInformation.profile.additionalInformation') }}
-            </h3>
-            <button
-              type="button"
-              class="app-button profile-add-claim"
-              :disabled="isSavingProfile || !canAddClaim"
-              @click="addClaim"
-            >
-              {{ t('app.accountInformation.profile.addInformation') }}
-            </button>
-          </div>
-
-          <ul v-if="editClaims.length > 0" class="profile-claim-list">
-            <li v-for="(claim, index) in editClaims" :key="index" class="profile-claim-row">
-              <select
-                v-model="claim.name"
-                class="profile-claim-select"
-                :aria-label="t('app.accountInformation.profile.informationType')"
-                :disabled="isSavingProfile"
-              >
-                <option
-                  v-for="claimType in availableClaimTypes(index)"
-                  :key="claimType"
-                  :value="claimType"
-                >
-                  {{ claimLabel(claimType) }}
-                </option>
-              </select>
-              <input
-                v-model="claim.value"
-                class="profile-claim-input"
-                type="text"
-                maxlength="2048"
-                required
-                :aria-label="t('app.accountInformation.profile.informationValue')"
-                :placeholder="t('app.accountInformation.profile.valuePlaceholder')"
-                :disabled="isSavingProfile"
-              />
-              <button
-                type="button"
-                class="app-button profile-remove-claim"
-                :aria-label="t('app.accountInformation.profile.removeInformation', { type: claimLabel(claim.name) })"
-                :title="t('app.accountInformation.profile.removeInformation', { type: claimLabel(claim.name) })"
-                :disabled="isSavingProfile"
-                @click="removeClaim(index)"
-              >
-                <span class="material-symbols-outlined" aria-hidden="true">delete</span>
-              </button>
-            </li>
-          </ul>
-          <p v-else class="profile-empty-claims">
-            {{ t('app.accountInformation.profile.noAdditionalInformation') }}
-          </p>
-        </section>
-
-        <div class="profile-editor-actions">
-          <button
-            type="button"
-            class="app-button profile-editor-action"
-            :disabled="isSavingProfile"
-            @click="cancelProfileEdit"
-          >
-            {{ t('app.accountInformation.profile.cancelAction') }}
-          </button>
-          <button
-            type="submit"
-            class="app-button profile-editor-action primary"
-            :disabled="isSavingProfile || !isProfileFormValid"
-          >
-            {{ isSavingProfile
-              ? t('app.accountInformation.profile.savingAction')
-              : t('app.accountInformation.profile.saveAction') }}
-          </button>
-        </div>
-      </form>
-
       <dl class="profile-details">
-        <div v-if="!isEditingProfile" class="profile-field">
+        <div class="profile-field">
           <dt>
             <span class="material-symbols-outlined" aria-hidden="true">id_card</span>
             {{ t('app.accountInformation.fields.fullName') }}
           </dt>
-          <dd>{{ shownFullName }}</dd>
+          <dd class="profile-row-content">
+            <span class="profile-row-value">{{ shownFullName }}</span>
+            <button
+              type="button"
+              class="app-button profile-row-edit-button"
+              :disabled="!profile || isLoadingProfile || isSavingProfile"
+              :aria-label="t('app.accountInformation.profile.editInformation', { type: t('app.accountInformation.fields.fullName') })"
+              :title="t('app.accountInformation.profile.editInformation', { type: t('app.accountInformation.fields.fullName') })"
+              @click="openProfileDialog('fullName')"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+              <span>{{ t('app.accountInformation.profile.editRowAction') }}</span>
+            </button>
+          </dd>
         </div>
 
-        <div v-if="!isEditingProfile" class="profile-field">
+        <div class="profile-field">
           <dt>
             <span class="material-symbols-outlined" aria-hidden="true">alternate_email</span>
             {{ t('app.accountInformation.fields.nickname') }}
           </dt>
-          <dd>{{ shownNickname }}</dd>
+          <dd class="profile-row-content">
+            <span class="profile-row-value">{{ shownNickname }}</span>
+            <button
+              type="button"
+              class="app-button profile-row-edit-button"
+              :disabled="!profile || isLoadingProfile || isSavingProfile"
+              :aria-label="t('app.accountInformation.profile.editInformation', { type: t('app.accountInformation.fields.nickname') })"
+              :title="t('app.accountInformation.profile.editInformation', { type: t('app.accountInformation.fields.nickname') })"
+              @click="openProfileDialog('nickname')"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+              <span>{{ t('app.accountInformation.profile.editRowAction') }}</span>
+            </button>
+          </dd>
         </div>
 
         <div
           v-for="claim in profile?.claims ?? []"
-          v-show="!isEditingProfile"
           :key="claim.name"
           class="profile-field"
         >
@@ -859,7 +774,38 @@ onMounted(loadProfileAsync);
             <span class="material-symbols-outlined" aria-hidden="true">person_edit</span>
             {{ claimLabel(claim.name) }}
           </dt>
-          <dd class="profile-claim-value">{{ claim.value }}</dd>
+          <dd class="profile-row-content">
+            <span class="profile-row-value profile-claim-value">{{ claim.value }}</span>
+            <button
+              type="button"
+              class="app-button profile-row-edit-button"
+              :disabled="isSavingProfile"
+              :aria-label="t('app.accountInformation.profile.editInformation', { type: claimLabel(claim.name) })"
+              :title="t('app.accountInformation.profile.editInformation', { type: claimLabel(claim.name) })"
+              @click="openProfileDialog('claim', claim)"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">edit</span>
+              <span>{{ t('app.accountInformation.profile.editRowAction') }}</span>
+            </button>
+          </dd>
+        </div>
+
+        <div v-if="availableClaimTypes.length > 0" class="profile-field">
+          <dt>
+            <span class="material-symbols-outlined" aria-hidden="true">add_circle</span>
+            {{ t('app.accountInformation.profile.additionalInformation') }}
+          </dt>
+          <dd>
+            <button
+              type="button"
+              class="app-button profile-add-row-button"
+              :disabled="!profile || isLoadingProfile || isSavingProfile"
+              @click="openProfileDialog('add')"
+            >
+              <span class="material-symbols-outlined" aria-hidden="true">add</span>
+              {{ t('app.accountInformation.profile.addInformation') }}
+            </button>
+          </dd>
         </div>
 
         <div class="profile-field">
@@ -917,6 +863,90 @@ onMounted(loadProfileAsync);
         </div>
       </dl>
     </article>
+
+    <Dialog
+      :is-open="isProfileDialogOpen"
+      :title="profileDialogTitle"
+      size="small"
+      :close-on-backdrop="!isSavingProfile"
+      :close-on-escape="!isSavingProfile"
+      :show-close-button="!isSavingProfile"
+      @update:is-open="updateProfileDialogOpen"
+    >
+      <p class="profile-dialog-description">
+        {{ profileDialogMode === 'add'
+          ? t('app.accountInformation.profile.addDialogDescription')
+          : t('app.accountInformation.profile.editDialogDescription') }}
+      </p>
+      <form
+        id="account-profile-dialog-form"
+        class="profile-dialog-form"
+        @submit.prevent="saveProfileDialogAsync"
+      >
+        <label v-if="profileDialogMode === 'add'" class="profile-dialog-field">
+          <span>{{ t('app.accountInformation.profile.informationType') }}</span>
+          <select
+            v-model="profileDialogClaimName"
+            class="profile-dialog-select"
+            :disabled="isSavingProfile"
+          >
+            <option v-for="claimType in availableClaimTypes" :key="claimType" :value="claimType">
+              {{ claimLabel(claimType) }}
+            </option>
+          </select>
+        </label>
+        <label class="profile-dialog-field">
+          <span>{{ profileDialogFieldLabel }}</span>
+          <input
+            v-model="profileDialogValue"
+            class="profile-dialog-input"
+            type="text"
+            :maxlength="profileDialogMaxLength"
+            :required="profileDialogMode !== 'nickname'"
+            :autocomplete="profileDialogMode === 'fullName'
+              ? 'name'
+              : profileDialogMode === 'nickname' ? 'nickname' : 'off'"
+            :placeholder="profileDialogMode === 'nickname'
+              ? t('app.accountInformation.profile.optionalPlaceholder')
+              : t('app.accountInformation.profile.valuePlaceholder')"
+            :disabled="isSavingProfile"
+          />
+        </label>
+        <p v-if="profileDialogError" class="profile-dialog-error" role="alert">
+          {{ profileDialogError }}
+        </p>
+      </form>
+
+      <template #footer>
+        <button
+          v-if="profileDialogMode === 'claim'"
+          type="button"
+          class="app-button profile-dialog-action remove"
+          :disabled="isSavingProfile"
+          @click="removeProfileClaimAsync"
+        >
+          {{ t('app.accountInformation.profile.removeAction') }}
+        </button>
+        <button
+          type="button"
+          class="app-button profile-dialog-action"
+          :disabled="isSavingProfile"
+          @click="updateProfileDialogOpen(false)"
+        >
+          {{ t('app.accountInformation.profile.cancelAction') }}
+        </button>
+        <button
+          type="submit"
+          form="account-profile-dialog-form"
+          class="app-button profile-dialog-action primary"
+          :disabled="isSavingProfile || !canSaveProfileDialog"
+        >
+          {{ isSavingProfile
+            ? t('app.accountInformation.profile.savingAction')
+            : t('app.accountInformation.profile.saveAction') }}
+        </button>
+      </template>
+    </Dialog>
 
     <ProfileImageEditor
       :is-open="isProfileImageEditorOpen"
