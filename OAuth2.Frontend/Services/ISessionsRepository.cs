@@ -34,6 +34,11 @@ public interface ISessionsRepository
         System.Text.Json.JsonElement? value,
         CancellationToken cancellationToken = default);
 
+    ValueTask<bool> UpdateActiveAccountClaimsAsync(
+        string sessionId,
+        IReadOnlyDictionary<string, System.Text.Json.JsonElement?> values,
+        CancellationToken cancellationToken = default);
+
     ValueTask<bool> SignOutAsync(
         string sessionId,
         CancellationToken cancellationToken = default);

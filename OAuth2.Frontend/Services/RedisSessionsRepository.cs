@@ -264,14 +264,30 @@ internal sealed class RedisSessionsRepository(
             "The browser session changed too frequently to sign out.");
     }
 
-    public async ValueTask<bool> UpdateActiveAccountClaimAsync(
+    public ValueTask<bool> UpdateActiveAccountClaimAsync(
         string sessionId,
         string claimName,
         JsonElement? value,
+        CancellationToken cancellationToken = default) =>
+        UpdateActiveAccountClaimsAsync(
+            sessionId,
+            new Dictionary<string, JsonElement?>(StringComparer.Ordinal)
+            {
+                [claimName] = value
+            },
+            cancellationToken);
+
+    public async ValueTask<bool> UpdateActiveAccountClaimsAsync(
+        string sessionId,
+        IReadOnlyDictionary<string, JsonElement?> values,
         CancellationToken cancellationToken = default)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(sessionId);
-        ArgumentException.ThrowIfNullOrWhiteSpace(claimName);
+        ArgumentNullException.ThrowIfNull(values);
+        if (values.Keys.Any(string.IsNullOrWhiteSpace))
+        {
+            throw new ArgumentException("Claim names cannot be empty.", nameof(values));
+        }
 
         var database = connection.GetDatabase();
         var key = CreateKey(sessionId);
@@ -295,13 +311,16 @@ internal sealed class RedisSessionsRepository(
 
             var account = record.Accounts[activeIndex];
             var claims = new Dictionary<string, JsonElement>(account.Claims, StringComparer.Ordinal);
-            if (value.HasValue)
+            foreach (var (claimName, value) in values)
             {
-                claims[claimName] = value.Value.Clone();
-            }
-            else
-            {
-                claims.Remove(claimName);
+                if (value.HasValue)
+                {
+                    claims[claimName] = value.Value.Clone();
+                }
+                else
+                {
+                    claims.Remove(claimName);
+                }
             }
 
             var accounts = record.Accounts.ToList();

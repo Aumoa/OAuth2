@@ -13,6 +13,7 @@ namespace OAuth2.Controllers;
 [Route("api/v1/accounts")]
 public sealed class AccountsController(
     IAccounts accounts,
+    IAccountProfiles accountProfiles,
     IAccountProfileImages profileImages,
     ProfileImageProcessor profileImageProcessor,
     IEmailVerify emailVerify,
@@ -65,7 +66,41 @@ public sealed class AccountsController(
             new EmailVerificationChallenge
             {
                 Sub = registration.Sub
-            });
+        });
+    }
+
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfileAsync(
+        [FromQuery] string id,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        var profile = await accountProfiles.GetAsync(id, cancellationToken);
+        return profile is null ? NotFound() : Ok(profile);
+    }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfileAsync(
+        [FromQuery] string id,
+        [FromBody] UpdateAccountProfileForm form,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(id))
+        {
+            return BadRequest();
+        }
+
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        var profile = await accountProfiles.UpdateAsync(id, form, cancellationToken);
+        return profile is null ? NotFound() : Ok(profile);
     }
 
     [HttpGet("profile-image")]

@@ -56,6 +56,78 @@ public sealed class AccountsController(
         return FromBackend(response);
     }
 
+    [HttpGet("profile")]
+    public async Task<IActionResult> GetProfileAsync(CancellationToken cancellationToken)
+    {
+        var current = await GetCurrentAccountAsync(cancellationToken);
+        if (current is null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await backend.GetAccountProfileAsync(current.Id, cancellationToken);
+        return FromBackend(response);
+    }
+
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateProfileAsync(
+        [FromBody] UpdateAccountProfileForm form,
+        CancellationToken cancellationToken)
+    {
+        if (!BrowserActionRequest.IsValid(Request))
+        {
+            return Forbid();
+        }
+
+        if (!form.Verify(out var error))
+        {
+            return BadRequest(error);
+        }
+
+        var current = await GetCurrentAccountAsync(cancellationToken);
+        if (current is null)
+        {
+            return Unauthorized();
+        }
+
+        var response = await backend.UpdateAccountProfileAsync(
+            current.Id,
+            form,
+            cancellationToken);
+        if (response.StatusCode != HttpStatusCode.OK || response.Value is null)
+        {
+            return FromBackend(response);
+        }
+
+        var profile = response.Value;
+        var sessionClaims = AccountProfileClaimTypes.Editable.ToDictionary(
+            static name => name,
+            static _ => (JsonElement?)null,
+            StringComparer.Ordinal);
+        sessionClaims["name"] = JsonSerializer.SerializeToElement(profile.FullName);
+        sessionClaims["updated_at"] = JsonSerializer.SerializeToElement(profile.UpdatedAt);
+        if (!string.IsNullOrWhiteSpace(profile.Nickname))
+        {
+            sessionClaims[AccountProfileClaimTypes.Nickname] =
+                JsonSerializer.SerializeToElement(profile.Nickname);
+        }
+
+        foreach (var claim in profile.Claims)
+        {
+            sessionClaims[claim.Name] = JsonSerializer.SerializeToElement(claim.Value);
+        }
+
+        if (!await sessions.UpdateActiveAccountClaimsAsync(
+                current.SessionId,
+                sessionClaims,
+                cancellationToken))
+        {
+            return Unauthorized();
+        }
+
+        return FromBackend(response);
+    }
+
     [HttpGet("profile-image")]
     public async Task<IActionResult> GetProfileImageAsync(
         [FromQuery] string id,

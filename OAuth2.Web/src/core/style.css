@@ -226,13 +226,18 @@
   color: var(--text-h);
   cursor: pointer;
   display: inline-grid;
-  width: 40px;
+  width: auto;
   height: 40px;
   padding: 0;
+  box-sizing: border-box;
   place-items: center;
   border: 1px solid transparent;
   border-radius: 10px;
   transition: color 140ms ease, background-color 140ms ease, border-color 140ms ease;
+}
+
+.app-icon-button {
+  width: 40px;
 }
 
 .app-button:hover {

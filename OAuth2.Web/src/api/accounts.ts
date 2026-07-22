@@ -37,6 +37,24 @@ export interface ProfileImageReference {
   height: number;
 }
 
+export interface AccountProfileClaim {
+  name: string;
+  value: string;
+}
+
+export interface AccountProfile {
+  fullName: string;
+  nickname?: string | null;
+  claims: AccountProfileClaim[];
+  updatedAt: number;
+}
+
+export interface UpdateAccountProfileForm {
+  fullName: string;
+  nickname?: string | null;
+  claims: AccountProfileClaim[];
+}
+
 export function resolveAuthorizationRedirect(
   login: LoginResponse,
   authorization: AuthorizationRequest,
@@ -119,6 +137,34 @@ export class RegisterForm {
 }
 
 export class Accounts {
+  static async getProfileAsync(): Promise<AccountProfile> {
+    const response = await fetch('/api/v1/accounts/profile', {
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+      },
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as AccountProfile;
+  }
+
+  static async updateProfileAsync(form: UpdateAccountProfileForm): Promise<AccountProfile> {
+    const response = await fetch('/api/v1/accounts/profile', {
+      method: 'PUT',
+      headers: jsonRequestHeaders(),
+      credentials: 'include',
+      body: JSON.stringify(form),
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as AccountProfile;
+  }
+
   static async updateProfileImageAsync(image: Blob): Promise<ProfileImageReference> {
     const response = await fetch('/api/v1/accounts/profile-image', {
       method: 'PUT',
