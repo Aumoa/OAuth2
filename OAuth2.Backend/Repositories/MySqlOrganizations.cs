@@ -220,7 +220,8 @@ internal sealed class MySqlOrganizations(IOptions<MySqlOptions> mysqlOptions) : 
             foreach (var query in new[]
             {
                 "DELETE FROM `client_claim` WHERE `client_id` IN @clientIds",
-                "DELETE FROM `client_user_group` WHERE `client_id` IN @clientIds",
+                "DELETE FROM `client_role_assignment` WHERE `client_id` IN @clientIds",
+                "DELETE FROM `client_role` WHERE `client_id` IN @clientIds",
                 "DELETE FROM `oauth_grant` WHERE `client_id` IN @clientIds",
                 "DELETE FROM `oauth_refresh_token` WHERE `client_id` IN @clientIds",
                 "DELETE FROM `client_secret` WHERE `client_id` IN @clientIds"

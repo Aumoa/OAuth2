@@ -135,7 +135,8 @@ internal sealed class MySqlApplications(IOptions<MySqlOptions> mysqlOptions) : I
         foreach (var query in new[]
         {
             "DELETE FROM `client_claim` WHERE `client_id` = @id",
-            "DELETE FROM `client_user_group` WHERE `client_id` = @id",
+            "DELETE FROM `client_role_assignment` WHERE `client_id` = @id",
+            "DELETE FROM `client_role` WHERE `client_id` = @id",
             "DELETE FROM `oauth_grant` WHERE `client_id` = @id",
             "DELETE FROM `oauth_refresh_token` WHERE `client_id` = @id",
             "DELETE FROM `client_secret` WHERE `client_id` = @id"

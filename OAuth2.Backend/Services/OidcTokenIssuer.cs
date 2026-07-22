@@ -16,6 +16,7 @@ public sealed class OidcTokenIssuer(
         Account account,
         IReadOnlyList<AccountClaim> accountClaims,
         IReadOnlyList<OrganizationClaimValue> organizationClaims,
+        IReadOnlyList<string> applicationRoles,
         GroupClaimMapping groupClaimMapping,
         string clientId,
         string scope,
@@ -39,6 +40,16 @@ public sealed class OidcTokenIssuer(
             authTime,
             now,
             expiresAt);
+        if (OidcScopePolicy.Split(scope)
+            .Contains(OidcScopePolicy.RolesScope, StringComparer.Ordinal))
+        {
+            accessTokenClaims["roles"] = JsonSerializer.SerializeToElement(
+                applicationRoles
+                    .Where(static role => !string.IsNullOrWhiteSpace(role))
+                    .Distinct(StringComparer.Ordinal)
+                    .Order(StringComparer.Ordinal)
+                    .ToArray());
+        }
         accessTokenClaims["scope"] = scope;
         accessTokenClaims["client_id"] = clientId;
         accessTokenClaims["jti"] = OidcJwt.Base64UrlEncode(

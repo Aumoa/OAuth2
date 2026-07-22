@@ -12,6 +12,8 @@ public static class OidcScopePolicy
 
     public const string GroupsScope = "groups";
 
+    public const string RolesScope = "roles";
+
     public const string OrganizationScope = "organization";
 
     public static readonly string[] DefaultApplicationScopes =
@@ -21,7 +23,8 @@ public static class OidcScopePolicy
         "email",
         "address",
         "phone",
-        GroupsScope
+        GroupsScope,
+        RolesScope
     ];
 
     public static readonly string[] ClaimScopes =

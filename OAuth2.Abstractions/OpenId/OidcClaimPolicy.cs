@@ -29,6 +29,7 @@ public static class OidcClaimPolicy
             ["address"] = ["address"],
             ["phone"] = ["phone_number", "phone_number_verified"],
             ["groups"] = ["groups"],
+            ["roles"] = ["roles"],
             ["organization"] = ["organization"]
         };
 

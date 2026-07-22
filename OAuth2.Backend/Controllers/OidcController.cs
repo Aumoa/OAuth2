@@ -16,6 +16,7 @@ public sealed class OidcController(
     OidcAuthorizationRequestValidator authorizationValidator,
     IAuthorizationCodes authorizationCodes,
     IApplications applications,
+    IApplicationRoles applicationRoles,
     IApplicationSecrets applicationSecrets,
     IRefreshTokens refreshTokens,
     IAccounts accounts,
@@ -114,6 +115,11 @@ public sealed class OidcController(
         var organizationClaims = await organizationMembers.GetClaimsAsync(
             code.AccountId,
             cancellationToken);
+        var roles = await GetApplicationRolesAsync(
+            code.ClientId,
+            code.AccountId,
+            code.Scope,
+            cancellationToken);
         var refreshToken = OidcScopePolicy.Split(code.Scope)
             .Contains(OidcScopePolicy.OfflineAccessScope, StringComparer.Ordinal)
             ? await refreshTokens.CreateAsync(
@@ -127,6 +133,7 @@ public sealed class OidcController(
             account,
             claims,
             organizationClaims,
+            roles,
             application.GroupClaimMapping,
             code.ClientId,
             code.Scope,
@@ -207,10 +214,16 @@ public sealed class OidcController(
         var organizationClaims = await organizationMembers.GetClaimsAsync(
             rotation.AccountId,
             cancellationToken);
+        var roles = await GetApplicationRolesAsync(
+            rotation.ClientId,
+            rotation.AccountId,
+            rotation.Scope,
+            cancellationToken);
         return Ok(tokenIssuer.Issue(
             account!,
             claims,
             organizationClaims,
+            roles,
             application.GroupClaimMapping,
             rotation.ClientId,
             rotation.Scope,
@@ -218,6 +231,19 @@ public sealed class OidcController(
             null,
             rotation.Token));
     }
+
+    private Task<IReadOnlyList<string>> GetApplicationRolesAsync(
+        string clientId,
+        string accountId,
+        string scope,
+        CancellationToken cancellationToken) =>
+        OidcScopePolicy.Split(scope)
+            .Contains(OidcScopePolicy.RolesScope, StringComparer.Ordinal)
+            ? applicationRoles.GetAssignedRoleIdsAsync(
+                clientId,
+                accountId,
+                cancellationToken)
+            : Task.FromResult<IReadOnlyList<string>>([]);
 
     [HttpPost("token/revocation")]
     public async Task<IActionResult> RevokeTokenAsync(

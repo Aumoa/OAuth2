@@ -19,6 +19,7 @@ import {
 } from '../api/applications.ts';
 import Dialog from '../core/components/Dialog.vue';
 import FloatingInput from '../core/components/FloatingInput.vue';
+import ApplicationRolesPanel from '../components/ApplicationRolesPanel.vue';
 import { HttpStatusCodeError } from '../core/src/http-status-code-error.ts';
 
 type ViewState = 'loading' | 'ready' | 'error' | 'notFound';
@@ -40,6 +41,7 @@ const availableScopes = [
   'address',
   'phone',
   'groups',
+  'roles',
   'organization',
   'offline_access',
 ] as const;
@@ -111,6 +113,9 @@ const hasAllowedScopeChanges = computed(() => (
 ));
 const hasOrganizationClaimScope = computed(() => (
   allowedScopes.value.includes('groups') || allowedScopes.value.includes('organization')
+));
+const isRolesScopeActive = computed(() => (
+  application.value?.allowedScopes.includes('roles') === true
 ));
 const hasGroupClaimMappingChanges = computed(() => (
   !areGroupClaimMappingsEqual(
@@ -636,6 +641,7 @@ async function saveApplicationAsync(): Promise<void> {
       allowedScopes.value = [...scopes];
       initialRedirectUris.value = [...redirectUriValues];
       initialAllowedScopes.value = [...scopes];
+      application.value.allowedScopes = [...scopes];
       initialGroupClaimMapping.value = cloneGroupClaimMapping(groupClaimMapping);
       application.value.groupClaimMapping = cloneGroupClaimMapping(groupClaimMapping);
       savedMessage.value = t('app.applicationManagement.saved');
@@ -1925,6 +1931,12 @@ onBeforeUnmount(() => {
           </button>
         </div>
       </form>
+
+      <ApplicationRolesPanel
+        :client-id="clientId"
+        :organization-id="organizationId"
+        :roles-scope-enabled="isRolesScopeActive"
+      />
 
       <section
         v-if="application.applicationType === 'web'"

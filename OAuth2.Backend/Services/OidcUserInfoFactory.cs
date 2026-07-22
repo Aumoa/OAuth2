@@ -27,7 +27,8 @@ internal static class OidcUserInfoFactory
 
         foreach (var accountClaim in accountClaims)
         {
-            if (allowedClaimNames.Contains(accountClaim.Name)
+            if (!string.Equals(accountClaim.Name, "roles", StringComparison.Ordinal)
+                && allowedClaimNames.Contains(accountClaim.Name)
                 && TryCreateClaimValue(accountClaim.Name, accountClaim.Value, out var value))
             {
                 claims[accountClaim.Name] = value;

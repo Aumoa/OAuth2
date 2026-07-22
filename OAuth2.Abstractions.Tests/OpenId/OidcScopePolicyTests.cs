@@ -66,6 +66,13 @@ public sealed class OidcScopePolicyTests
     }
 
     [Fact]
+    public void RolesScope_IsSupportedForApplications()
+    {
+        Assert.Contains(OidcScopePolicy.RolesScope, OidcScopePolicy.SupportedScopes);
+        Assert.Contains(OidcScopePolicy.RolesScope, OidcScopePolicy.DefaultApplicationScopes);
+    }
+
+    [Fact]
     public void TryResolveRefreshScope_PreservesOfflineGrantWhenAccessScopeIsNarrowed()
     {
         var result = OidcScopePolicy.TryResolveRefreshScope(
@@ -131,5 +138,21 @@ public sealed class OidcScopePolicyTests
         Assert.DoesNotContain("organization", groupsOnly);
         Assert.Contains("organization", organizationOnly);
         Assert.DoesNotContain("groups", organizationOnly);
+    }
+
+    [Fact]
+    public void Filter_ReturnsRolesOnlyForRolesScope()
+    {
+        var claims = new Dictionary<string, JsonElement>(StringComparer.Ordinal)
+        {
+            ["sub"] = JsonSerializer.SerializeToElement("subject"),
+            ["roles"] = JsonSerializer.SerializeToElement(new[] { "admin" })
+        };
+
+        var withoutRoles = OidcClaimPolicy.Filter(claims, "openid");
+        var withRoles = OidcClaimPolicy.Filter(claims, "openid roles");
+
+        Assert.DoesNotContain("roles", withoutRoles);
+        Assert.Contains("roles", withRoles);
     }
 }

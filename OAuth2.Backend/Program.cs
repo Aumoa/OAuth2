@@ -92,6 +92,7 @@ static IServiceCollection Configure(IServiceCollection s, IConfiguration config)
     s.AddScoped<IAccountProfileImages, MySqlAccountProfileImages>();
     s.AddScoped<IAccountClaims, MySqlAccountClaims>();
     s.AddScoped<IApplications, MySqlApplications>();
+    s.AddScoped<IApplicationRoles, MySqlApplicationRoles>();
     s.AddScoped<IApplicationSecrets, MySqlApplicationSecrets>();
     s.AddScoped<IRefreshTokens, MySqlRefreshTokens>();
     s.AddScoped<IOrganizations, MySqlOrganizations>();

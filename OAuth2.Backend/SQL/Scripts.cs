@@ -28,6 +28,7 @@ public class Scripts : IScripts
         yield return new AddOrganizationGroups();
         yield return new RenameMacOsApplicationTypeToDesktop();
         yield return new AddAccountProfileImage();
+        yield return new AddApplicationRoles();
     }
 
     private class Init : IScript
@@ -598,6 +599,106 @@ CREATE TABLE `account_profile_image` (
 
         public string DownSql => @"
 DROP TABLE `account_profile_image`;
+";
+    }
+
+    private class AddApplicationRoles : IScript
+    {
+        public string Name => "Add_application_roles";
+
+        public int InstalledRank => 22;
+
+        public string UpSql => @"
+CREATE TABLE `client_role` (
+    `client_id` VARCHAR(128) NOT NULL,
+    `id` VARCHAR(128) NOT NULL,
+    `name` VARCHAR(128) NOT NULL,
+    `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (`client_id`, `id`),
+    INDEX `IDX__client_role__client_name_id` (`client_id`, `name`, `id`),
+    CONSTRAINT `FK__client_role__client`
+        FOREIGN KEY (`client_id`) REFERENCES `client` (`id`) ON DELETE CASCADE
+);
+
+INSERT IGNORE INTO `client_role` (`client_id`, `id`, `name`, `created_at`)
+SELECT
+    `legacy`.`client_id`,
+    `legacy`.`group`,
+    `legacy`.`group`,
+    MIN(`legacy`.`created_at`)
+FROM `client_user_group` `legacy`
+INNER JOIN `client` ON `client`.`id` = `legacy`.`client_id`
+WHERE `legacy`.`removed_at` IS NULL
+GROUP BY `legacy`.`client_id`, `legacy`.`group`;
+
+CREATE TABLE `client_role_assignment` (
+    `client_id` VARCHAR(128) NOT NULL,
+    `role_id` VARCHAR(128) NOT NULL,
+    `account_id` VARCHAR(128) NOT NULL,
+    `created_at` DATETIME(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (`client_id`, `role_id`, `account_id`),
+    INDEX `IDX__client_role_assignment__account_client_role`
+        (`account_id`, `client_id`, `role_id`),
+    CONSTRAINT `FK__client_role_assignment__role`
+        FOREIGN KEY (`client_id`, `role_id`)
+        REFERENCES `client_role` (`client_id`, `id`) ON DELETE CASCADE,
+    CONSTRAINT `FK__client_role_assignment__account`
+        FOREIGN KEY (`account_id`) REFERENCES `account` (`id`) ON DELETE CASCADE
+);
+
+INSERT IGNORE INTO `client_role_assignment`
+    (`client_id`, `role_id`, `account_id`, `created_at`)
+SELECT
+    `legacy`.`client_id`,
+    `legacy`.`group`,
+    `legacy`.`account_id`,
+    MIN(`legacy`.`created_at`)
+FROM `client_user_group` `legacy`
+INNER JOIN `client_role` `role`
+    ON `role`.`client_id` = `legacy`.`client_id`
+    AND `role`.`id` = `legacy`.`group`
+INNER JOIN `account` ON `account`.`id` = `legacy`.`account_id`
+WHERE `legacy`.`removed_at` IS NULL
+GROUP BY `legacy`.`client_id`, `legacy`.`group`, `legacy`.`account_id`;
+
+DROP TABLE `client_user_group`;
+
+INSERT INTO `client_claim` (`client_id`, `name`, `value`)
+SELECT `client`.`id`, 'scope', 'roles'
+FROM `client`
+LEFT JOIN `client_claim`
+    ON `client_claim`.`client_id` = `client`.`id`
+    AND `client_claim`.`name` = 'scope'
+    AND `client_claim`.`value` = 'roles'
+    AND `client_claim`.`removed_at` IS NULL
+WHERE `client`.`removed_at` IS NULL
+    AND `client_claim`.`id` IS NULL;
+";
+
+        public string DownSql => @"
+CREATE TABLE `client_user_group` (
+    `id` BIGINT AUTO_INCREMENT NOT NULL PRIMARY KEY,
+    `client_id` VARCHAR(128) NOT NULL,
+    `account_id` VARCHAR(128) NOT NULL,
+    `group` VARCHAR(128) NOT NULL,
+    `created_at` DATETIME NOT NULL DEFAULT NOW(),
+    `removed_at` DATETIME,
+    INDEX `IDX__client_id__account_id` (`client_id`, `account_id`),
+    UNIQUE INDEX `UNQ__client_id__account_id__group__removed_at`
+        (`client_id`, `account_id`, `group`, `removed_at`)
+);
+
+INSERT INTO `client_user_group`
+    (`client_id`, `account_id`, `group`, `created_at`)
+SELECT `client_id`, `account_id`, `role_id`, `created_at`
+FROM `client_role_assignment`;
+
+DROP TABLE `client_role_assignment`;
+DROP TABLE `client_role`;
+
+UPDATE `client_claim`
+SET `removed_at` = NOW()
+WHERE `name` = 'scope' AND `value` = 'roles' AND `removed_at` IS NULL;
 ";
     }
 }

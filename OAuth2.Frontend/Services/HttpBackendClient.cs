@@ -136,6 +136,44 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
             cancellationToken);
     }
 
+    public Task<BackendResponse> CreateApplicationRoleAsync(
+        string ownerId,
+        string clientId,
+        CreateApplicationRoleForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        return SendAsync(
+            HttpMethod.Post,
+            ApplicationRolesUri(ownerId, clientId),
+            form,
+            null,
+            cancellationToken);
+    }
+
+    public Task<BackendResponse> AddApplicationRoleMemberAsync(
+        string ownerId,
+        string clientId,
+        string roleId,
+        AddApplicationRoleMemberForm form,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roleId);
+        ArgumentNullException.ThrowIfNull(form);
+
+        return SendAsync(
+            HttpMethod.Post,
+            ApplicationRoleMembersUri(ownerId, clientId, roleId),
+            form,
+            null,
+            cancellationToken);
+    }
+
     public Task<BackendResponse> CreateOrganizationAsync(
         string accountId,
         CreateOrganizationForm form,
@@ -243,6 +281,40 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
         return await ToBackendResponseAsync(response, cancellationToken);
     }
 
+    public async Task<BackendResponse> DeleteApplicationRoleAsync(
+        string ownerId,
+        string clientId,
+        string roleId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roleId);
+
+        using var response = await http.DeleteAsync(
+            ApplicationRoleUri(ownerId, clientId, roleId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> DeleteApplicationRoleMemberAsync(
+        string ownerId,
+        string clientId,
+        string roleId,
+        string accountId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roleId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(accountId);
+
+        using var response = await http.DeleteAsync(
+            ApplicationRoleMemberUri(ownerId, clientId, roleId, accountId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
     public async Task<BackendResponse> DeleteOrganizationMemberAsync(
         string actorAccountId,
         string organizationId,
@@ -335,6 +407,41 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
         using var response = await http.GetAsync(
             ApplicationSecretsUri(ownerId, clientId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetApplicationRolesAsync(
+        string ownerId,
+        string clientId,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+
+        using var response = await http.GetAsync(
+            ApplicationRolesUri(ownerId, clientId),
+            cancellationToken);
+        return await ToBackendResponseAsync(response, cancellationToken);
+    }
+
+    public async Task<BackendResponse> GetApplicationRoleMembersAsync(
+        string ownerId,
+        string clientId,
+        string roleId,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(ownerId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(clientId);
+        ArgumentException.ThrowIfNullOrWhiteSpace(roleId);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(page);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(pageSize);
+
+        using var response = await http.GetAsync(
+            ApplicationRoleMembersUri(ownerId, clientId, roleId)
+                + $"&page={page}&pageSize={pageSize}",
             cancellationToken);
         return await ToBackendResponseAsync(response, cancellationToken);
     }
@@ -731,6 +838,25 @@ internal sealed class HttpBackendClient(HttpClient http) : IBackendClient
 
     private static string ApplicationSecretUri(string ownerId, string clientId, long secretId) =>
         $"/api/v1/applications/{Uri.EscapeDataString(clientId)}/secrets/{secretId}?ownerId={Uri.EscapeDataString(ownerId)}";
+
+    private static string ApplicationRolesUri(string ownerId, string clientId) =>
+        $"/api/v1/applications/{Uri.EscapeDataString(clientId)}/roles?ownerId={Uri.EscapeDataString(ownerId)}";
+
+    private static string ApplicationRoleUri(string ownerId, string clientId, string roleId) =>
+        $"/api/v1/applications/{Uri.EscapeDataString(clientId)}/roles/{Uri.EscapeDataString(roleId)}?ownerId={Uri.EscapeDataString(ownerId)}";
+
+    private static string ApplicationRoleMembersUri(
+        string ownerId,
+        string clientId,
+        string roleId) =>
+        $"/api/v1/applications/{Uri.EscapeDataString(clientId)}/roles/{Uri.EscapeDataString(roleId)}/members?ownerId={Uri.EscapeDataString(ownerId)}";
+
+    private static string ApplicationRoleMemberUri(
+        string ownerId,
+        string clientId,
+        string roleId,
+        string accountId) =>
+        $"/api/v1/applications/{Uri.EscapeDataString(clientId)}/roles/{Uri.EscapeDataString(roleId)}/members/{Uri.EscapeDataString(accountId)}?ownerId={Uri.EscapeDataString(ownerId)}";
 
     private static string OrganizationMembersUri(string actorAccountId, string organizationId) =>
         $"/api/v1/organizations/{Uri.EscapeDataString(organizationId)}/members?accountId={Uri.EscapeDataString(actorAccountId)}";

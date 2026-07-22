@@ -33,7 +33,74 @@ export interface CreatedApplicationSecret extends ApplicationSecretSummary {
   secret: string;
 }
 
+export interface ApplicationRoleSummary {
+  id: string;
+  name: string;
+  memberCount: number;
+  createdAt: string;
+}
+
+export interface ApplicationRoleMemberSummary {
+  accountId: string;
+  name: string;
+  email: string;
+  assignedAt: string;
+}
+
+export interface ApplicationRoleMemberPage {
+  items: ApplicationRoleMemberSummary[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+}
+
 export class Applications {
+  static async addRoleMemberAsync(
+    clientId: string,
+    roleId: string,
+    accountId: string,
+    organizationId?: string,
+  ): Promise<void> {
+    const response = await fetch(
+      Applications.applicationRoleMembersUri(clientId, roleId, organizationId),
+      {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-OAuth2-Action': '1',
+        },
+        body: JSON.stringify({ accountId }),
+      },
+    );
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+  }
+
+  static async createRoleAsync(
+    clientId: string,
+    id: string,
+    name: string,
+    organizationId?: string,
+  ): Promise<ApplicationRoleSummary> {
+    const response = await fetch(Applications.applicationRolesUri(clientId, organizationId), {
+      method: 'POST',
+      credentials: 'include',
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        'X-OAuth2-Action': '1',
+      },
+      body: JSON.stringify({ id, name }),
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as ApplicationRoleSummary;
+  }
+
   static async createSecretAsync(
     clientId: string,
     organizationId?: string,
@@ -110,6 +177,48 @@ export class Applications {
     }
   }
 
+  static async deleteRoleAsync(
+    clientId: string,
+    roleId: string,
+    organizationId?: string,
+  ): Promise<void> {
+    const response = await fetch(
+      Applications.applicationRoleUri(clientId, roleId, organizationId),
+      {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'X-OAuth2-Action': '1' },
+      },
+    );
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+  }
+
+  static async deleteRoleMemberAsync(
+    clientId: string,
+    roleId: string,
+    accountId: string,
+    organizationId?: string,
+  ): Promise<void> {
+    const response = await fetch(
+      Applications.applicationRoleMemberUri(
+        clientId,
+        roleId,
+        accountId,
+        organizationId,
+      ),
+      {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: { 'X-OAuth2-Action': '1' },
+      },
+    );
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+  }
+
   static async getAsync(clientId: string, organizationId?: string): Promise<ApplicationDetails> {
     const response = await fetch(Applications.applicationUri(clientId, organizationId), {
       credentials: 'include',
@@ -154,6 +263,50 @@ export class Applications {
     }
 
     return await response.json() as ApplicationSecretSummary[];
+  }
+
+  static async listRolesAsync(
+    clientId: string,
+    organizationId?: string,
+  ): Promise<ApplicationRoleSummary[]> {
+    const response = await fetch(Applications.applicationRolesUri(clientId, organizationId), {
+      cache: 'no-store',
+      credentials: 'include',
+      headers: { Accept: 'application/json' },
+    });
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as ApplicationRoleSummary[];
+  }
+
+  static async listRoleMembersAsync(
+    clientId: string,
+    roleId: string,
+    page: number,
+    pageSize: number,
+    organizationId?: string,
+  ): Promise<ApplicationRoleMemberPage> {
+    const baseUri = Applications.applicationRoleMembersUri(
+      clientId,
+      roleId,
+      organizationId,
+    );
+    const separator = baseUri.includes('?') ? '&' : '?';
+    const response = await fetch(
+      `${baseUri}${separator}page=${page}&pageSize=${pageSize}`,
+      {
+        cache: 'no-store',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      },
+    );
+    if (!response.ok) {
+      throw new HttpStatusCodeError(response.status, response.statusText);
+    }
+
+    return await response.json() as ApplicationRoleMemberPage;
   }
 
   static async updateAsync(
@@ -205,6 +358,50 @@ export class Applications {
     organizationId?: string,
   ): string {
     const baseUri = `/api/v1/applications/${encodeURIComponent(clientId)}/secrets/${secretId}`;
+    return organizationId === undefined
+      ? baseUri
+      : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;
+  }
+
+  private static applicationRolesUri(clientId: string, organizationId?: string): string {
+    const baseUri = `/api/v1/applications/${encodeURIComponent(clientId)}/roles`;
+    return organizationId === undefined
+      ? baseUri
+      : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;
+  }
+
+  private static applicationRoleUri(
+    clientId: string,
+    roleId: string,
+    organizationId?: string,
+  ): string {
+    const baseUri = `${Applications.applicationRolesUri(clientId)}/${encodeURIComponent(roleId)}`;
+    return organizationId === undefined
+      ? baseUri
+      : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;
+  }
+
+  private static applicationRoleMembersUri(
+    clientId: string,
+    roleId: string,
+    organizationId?: string,
+  ): string {
+    const baseUri = `${Applications.applicationRolesUri(clientId)}/${encodeURIComponent(roleId)}/members`;
+    return organizationId === undefined
+      ? baseUri
+      : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;
+  }
+
+  private static applicationRoleMemberUri(
+    clientId: string,
+    roleId: string,
+    accountId: string,
+    organizationId?: string,
+  ): string {
+    const baseUri = `${Applications.applicationRoleMembersUri(
+      clientId,
+      roleId,
+    )}/${encodeURIComponent(accountId)}`;
     return organizationId === undefined
       ? baseUri
       : `${baseUri}?organizationId=${encodeURIComponent(organizationId)}`;

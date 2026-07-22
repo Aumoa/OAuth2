@@ -32,6 +32,19 @@ public interface IBackendClient
         string clientId,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> CreateApplicationRoleAsync(
+        string ownerId,
+        string clientId,
+        CreateApplicationRoleForm form,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> AddApplicationRoleMemberAsync(
+        string ownerId,
+        string clientId,
+        string roleId,
+        AddApplicationRoleMemberForm form,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> CreateOrganizationAsync(
         string accountId,
         CreateOrganizationForm form,
@@ -67,6 +80,19 @@ public interface IBackendClient
         long secretId,
         CancellationToken cancellationToken = default);
 
+    Task<BackendResponse> DeleteApplicationRoleAsync(
+        string ownerId,
+        string clientId,
+        string roleId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> DeleteApplicationRoleMemberAsync(
+        string ownerId,
+        string clientId,
+        string roleId,
+        string accountId,
+        CancellationToken cancellationToken = default);
+
     Task<BackendResponse> DeleteOrganizationMemberAsync(
         string actorAccountId,
         string organizationId,
@@ -98,6 +124,19 @@ public interface IBackendClient
     Task<BackendResponse> GetApplicationSecretsAsync(
         string ownerId,
         string clientId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetApplicationRolesAsync(
+        string ownerId,
+        string clientId,
+        CancellationToken cancellationToken = default);
+
+    Task<BackendResponse> GetApplicationRoleMembersAsync(
+        string ownerId,
+        string clientId,
+        string roleId,
+        int page,
+        int pageSize,
         CancellationToken cancellationToken = default);
 
     Task<BackendResponse> GetOrganizationAsync(
