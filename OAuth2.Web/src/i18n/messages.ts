@@ -45,7 +45,6 @@ export const appMessages = {
         profile: {
           editAction: '프로필 정보 편집',
           editInformation: '{type} 수정',
-          editRowAction: '수정',
           editDialogTitle: '{type} 수정',
           editDialogDescription: '값을 변경한 뒤 저장하세요.',
           additionalInformation: '추가 프로필 정보',
@@ -499,7 +498,6 @@ export const appMessages = {
         profile: {
           editAction: 'Edit profile information',
           editInformation: 'Edit {type}',
-          editRowAction: 'Edit',
           editDialogTitle: 'Edit {type}',
           editDialogDescription: 'Change the value and save it.',
           additionalInformation: 'Additional profile information',
@@ -951,7 +949,6 @@ export const appMessages = {
         profile: {
           editAction: 'プロフィール情報を編集',
           editInformation: '{type}を編集',
-          editRowAction: '編集',
           editDialogTitle: '{type}を編集',
           editDialogDescription: '値を変更して保存してください。',
           additionalInformation: '追加プロフィール情報',

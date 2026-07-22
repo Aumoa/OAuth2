@@ -471,20 +471,18 @@ onMounted(loadProfileAsync);
 }
 
 .profile-row-edit-button {
-  display: inline-flex;
+  display: inline-grid;
+  width: 34px;
+  min-width: 34px;
   height: 34px;
   flex: 0 0 auto;
-  gap: 5px;
-  align-items: center;
-  padding: 0 10px;
+  padding: 0;
+  place-items: center;
   color: var(--accent);
   border: 1px solid var(--accent-border);
   border-radius: 8px;
   background: var(--surface);
   cursor: pointer;
-  font-size: 12px;
-  font-weight: 700;
-  white-space: nowrap;
 }
 
 .profile-row-edit-button:hover:not(:disabled),
@@ -571,14 +569,21 @@ onMounted(loadProfileAsync);
 }
 
 .profile-dialog-action {
-  padding: 8px 14px;
+  display: inline-grid;
+  width: 40px;
+  min-width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
   color: var(--text-h);
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--surface);
   cursor: pointer;
-  font-weight: 700;
-  white-space: nowrap;
+}
+
+.profile-dialog-action .material-symbols-outlined {
+  font-size: 20px;
 }
 
 .profile-dialog-action.primary {
@@ -739,7 +744,6 @@ onMounted(loadProfileAsync);
               @click="openProfileDialog('fullName')"
             >
               <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-              <span>{{ t('app.accountInformation.profile.editRowAction') }}</span>
             </button>
           </dd>
         </div>
@@ -760,7 +764,6 @@ onMounted(loadProfileAsync);
               @click="openProfileDialog('nickname')"
             >
               <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-              <span>{{ t('app.accountInformation.profile.editRowAction') }}</span>
             </button>
           </dd>
         </div>
@@ -785,7 +788,6 @@ onMounted(loadProfileAsync);
               @click="openProfileDialog('claim', claim)"
             >
               <span class="material-symbols-outlined" aria-hidden="true">edit</span>
-              <span>{{ t('app.accountInformation.profile.editRowAction') }}</span>
             </button>
           </dd>
         </div>
@@ -923,27 +925,37 @@ onMounted(loadProfileAsync);
           type="button"
           class="app-button profile-dialog-action remove"
           :disabled="isSavingProfile"
+          :aria-label="t('app.accountInformation.profile.removeInformation', { type: profileDialogFieldLabel })"
+          :title="t('app.accountInformation.profile.removeInformation', { type: profileDialogFieldLabel })"
           @click="removeProfileClaimAsync"
         >
-          {{ t('app.accountInformation.profile.removeAction') }}
+          <span class="material-symbols-outlined" aria-hidden="true">delete</span>
         </button>
         <button
           type="button"
           class="app-button profile-dialog-action"
           :disabled="isSavingProfile"
+          :aria-label="t('app.accountInformation.profile.cancelAction')"
+          :title="t('app.accountInformation.profile.cancelAction')"
           @click="updateProfileDialogOpen(false)"
         >
-          {{ t('app.accountInformation.profile.cancelAction') }}
+          <span class="material-symbols-outlined" aria-hidden="true">close</span>
         </button>
         <button
           type="submit"
           form="account-profile-dialog-form"
           class="app-button profile-dialog-action primary"
           :disabled="isSavingProfile || !canSaveProfileDialog"
-        >
-          {{ isSavingProfile
+          :aria-label="isSavingProfile
             ? t('app.accountInformation.profile.savingAction')
-            : t('app.accountInformation.profile.saveAction') }}
+            : t('app.accountInformation.profile.saveAction')"
+          :title="isSavingProfile
+            ? t('app.accountInformation.profile.savingAction')
+            : t('app.accountInformation.profile.saveAction')"
+        >
+          <span class="material-symbols-outlined" aria-hidden="true">
+            {{ isSavingProfile ? 'progress_activity' : 'save' }}
+          </span>
         </button>
       </template>
     </Dialog>
